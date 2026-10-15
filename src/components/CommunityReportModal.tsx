@@ -70,6 +70,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
   const [gpsAccuracyMsg, setGpsAccuracyMsg] = useState<string | null>(null);
   const [gpsErrorMsg, setGpsErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [previewLightboxMedia, setPreviewLightboxMedia] = useState<CommunityReportMedia | null>(null);
 
@@ -232,6 +233,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
     if (!title.trim() || !description.trim()) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     const parsedLat = parseFloat(lat) || 4.1250;
     const parsedLng = parseFloat(lng) || -66.5820;
 
@@ -257,60 +259,17 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
         body: JSON.stringify(payload),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
         const createdReport: CommunityReport = data.report;
         onSubmitReport(createdReport);
         setSubmittedCode(createdReport.code);
       } else {
-        // Fallback local report
-        const fallbackCode = `DEN-2026-${Math.floor(100 + Math.random() * 900)}`;
-        const localReport: CommunityReport = {
-          id: `REP-COM-${Date.now()}`,
-          code: fallbackCode,
-          title: payload.title,
-          category: payload.category,
-          severity: payload.severity,
-          status: 'PENDIENTE_VALIDACION',
-          latitude: payload.latitude,
-          longitude: payload.longitude,
-          locationName: payload.locationName,
-          communityName: payload.communityName,
-          description: payload.description,
-          isAnonymous: payload.isAnonymous,
-          reporterName: payload.reporterName,
-          reporterContact: payload.reporterContact,
-          media: payload.media,
-          timestamp: new Date().toISOString(),
-          upvotesCount: 1,
-        };
-        onSubmitReport(localReport);
-        setSubmittedCode(fallbackCode);
+        setSubmitError(data.error || `El servidor rechazó la denuncia (HTTP ${res.status}).`);
       }
     } catch (err) {
-      console.warn('Fallo guardando en backend, creando reporte local:', err);
-      const fallbackCode = `DEN-2026-${Math.floor(100 + Math.random() * 900)}`;
-      const localReport: CommunityReport = {
-        id: `REP-COM-${Date.now()}`,
-        code: fallbackCode,
-        title: payload.title,
-        category: payload.category,
-        severity: payload.severity,
-        status: 'PENDIENTE_VALIDACION',
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        locationName: payload.locationName,
-        communityName: payload.communityName,
-        description: payload.description,
-        isAnonymous: payload.isAnonymous,
-        reporterName: payload.reporterName,
-        reporterContact: payload.reporterContact,
-        media: payload.media,
-        timestamp: new Date().toISOString(),
-        upvotesCount: 1,
-      };
-      onSubmitReport(localReport);
-      setSubmittedCode(fallbackCode);
+      console.warn('Fallo enviando la denuncia al backend:', err);
+      setSubmitError('No hay conexión con el servidor. La denuncia no fue registrada; intente nuevamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -775,6 +734,12 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                 </div>
               )}
             </div>
+
+            {submitError && (
+              <div role="alert" className="px-3 py-2 rounded-lg border border-red-800 bg-red-950/50 text-red-300 text-xs">
+                {submitError}
+              </div>
+            )}
 
             {/* Modal Actions */}
             <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-800">

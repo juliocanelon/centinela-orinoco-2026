@@ -241,30 +241,33 @@ export default function App() {
     }).catch((err) => console.warn('Error actualizando estado de denuncia comunitaria:', err));
   };
 
-  const handleElevateCommunityReportToIncident = (report: CommunityReport) => {
-    const newInc: IncidentReport = {
-      id: `INC-COM-${Date.now().toString().slice(-4)}`,
-      code: `ALERTA-${report.code}`,
-      title: `Interdicción Veeduría Comunitaria: ${report.title}`,
-      category: report.category === 'MINERIA_ILEGAL' ? 'MINERIA_ILEGAL' : 'ALTERCADO_TERRITORIAL',
-      severity: report.severity,
-      status: 'OPERATIVO_EN_CURSO',
-      latitude: report.latitude,
-      longitude: report.longitude,
-      locationName: report.locationName,
-      description: `Alerta derivada de veeduría comunitaria (${report.communityName || 'Comunidad Ribereña'}). ${report.description}`,
-      reportedBy: report.isAnonymous ? 'Veeduría Comunitaria Confidencial' : (report.reporterName || 'Comunidad Local'),
-      timestamp: new Date().toISOString(),
-      assignedUnit: 'Comando de Guardería Ambiental / Fluvial',
-      evidenceCount: report.media.length,
-    };
-    handleAddIncident(newInc);
-    setCommunityReports((prev) =>
-      prev.map((r) => (r.id === report.id ? { ...r, status: 'OPERATIVO_ENVIADO', linkedIncidentId: newInc.code } : r))
-    );
-    fetch(`/api/community-reports/${report.id}/elevate-incident`, { method: 'POST' })
-      .catch((err) => console.warn('Error elevando denuncia comunitaria a incidente:', err));
-    setCurrentView('INCIDENTS');
+  const handleElevateCommunityReportToIncident = async (report: CommunityReport) => {
+    try {
+      const res = await fetch(`/api/community-reports/${report.id}/elevate-incident`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: JSON.stringify({ assignedUnit: 'Comando de Guardería Ambiental / Fluvial' }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        window.alert(data.error || `No se pudo elevar la denuncia (HTTP ${res.status}).`);
+        return;
+      }
+
+      const newInc: IncidentReport = data.incident;
+      handleAddIncident(newInc);
+      setCommunityReports((prev) =>
+        prev.map((r) => (r.id === report.id ? { ...r, status: 'OPERATIVO_ENVIADO', linkedIncidentId: newInc.id } : r))
+      );
+      setCurrentView('INCIDENTS');
+    } catch (err) {
+      console.warn('Error elevando denuncia comunitaria a incidente:', err);
+      window.alert('No hay conexión con el servidor; la denuncia no fue elevada.');
+    }
   };
 
   return (

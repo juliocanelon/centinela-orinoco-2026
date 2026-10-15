@@ -11,6 +11,7 @@ export interface HybridCommunityMedia {
   url: string;
   sizeMb?: number;
   thumbnailUrl?: string;
+  contentType?: string;
 }
 
 export interface HybridCommunityReport {
@@ -102,8 +103,10 @@ function buildEvidenceDocument(
       type: media.type,
       storage: {
         provider: "supabase-storage",
+        bucket: process.env.SUPABASE_EVIDENCE_BUCKET?.trim() || "community-evidence",
         object_path: media.url,
-        content_type: media.type === "video" ? "video/*" : "image/*",
+        content_type: media.contentType ??
+          (media.type === "video" ? "video/*" : "image/*"),
         size_bytes: Math.round((media.sizeMb ?? 0) * 1024 * 1024),
       },
       tags: [report.category.toLowerCase()],

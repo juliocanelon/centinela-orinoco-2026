@@ -53,6 +53,7 @@ export interface CommunityReportMedia {
   url: string;
   sizeMb?: number;
   thumbnailUrl?: string;
+  storagePath?: string;
 }
 
 export interface CommunityReport {

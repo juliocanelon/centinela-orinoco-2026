@@ -7,6 +7,9 @@
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
+    "mongo:ping": "tsx server/scripts/pingMongo.ts",
+    "mongo:init": "tsx server/scripts/initializeMongo.ts",
+    "mongo:verify": "tsx server/scripts/verifyMongo.ts",
     "clean": "rm -rf dist server.js",
     "lint": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit"
   },
@@ -22,6 +25,7 @@
     "express": "^4.21.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
+    "mongodb": "^7.7.0",
     "motion": "^12.23.24",
     "pdf-parse": "^2.4.5",
     "react": "^19.0.1",

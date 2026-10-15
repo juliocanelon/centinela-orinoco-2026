@@ -8,8 +8,16 @@ import { PDFParse } from "pdf-parse";
 import { SatelliteAutomatedScheduler, getSupabaseServerClient } from "./server/satelliteScheduler";
 import { aiModelCascadeManager } from "./server/aiModelManager";
 import { performZonePredictiveAndPerceptiveAnalysis } from "./server/zoneAnalyticsEngine";
+import { elevateCommunityReport } from "./server/services/hybridIncidentService";
+import {
+  createCommunityReport,
+  isUuid,
+  listCommunityReports,
+  loadReportForElevation,
+  updateCommunityReportStatus,
+} from "./server/services/communityReportService";
 
-dotenv.config();
+dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 const PORT = 3000;
 
@@ -532,8 +540,54 @@ DO UPDATE SET
   ];
 
   // Community Reports Endpoints
-  app.get("/api/community-reports", (req, res) => {
-    return res.json(liveCommunityReportsStore);
+  // PostgreSQL (Supabase) es la fuente de verdad; el store en memoria solo conserva las denuncias demo
+  // y sirve de respaldo cuando Supabase no esta configurado (desarrollo local).
+  const mergeCommunityReports = (persisted: any[]) => {
+    const byId = new Map<string, any>();
+    [...persisted, ...liveCommunityReportsStore].forEach((report) => {
+      if (report?.id && !byId.has(report.id)) byId.set(report.id, report);
+    });
+    return Array.from(byId.values());
+  };
+
+  const incidentCategoryFromReport = (category: string) => {
+    if (category === "MINERIA_ILEGAL" || category === "DEFORESTACION") return category;
+    if (category === "CONTAMINACION_HIDRICA") return "CONTAMINACION_MERCURIO";
+    return "ALTERCADO_TERRITORIAL";
+  };
+
+  const hybridErrorStatus: Record<string, number> = {
+    VALIDATION_ERROR: 400,
+    REPORT_ID_MUST_BE_UUID: 400,
+    REPORT_NOT_FOUND: 404,
+    IDEMPOTENCY_CONFLICT: 409,
+    OPERATION_IN_PROGRESS: 409,
+    REPORT_NOT_ELIGIBLE: 422,
+    REPORT_NOT_PERSISTED: 422,
+    MONGODB_WRITE_FAILED: 503,
+    SUPABASE_NOT_CONFIGURED: 503,
+  };
+
+  const hybridErrorMessages: Record<string, string> = {
+    REPORT_NOT_ELIGIBLE: "La denuncia debe estar CONFIRMADA_EN_TERRENO antes de elevarse a operativo.",
+    REPORT_NOT_PERSISTED: "Esta denuncia es de demostración y no existe en la base de datos; no puede elevarse.",
+    REPORT_NOT_FOUND: "La denuncia no existe en la base de datos.",
+    IDEMPOTENCY_CONFLICT: "La clave de idempotencia ya se usó con otra solicitud.",
+    OPERATION_IN_PROGRESS: "Ya hay una elevación en curso para esta solicitud.",
+    MONGODB_WRITE_FAILED: "No se pudo registrar la evidencia en MongoDB; la operación fue compensada.",
+    SUPABASE_NOT_CONFIGURED: "Supabase no está configurado en el servidor.",
+  };
+
+  app.get("/api/community-reports", async (req, res) => {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) return res.json(liveCommunityReportsStore);
+
+    try {
+      return res.json(mergeCommunityReports(await listCommunityReports(supabase)));
+    } catch (err: any) {
+      console.warn("[Community Reports] Lectura desde Supabase falló:", err?.message || err);
+      return res.json(liveCommunityReportsStore);
+    }
   });
 
   app.post("/api/community-reports", async (req, res) => {
@@ -556,15 +610,13 @@ DO UPDATE SET
       if (!title || !description || latitude === undefined || longitude === undefined) {
         return res.status(400).json({ error: "Faltan campos obligatorios: título, descripción o coordenadas GPS." });
       }
+      if (String(title).trim().length < 3 || String(description).trim().length < 10) {
+        return res.status(400).json({ error: "El título requiere al menos 3 caracteres y la descripción al menos 10." });
+      }
 
-      const count = liveCommunityReportsStore.length + 1;
-      const code = `DEN-2026-${String(count).padStart(3, "0")}`;
-      const id = `REP-COM-${Date.now().toString().slice(-6)}`;
-
-      const newReport: any = {
-        id,
-        code,
-        title: title.trim(),
+      const anonymous = !!isAnonymous;
+      const draft = {
+        title: String(title).trim(),
         category: category || "MINERIA_ILEGAL",
         severity: severity || "HIGH",
         status: "PENDIENTE_VALIDACION", // Publicación directa en mapa con estado inicial
@@ -572,46 +624,42 @@ DO UPDATE SET
         longitude: Number(longitude),
         locationName: locationName?.trim() || `Sector [${Number(latitude).toFixed(3)}, ${Number(longitude).toFixed(3)}]`,
         communityName: communityName?.trim() || undefined,
-        description: description.trim(),
-        isAnonymous: !!isAnonymous,
-        reporterName: isAnonymous ? undefined : (reporterName?.trim() || undefined),
-        reporterContact: isAnonymous ? undefined : (reporterContact?.trim() || undefined),
+        description: String(description).trim(),
+        isAnonymous: anonymous,
+        reporterName: anonymous ? undefined : (reporterName?.trim() || undefined),
+        reporterContact: anonymous ? undefined : (reporterContact?.trim() || undefined),
         media: Array.isArray(media) ? media : [],
         timestamp: new Date().toISOString(),
-        upvotesCount: 1
+        upvotesCount: 1,
       };
+
+      const supabase = getSupabaseServerClient();
+      let newReport: any;
+
+      if (supabase) {
+        try {
+          newReport = { ...(await createCommunityReport(supabase, draft)), upvotesCount: 1 };
+        } catch (dbErr: any) {
+          console.error("[Community Report Supabase Error]:", dbErr?.code, dbErr?.message || dbErr);
+          return res.status(502).json({
+            error: "No se pudo guardar la denuncia en la base de datos. Intente nuevamente.",
+            errorCode: dbErr?.code || "SUPABASE_INSERT_FAILED",
+          });
+        }
+      } else {
+        const count = liveCommunityReportsStore.length + 1;
+        newReport = {
+          ...draft,
+          id: `REP-COM-${Date.now().toString().slice(-6)}`,
+          code: `DEN-2026-${String(count).padStart(3, "0")}`,
+        };
+      }
 
       liveCommunityReportsStore.unshift(newReport);
 
-      // Sincronización en segundo plano con Supabase si está disponible
-      const supabase = getSupabaseServerClient();
-      if (supabase) {
-        try {
-          await supabase.from("community_reports").insert([{
-            id: newReport.id,
-            code: newReport.code,
-            title: newReport.title,
-            category: newReport.category,
-            severity: newReport.severity,
-            status: newReport.status,
-            latitude: newReport.latitude,
-            longitude: newReport.longitude,
-            location_name: newReport.locationName,
-            community_name: newReport.communityName,
-            description: newReport.description,
-            is_anonymous: newReport.isAnonymous,
-            reporter_name: newReport.reporterName,
-            reporter_contact: newReport.reporterContact,
-            media_json: newReport.media,
-            timestamp: newReport.timestamp,
-          }]);
-        } catch (dbErr: any) {
-          console.warn("[Community Report Supabase Sync Warning]:", dbErr?.message || dbErr);
-        }
-      }
-
       return res.status(201).json({
         success: true,
+        persisted: !!supabase,
         report: newReport,
         message: "Denuncia ambiental comunitaria registrada y publicada directamente en la cartografía táctica."
       });
@@ -621,46 +669,106 @@ DO UPDATE SET
     }
   });
 
-  app.patch("/api/community-reports/:id/status", (req, res) => {
+  app.patch("/api/community-reports/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status, verifiedBy } = req.body;
+    const supabase = getSupabaseServerClient();
     const report = liveCommunityReportsStore.find((r) => r.id === id);
-    if (!report) {
+
+    if (supabase && isUuid(id)) {
+      try {
+        await updateCommunityReportStatus(supabase, id, status, verifiedBy);
+      } catch (dbErr: any) {
+        console.error("[Community Report Status Error]:", dbErr?.message || dbErr);
+        return res.status(502).json({ error: "No se pudo actualizar el estado en la base de datos." });
+      }
+    } else if (!report) {
       return res.status(404).json({ error: "Denuncia no encontrada." });
     }
-    if (status) report.status = status;
-    if (verifiedBy) report.verifiedBy = verifiedBy;
-    return res.json({ success: true, report });
+
+    if (report) {
+      if (status) report.status = status;
+      if (verifiedBy) report.verifiedBy = verifiedBy;
+    }
+    return res.json({ success: true, report: report ?? { id, status, verifiedBy } });
   });
 
-  app.post("/api/community-reports/:id/elevate-incident", (req, res) => {
+  app.post("/api/community-reports/:id/elevate-incident", async (req, res) => {
     const { id } = req.params;
-    const report = liveCommunityReportsStore.find((r) => r.id === id);
-    if (!report) {
-      return res.status(404).json({ error: "Denuncia no encontrada." });
+    const idempotencyKey = String(req.get("Idempotency-Key") || "").trim();
+    const assignedUnit = req.body?.assignedUnit || "Comando de Guardería Ambiental / Fluvial";
+
+    const fail = (errorCode: string, extra: Record<string, unknown> = {}) =>
+      res.status(hybridErrorStatus[errorCode] ?? 500).json({
+        success: false,
+        errorCode,
+        error: hybridErrorMessages[errorCode] ?? "No se pudo elevar la denuncia a operativo.",
+        correlationId: idempotencyKey || undefined,
+        ...extra,
+      });
+
+    if (!isUuid(idempotencyKey)) {
+      return fail("VALIDATION_ERROR", { error: "La cabecera Idempotency-Key debe ser un UUID." });
     }
+    if (!isUuid(id)) return fail("REPORT_NOT_PERSISTED");
 
-    report.status = "OPERATIVO_ENVIADO";
-    report.linkedIncidentId = `INC-${report.code}`;
+    const supabase = getSupabaseServerClient();
+    if (!supabase) return fail("SUPABASE_NOT_CONFIGURED");
 
-    const newIncident = {
-      id: `INC-${Date.now().toString().slice(-4)}`,
-      code: `ALERTA-${report.code}`,
-      title: `Interdicción Veeduría Comunitaria: ${report.title}`,
-      category: report.category === "MINERIA_ILEGAL" ? "MINERIA_ILEGAL" : "ALTERCADO_TERRITORIAL",
-      severity: report.severity,
-      status: "OPERATIVO_EN_CURSO",
-      latitude: report.latitude,
-      longitude: report.longitude,
-      locationName: report.locationName,
-      description: `Reporte derivado de veeduría comunitaria (${report.communityName || "Comunidad Ribereña"}). ${report.description}`,
-      reportedBy: report.isAnonymous ? "Veeduría Comunitaria Confidencial" : (report.reporterName || "Comunidad Local"),
-      timestamp: new Date().toISOString(),
-      assignedUnit: "Comando de Guardería Ambiental / Fluvial",
-      evidenceCount: report.media.length,
-    };
+    try {
+      const report = await loadReportForElevation(supabase, id);
+      if (!report) return fail("REPORT_NOT_FOUND");
 
-    return res.json({ success: true, report, incident: newIncident });
+      const result = await elevateCommunityReport({
+        report,
+        idempotencyKey,
+        assignedUnit,
+        reportedBy: "Sistema Centinela",
+      });
+
+      if (!result.success || !result.incident) {
+        return fail(result.errorCode ?? "HYBRID_WRITE_FAILED", {
+          operationId: result.operationId,
+          operationStatus: result.operationStatus,
+        });
+      }
+
+      const inc = result.incident as Record<string, any>;
+      const incident = {
+        id: inc.id,
+        code: inc.code,
+        title: inc.title,
+        category: incidentCategoryFromReport(String(inc.category)),
+        severity: inc.severity,
+        status: "OPERATIVO_EN_CURSO",
+        latitude: inc.latitude,
+        longitude: inc.longitude,
+        locationName: inc.location_name,
+        description: inc.description,
+        reportedBy: report.isAnonymous ? "Veeduría Comunitaria Confidencial" : inc.reported_by,
+        timestamp: inc.created_at,
+        assignedUnit: inc.assigned_unit ?? assignedUnit,
+        evidenceCount: inc.evidence_count,
+      };
+
+      const cached = liveCommunityReportsStore.find((r) => r.id === id);
+      if (cached) {
+        cached.status = "OPERATIVO_ENVIADO";
+        cached.linkedIncidentId = inc.id;
+      }
+
+      return res.status(result.replayed ? 200 : 201).json({
+        success: true,
+        replayed: !!result.replayed,
+        operationId: result.operationId,
+        operationStatus: result.operationStatus,
+        correlationId: idempotencyKey,
+        incident,
+      });
+    } catch (err: any) {
+      console.error("[Hybrid Elevation Error]:", err?.message || err);
+      return fail(err?.message === "SUPABASE_NOT_CONFIGURED" ? "SUPABASE_NOT_CONFIGURED" : "HYBRID_WRITE_FAILED");
+    }
   });
 
   const liveHydroTelemetryStore: any[] = [
