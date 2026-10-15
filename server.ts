@@ -11,9 +11,11 @@ import { performZonePredictiveAndPerceptiveAnalysis } from "./server/zoneAnalyti
 import { elevateCommunityReport } from "./server/services/hybridIncidentService";
 import {
   createCommunityReport,
+  formatReportCode,
   isUuid,
   listCommunityReports,
   loadReportForElevation,
+  maxReportSequence,
   updateCommunityReportStatus,
 } from "./server/services/communityReportService";
 
@@ -638,7 +640,9 @@ DO UPDATE SET
 
       if (supabase) {
         try {
-          newReport = { ...(await createCommunityReport(supabase, draft)), upvotesCount: 1 };
+          // Los codigos de las denuncias demo en memoria tambien se reservan para no duplicarlos.
+          const reservedCodes = liveCommunityReportsStore.map((r) => r.code);
+          newReport = { ...(await createCommunityReport(supabase, draft, reservedCodes)), upvotesCount: 1 };
         } catch (dbErr: any) {
           console.error("[Community Report Supabase Error]:", dbErr?.code, dbErr?.message || dbErr);
           return res.status(502).json({
@@ -647,11 +651,10 @@ DO UPDATE SET
           });
         }
       } else {
-        const count = liveCommunityReportsStore.length + 1;
         newReport = {
           ...draft,
           id: `REP-COM-${Date.now().toString().slice(-6)}`,
-          code: `DEN-2026-${String(count).padStart(3, "0")}`,
+          code: formatReportCode(maxReportSequence(liveCommunityReportsStore.map((r) => r.code)) + 1),
         };
       }
 

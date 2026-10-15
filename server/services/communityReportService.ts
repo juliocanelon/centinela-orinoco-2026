@@ -153,10 +153,35 @@ async function uploadEvidence(
   );
 }
 
-async function nextReportCode(supabase: SupabaseClient, attempt: number): Promise<string> {
-  const { count, error } = await supabase
+function reportCodePrefix(): string {
+  return `DEN-${new Date().getFullYear()}-`;
+}
+
+/** Mayor correlativo entre los codigos dados que siguen el patron DEN-<año>-<n>. */
+export function maxReportSequence(codes: Iterable<string>): number {
+  const prefix = reportCodePrefix();
+  let max = 0;
+  for (const code of codes) {
+    if (!code?.startsWith(prefix)) continue;
+    const sequence = Number(code.slice(prefix.length));
+    if (Number.isInteger(sequence) && sequence > max) max = sequence;
+  }
+  return max;
+}
+
+export function formatReportCode(sequence: number): string {
+  return `${reportCodePrefix()}${String(sequence).padStart(3, "0")}`;
+}
+
+async function nextReportCode(
+  supabase: SupabaseClient,
+  reservedCodes: string[],
+  attempt: number,
+): Promise<string> {
+  const { data, error } = await supabase
     .from("community_reports")
-    .select("id", { count: "exact", head: true });
+    .select("code")
+    .like("code", `${reportCodePrefix()}%`);
 
   if (error) {
     throw new CommunityReportPersistenceError(
@@ -165,19 +190,21 @@ async function nextReportCode(supabase: SupabaseClient, attempt: number): Promis
     );
   }
 
-  return `DEN-2026-${String((count ?? 0) + 1 + attempt).padStart(3, "0")}`;
+  const persistedCodes = (data ?? []).map((row: { code: string }) => row.code);
+  return formatReportCode(maxReportSequence([...persistedCodes, ...reservedCodes]) + 1 + attempt);
 }
 
 export async function createCommunityReport(
   supabase: SupabaseClient,
   report: Omit<CommunityReportRecord, "id" | "code">,
+  reservedCodes: string[] = [],
 ): Promise<CommunityReportRecord> {
   const id = randomUUID();
   const media = await uploadEvidence(supabase, id, report.media);
   const evidenceCount = media.filter((item) => item.storagePath).length;
 
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
-    const code = await nextReportCode(supabase, attempt);
+    const code = await nextReportCode(supabase, reservedCodes, attempt);
     const { error } = await supabase.from("community_reports").insert({
       id,
       code,
