@@ -1,4 +1,5 @@
 import express from "express";
+import { randomUUID } from "node:crypto";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -8,8 +9,9 @@ import { PDFParse } from "pdf-parse";
 import { SatelliteAutomatedScheduler, getSupabaseServerClient } from "./server/satelliteScheduler";
 import { aiModelCascadeManager } from "./server/aiModelManager";
 import { performZonePredictiveAndPerceptiveAnalysis } from "./server/zoneAnalyticsEngine";
+import { elevateCommunityReport } from "./server/services/hybridIncidentService";
 
-dotenv.config();
+dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 const PORT = 3000;
 
@@ -531,6 +533,47 @@ DO UPDATE SET
     }
   ];
 
+  function mapPersistedCommunityReport(row: any): any {
+    return {
+      id: row.id,
+      code: row.code,
+      title: row.title,
+      category: row.category,
+      severity: row.severity,
+      status: row.status,
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+      locationName: row.location_name,
+      communityName: row.community_name || undefined,
+      description: row.description,
+      isAnonymous: Boolean(row.is_anonymous),
+      reporterName: row.reporter_name || undefined,
+      reporterContact: row.reporter_contact || undefined,
+      media: [],
+      timestamp: row.created_at,
+      verifiedBy: row.verified_by || undefined,
+      linkedIncidentId: row.linked_incident_id || undefined,
+      upvotesCount: 0,
+    };
+  }
+
+  async function loadPersistedCommunityReport(id: string): Promise<any | null> {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from("community_reports")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const hydratedReport = mapPersistedCommunityReport(data);
+    liveCommunityReportsStore.unshift(hydratedReport);
+    return hydratedReport;
+  }
+
   // Community Reports Endpoints
   app.get("/api/community-reports", (req, res) => {
     return res.json(liveCommunityReportsStore);
@@ -559,7 +602,7 @@ DO UPDATE SET
 
       const count = liveCommunityReportsStore.length + 1;
       const code = `DEN-2026-${String(count).padStart(3, "0")}`;
-      const id = `REP-COM-${Date.now().toString().slice(-6)}`;
+      const id = randomUUID();
 
       const newReport: any = {
         id,
@@ -581,13 +624,12 @@ DO UPDATE SET
         upvotesCount: 1
       };
 
-      liveCommunityReportsStore.unshift(newReport);
-
-      // Sincronización en segundo plano con Supabase si está disponible
+      // Persistencia relacional durable antes de publicar el reporte en memoria.
       const supabase = getSupabaseServerClient();
       if (supabase) {
-        try {
-          await supabase.from("community_reports").insert([{
+        const { error: insertError } = await supabase
+          .from("community_reports")
+          .insert({
             id: newReport.id,
             code: newReport.code,
             title: newReport.title,
@@ -602,13 +644,19 @@ DO UPDATE SET
             is_anonymous: newReport.isAnonymous,
             reporter_name: newReport.reporterName,
             reporter_contact: newReport.reporterContact,
-            media_json: newReport.media,
-            timestamp: newReport.timestamp,
-          }]);
-        } catch (dbErr: any) {
-          console.warn("[Community Report Supabase Sync Warning]:", dbErr?.message || dbErr);
+            evidence_count: newReport.media.length,
+          });
+
+        if (insertError) {
+          console.error("[Community Report Persistence Error]:", insertError.message);
+          return res.status(503).json({
+            error: "No se pudo persistir la denuncia comunitaria.",
+            errorCode: "POSTGRES_WRITE_FAILED",
+          });
         }
       }
+
+      liveCommunityReportsStore.unshift(newReport);
 
       return res.status(201).json({
         success: true,
@@ -621,46 +669,118 @@ DO UPDATE SET
     }
   });
 
-  app.patch("/api/community-reports/:id/status", (req, res) => {
+  app.patch("/api/community-reports/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status, verifiedBy } = req.body;
-    const report = liveCommunityReportsStore.find((r) => r.id === id);
+    let report = liveCommunityReportsStore.find((r) => r.id === id);
+    if (!report) {
+      report = await loadPersistedCommunityReport(id);
+    }
     if (!report) {
       return res.status(404).json({ error: "Denuncia no encontrada." });
     }
+    const allowedStatuses = new Set([
+      "PENDIENTE_VALIDACION",
+      "CONFIRMADA_EN_TERRENO",
+      "OPERATIVO_ENVIADO",
+      "DESESTIMADA",
+    ]);
+    if (status && !allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "Estado de denuncia no valido." });
+    }
+
+    const supabase = getSupabaseServerClient();
+    if (supabase && status) {
+      const { error: updateError } = await supabase
+        .from("community_reports")
+        .update({
+          status,
+          verified_by: verifiedBy || null,
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        console.error("[Community Report Status Persistence Error]:", updateError.message);
+        return res.status(503).json({
+          error: "No se pudo persistir el estado de la denuncia.",
+          errorCode: "POSTGRES_WRITE_FAILED",
+        });
+      }
+    }
+
     if (status) report.status = status;
     if (verifiedBy) report.verifiedBy = verifiedBy;
     return res.json({ success: true, report });
   });
 
-  app.post("/api/community-reports/:id/elevate-incident", (req, res) => {
+  app.post("/api/community-reports/:id/elevate-incident", async (req, res) => {
     const { id } = req.params;
-    const report = liveCommunityReportsStore.find((r) => r.id === id);
+    let report = liveCommunityReportsStore.find((r) => r.id === id);
+    if (!report) {
+      report = await loadPersistedCommunityReport(id);
+    }
     if (!report) {
       return res.status(404).json({ error: "Denuncia no encontrada." });
     }
 
+    const idempotencyKey = req.header("Idempotency-Key") || req.body?.idempotencyKey;
+    if (!idempotencyKey || typeof idempotencyKey !== "string") {
+      return res.status(400).json({
+        error: "La cabecera Idempotency-Key es obligatoria.",
+        errorCode: "IDEMPOTENCY_KEY_REQUIRED",
+      });
+    }
+
+    let result;
+    try {
+      result = await elevateCommunityReport({
+        report,
+        idempotencyKey,
+        assignedUnit: req.body?.assignedUnit || "Comando de Guardería Ambiental / Fluvial",
+        reportedBy: req.body?.reportedBy || "Sistema Centinela",
+      });
+    } catch (error: any) {
+      console.error("[Hybrid Elevation Error]:", error?.message || "unknown failure");
+      const safeErrorCode =
+        typeof error?.message === "string" && /^[A-Z0-9_]+$/.test(error.message)
+          ? error.message
+          : "HYBRID_SERVICE_UNAVAILABLE";
+      return res.status(503).json({
+        success: false,
+        error: safeErrorCode,
+      });
+    }
+
+    if (!result.success) {
+      const statusByError: Record<string, number> = {
+        REPORT_ID_MUST_BE_UUID: 422,
+        REPORT_NOT_FOUND: 404,
+        REPORT_NOT_ELIGIBLE: 422,
+        IDEMPOTENCY_CONFLICT: 409,
+        OPERATION_IN_PROGRESS: 409,
+        MONGODB_WRITE_FAILED: 503,
+        POSTGRES_WRITE_FAILED: 503,
+      };
+
+      return res.status(statusByError[result.errorCode || ""] || 500).json({
+        success: false,
+        error: result.errorCode || "HYBRID_WRITE_FAILED",
+        operationId: result.operationId,
+        operationStatus: result.operationStatus,
+      });
+    }
+
     report.status = "OPERATIVO_ENVIADO";
-    report.linkedIncidentId = `INC-${report.code}`;
+    report.linkedIncidentId = String(result.incident?.id || "");
 
-    const newIncident = {
-      id: `INC-${Date.now().toString().slice(-4)}`,
-      code: `ALERTA-${report.code}`,
-      title: `Interdicción Veeduría Comunitaria: ${report.title}`,
-      category: report.category === "MINERIA_ILEGAL" ? "MINERIA_ILEGAL" : "ALTERCADO_TERRITORIAL",
-      severity: report.severity,
-      status: "OPERATIVO_EN_CURSO",
-      latitude: report.latitude,
-      longitude: report.longitude,
-      locationName: report.locationName,
-      description: `Reporte derivado de veeduría comunitaria (${report.communityName || "Comunidad Ribereña"}). ${report.description}`,
-      reportedBy: report.isAnonymous ? "Veeduría Comunitaria Confidencial" : (report.reporterName || "Comunidad Local"),
-      timestamp: new Date().toISOString(),
-      assignedUnit: "Comando de Guardería Ambiental / Fluvial",
-      evidenceCount: report.media.length,
-    };
-
-    return res.json({ success: true, report, incident: newIncident });
+    return res.status(result.replayed ? 200 : 201).json({
+      success: true,
+      replayed: result.replayed || false,
+      operationId: result.operationId,
+      operationStatus: result.operationStatus,
+      report,
+      incident: result.incident,
+    });
   });
 
   const liveHydroTelemetryStore: any[] = [

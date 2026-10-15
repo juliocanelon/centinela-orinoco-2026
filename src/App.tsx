@@ -241,30 +241,62 @@ export default function App() {
     }).catch((err) => console.warn('Error actualizando estado de denuncia comunitaria:', err));
   };
 
-  const handleElevateCommunityReportToIncident = (report: CommunityReport) => {
-    const newInc: IncidentReport = {
-      id: `INC-COM-${Date.now().toString().slice(-4)}`,
-      code: `ALERTA-${report.code}`,
-      title: `Interdicción Veeduría Comunitaria: ${report.title}`,
-      category: report.category === 'MINERIA_ILEGAL' ? 'MINERIA_ILEGAL' : 'ALTERCADO_TERRITORIAL',
-      severity: report.severity,
-      status: 'OPERATIVO_EN_CURSO',
-      latitude: report.latitude,
-      longitude: report.longitude,
-      locationName: report.locationName,
-      description: `Alerta derivada de veeduría comunitaria (${report.communityName || 'Comunidad Ribereña'}). ${report.description}`,
-      reportedBy: report.isAnonymous ? 'Veeduría Comunitaria Confidencial' : (report.reporterName || 'Comunidad Local'),
-      timestamp: new Date().toISOString(),
-      assignedUnit: 'Comando de Guardería Ambiental / Fluvial',
-      evidenceCount: report.media.length,
-    };
-    handleAddIncident(newInc);
-    setCommunityReports((prev) =>
-      prev.map((r) => (r.id === report.id ? { ...r, status: 'OPERATIVO_ENVIADO', linkedIncidentId: newInc.code } : r))
-    );
-    fetch(`/api/community-reports/${report.id}/elevate-incident`, { method: 'POST' })
-      .catch((err) => console.warn('Error elevando denuncia comunitaria a incidente:', err));
-    setCurrentView('INCIDENTS');
+  const handleElevateCommunityReportToIncident = async (report: CommunityReport) => {
+    const idempotencyKey = crypto.randomUUID();
+
+    try {
+      const response = await fetch(`/api/community-reports/${report.id}/elevate-incident`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify({
+          assignedUnit: 'Comando de Guardería Ambiental / Fluvial',
+          reportedBy: report.isAnonymous ? 'Veeduría Comunitaria Confidencial' : (report.reporterName || 'Comunidad Local'),
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success || !payload.incident) {
+        throw new Error(payload.error || 'No se pudo elevar la denuncia a incidente.');
+      }
+
+      const persistedIncident = payload.incident;
+      const incidentCategory = persistedIncident.category === 'MINERIA_ILEGAL'
+        ? 'MINERIA_ILEGAL'
+        : persistedIncident.category === 'DEFORESTACION'
+          ? 'DEFORESTACION'
+          : persistedIncident.category === 'CONTAMINACION_HIDRICA'
+            ? 'CONTAMINACION_MERCURIO'
+            : 'ALTERCADO_TERRITORIAL';
+      const newInc: IncidentReport = {
+        id: persistedIncident.id,
+        code: persistedIncident.code,
+        title: persistedIncident.title,
+        category: incidentCategory,
+        severity: persistedIncident.severity,
+        status: 'OPERATIVO_EN_CURSO',
+        latitude: persistedIncident.latitude,
+        longitude: persistedIncident.longitude,
+        locationName: persistedIncident.location_name,
+        description: persistedIncident.description,
+        reportedBy: persistedIncident.reported_by,
+        timestamp: persistedIncident.created_at,
+        assignedUnit: persistedIncident.assigned_unit,
+        evidenceCount: persistedIncident.evidence_count,
+      };
+
+      handleAddIncident(newInc);
+      setCommunityReports((prev) =>
+        prev.map((r) => (r.id === report.id
+          ? { ...r, status: 'OPERATIVO_ENVIADO', linkedIncidentId: newInc.id }
+          : r))
+      );
+      setCurrentView('INCIDENTS');
+    } catch (error) {
+      console.warn('Error elevando denuncia comunitaria a incidente:', error);
+    }
   };
 
   return (
