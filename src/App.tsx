@@ -12,6 +12,8 @@ import { SarAnomalyViewer } from './components/SarAnomalyViewer';
 import { SyntheticTelemetryGenerator } from './components/SyntheticTelemetryGenerator';
 import { LiveIngestionPipelineView } from './components/LiveIngestionPipelineView';
 import { SatelliteApiConnectionsModal } from './components/SatelliteApiConnectionsModal';
+import { AboutProjectModal } from './components/AboutProjectModal';
+import { ACADEMIC_INFO } from './data/academicInfo';
 import { CommunityReportModal } from './components/CommunityReportModal';
 import { CommunityReportsView } from './components/CommunityReportsView';
 import { 
@@ -72,6 +74,7 @@ export default function App() {
 
   // Modals & Drawers
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isCommunityReportModalOpen, setIsCommunityReportModalOpen] = useState(false);
   const [isSatelliteModalOpen, setIsSatelliteModalOpen] = useState(false);
@@ -282,6 +285,7 @@ export default function App() {
         }}
         onOpenCommunityReportModal={() => setIsCommunityReportModalOpen(true)}
         onOpenAiDrawer={() => setIsAiDrawerOpen(true)}
+        onOpenAbout={() => setIsAboutModalOpen(true)}
         activeIncidentsCount={incidents.filter((i) => i.status === 'ACTIVO' || i.status === 'OPERATIVO_EN_CURSO').length}
         communityReportsCount={communityReports.length}
         thermalAnomaliesCount={heatAnomalies.length}
@@ -475,6 +479,21 @@ export default function App() {
         )}
       </main>
 
+      {/* Academic credits footer */}
+      <footer className="px-4 py-3 border-t border-slate-900 bg-[#060a0f] text-center text-[11px] text-slate-500">
+        <span>
+          Proyecto académico · {ACADEMIC_INFO.course} · {ACADEMIC_INFO.program} · {ACADEMIC_INFO.universityShortName} · {ACADEMIC_INFO.term}
+        </span>
+        <span className="mx-2 text-slate-700">|</span>
+        <button
+          type="button"
+          onClick={() => setIsAboutModalOpen(true)}
+          className="text-sky-400 hover:text-sky-300 underline underline-offset-2"
+        >
+          Acerca del proyecto
+        </button>
+      </footer>
+
       {/* Side AI Companion Drawer */}
       <AIChatDrawer
         isOpen={isAiDrawerOpen}
@@ -494,6 +513,9 @@ export default function App() {
         isOpen={isSatelliteModalOpen}
         onClose={() => setIsSatelliteModalOpen(false)}
       />
+
+      {/* Academic project information */}
+      <AboutProjectModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
 
       {/* Community Environmental Report Form Modal */}
       <CommunityReportModal

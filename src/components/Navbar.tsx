@@ -16,7 +16,8 @@ import {
   Radar,
   Sliders,
   Workflow,
-  Users
+  Users,
+  Info
 } from 'lucide-react';
 import { ViewMode } from '../types';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
@@ -27,6 +28,7 @@ interface NavbarProps {
   onOpenNewIncidentModal: () => void;
   onOpenCommunityReportModal?: () => void;
   onOpenAiDrawer: () => void;
+  onOpenAbout?: () => void;
   activeIncidentsCount: number;
   communityReportsCount?: number;
   thermalAnomaliesCount: number;
@@ -38,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewIncidentModal,
   onOpenCommunityReportModal,
   onOpenAiDrawer,
+  onOpenAbout,
   activeIncidentsCount,
   communityReportsCount = 0,
   thermalAnomaliesCount,
@@ -160,6 +163,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Bot className="w-3.5 h-3.5" />
             <span>Asistente IA</span>
           </button>
+
+          {onOpenAbout && (
+            <button
+              id="btn-about-project"
+              onClick={onOpenAbout}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-md border border-slate-700 transition-colors whitespace-nowrap"
+              title="Acerca del proyecto académico"
+            >
+              <Info className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Acerca de</span>
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs (Scrollable on mobile) */}
