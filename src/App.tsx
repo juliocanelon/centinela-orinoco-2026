@@ -43,7 +43,7 @@ import { INITIAL_COMMUNITY_REPORTS } from './data/communityReportsData';
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewMode>('MAP_SITUATION');
   
-  // Data states
+  // Data states - y2k
   const [heatAnomalies, setHeatAnomalies] = useState<HeatAnomaly[]>(INITIAL_HEAT_ANOMALIES);
   const [miningClusters, setMiningClusters] = useState<MiningCluster[]>(INITIAL_MINING_CLUSTERS);
   const [hydrologicalStations, setHydrologicalStations] = useState<HydrologicalStation[]>(INITIAL_HYDROLOGICAL_STATIONS);
@@ -51,7 +51,24 @@ export default function App() {
   const [incidents, setIncidents] = useState<IncidentReport[]>(INITIAL_INCIDENT_REPORTS);
   const [scientificArticles, setScientificArticles] = useState<ScientificArticle[]>(INITIAL_SCIENTIFIC_ARTICLES);
   const [sarAnomalies, setSarAnomalies] = useState<SarRadarAnomaly[]>(INITIAL_SAR_RADAR_ANOMALIES);
-  const [communityReports, setCommunityReports] = useState<CommunityReport[]>(INITIAL_COMMUNITY_REPORTS);
+  const [communityReports, setCommunityReports] = useState<CommunityReport[]>(() => {
+    try {
+      const local = localStorage.getItem('centinela_community_reports_local');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map();
+          [...parsed, ...INITIAL_COMMUNITY_REPORTS].forEach(r => {
+            if (r && r.id && !map.has(r.id)) map.set(r.id, r);
+          });
+          return Array.from(map.values());
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading local community reports:", e);
+    }
+    return INITIAL_COMMUNITY_REPORTS;
+  });
 
   // Modals & Drawers
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
@@ -106,7 +123,13 @@ export default function App() {
         if (comRes.ok) {
           const comData = await comRes.json();
           if (Array.isArray(comData) && comData.length > 0) {
-            setCommunityReports(comData);
+            setCommunityReports((prev) => {
+              const map = new Map();
+              [...comData, ...prev].forEach(r => {
+                if (r && r.id && !map.has(r.id)) map.set(r.id, r);
+              });
+              return Array.from(map.values());
+            });
           }
         }
       } catch (comErr) {
@@ -195,7 +218,16 @@ export default function App() {
 
   // Handlers for Community Reports
   const handleAddCommunityReport = (report: CommunityReport) => {
-    setCommunityReports((prev) => [report, ...prev]);
+    setCommunityReports((prev) => {
+      const updated = [report, ...prev];
+      try {
+        const localOnly = updated.filter(r => r.id && !r.id.startsWith('MOCK-INITIAL'));
+        localStorage.setItem('centinela_community_reports_local', JSON.stringify(localOnly));
+      } catch (e) {
+        console.warn("Error saving community report to localStorage:", e);
+      }
+      return updated;
+    });
   };
 
   const handleUpdateCommunityReportStatus = (id: string, status: CommunityReportStatus) => {
