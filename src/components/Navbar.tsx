@@ -14,7 +14,6 @@ import {
   Bot,
   BookOpen,
   Radar,
-  Sliders,
   Workflow,
   Users,
   Info
@@ -65,7 +64,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'LIVE_PIPELINE', label: 'Ingesta & RAG PostGIS', icon: Workflow },
     { id: 'SCIENTIFIC_CORPUS', label: 'Corpus Científico', icon: BookOpen },
     { id: 'SAR_RADAR_ANOMALIES', label: 'Radar SAR', icon: Radar },
-    { id: 'SYNTHETIC_TELEMETRY', label: 'Simulador Telemetría', icon: Sliders },
     { id: 'TELEMETRY', label: 'Telemetría Hidrológica', icon: Activity },
     { id: 'INCIDENTS', label: 'Incidentes', icon: ShieldAlert, badge: activeIncidentsCount },
     { id: 'SUPABASE_CONSOLE', label: 'Postgres RPCs', icon: Database },

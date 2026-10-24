@@ -205,9 +205,9 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                 </div>
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <span>Veredicto Táctico Categórico</span>
+                    <span>Clasificación preliminar</span>
                     <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-sky-500/30 text-sky-200 border border-sky-400/40 rounded-full">
-                      {result.confidencePercentage ? `${result.confidencePercentage}% Confiabilidad` : '96.8% Confiabilidad'}
+                      Basado en datos almacenados
                     </span>
                   </div>
                   <div className="text-sm sm:text-base font-extrabold text-white tracking-tight">
@@ -421,8 +421,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                     </p>
                     <div className="text-[11px] text-slate-400 flex flex-wrap gap-4 pt-2 border-t border-slate-800">
                       <span><strong>Marco Legal:</strong> Art. 127 CRBV / Ley Penal del Ambiente</span>
-                      <span><strong>Régimen:</strong> {result.ragIndicators.find(i => i.id === 'RAG-IND-06')?.value || 'ABRAE / Cuenca del Orinoco'}</span>
-                      <span><strong>Certeza Semántica pgvector:</strong> 0.942 (Alta)</span>
+                      <span><strong>Régimen (estimado por nombre):</strong> {result.ragIndicators.find(i => i.id === 'IND-08')?.value || 'Sin régimen especial identificado'}</span>
                     </div>
                   </div>
                 </div>
@@ -433,8 +432,8 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-white">Indicadores y Parámetros del RAG Semántico</h3>
-                      <p className="text-xs text-slate-400">Datos recuperados mediante búsqueda vectorial y espacial (PostGIS + pgvector) en Supabase.</p>
+                      <h3 className="text-sm font-bold text-white">Indicadores de la zona</h3>
+                      <p className="text-xs text-slate-400">Calculados con los registros de Supabase dentro del radio de análisis (focos FIRMS, escenas Sentinel, estaciones INAMEH).</p>
                     </div>
                     <span className="text-xs font-mono px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg text-slate-300">
                       {result.ragIndicators.length} Métricas Operativas

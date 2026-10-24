@@ -8,6 +8,8 @@ Plataforma web de monitoreo geoespacial, ambiental y de seguridad territorial pa
 
 - **Producción:** [centinela-orinoco-2026.ai.studio](https://centinela-orinoco-2026.ai.studio/)
 
+![Sala GIS de Centinela Orinoco: mapa táctico de Venezuela con capas satelitales, ríos, sectores estratégicos y focos térmicos](public/captura-sala-gis.png)
+
 ## Acerca del proyecto
 
 <p align="center">

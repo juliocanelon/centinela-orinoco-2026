@@ -1,11 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { 
-  INITIAL_HEAT_ANOMALIES, 
-  INITIAL_MINING_CLUSTERS, 
-  INITIAL_HYDROLOGICAL_STATIONS, 
-  INITIAL_PROTECTED_AREAS, 
-  INITIAL_INCIDENT_REPORTS 
-} from '../data/mockGeoJSON';
+import { INITIAL_PROTECTED_AREAS } from '../data/mockGeoJSON';
 import { HeatAnomaly, MiningCluster, HydrologicalStation, ProtectedArea, IncidentReport } from '../types';
 
 const rawSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -34,80 +28,55 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
  */
 export const SupabaseRpcService = {
   /**
-   * RPC: get_heat_anomalies_geojson
+   * RPC: get_heat_anomalies_geojson — focos NASA FIRMS reales de los últimos 7 días.
    */
   async getHeatAnomalies(params?: { minConfidence?: string; limit?: number }): Promise<{
     data: HeatAnomaly[];
-    source: 'supabase_rpc' | 'local_geojson';
+    source: 'supabase_rpc' | 'unavailable';
     error?: string;
   }> {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc('get_heat_anomalies_geojson', {
-          p_min_confidence: params?.minConfidence || 'low',
-          p_limit: params?.limit || 100
-        });
-
-        if (!error && data) {
-          // Si retorna FeatureCollection o array
-          const parsed = Array.isArray(data) ? data : data.features?.map((f: any) => f.properties) || [];
-          return { data: parsed.length > 0 ? parsed : INITIAL_HEAT_ANOMALIES, source: 'supabase_rpc' };
-        }
-      } catch (err: any) {
-        console.warn('Fallo llamada RPC get_heat_anomalies_geojson, usando caché local:', err);
-      }
-    }
-    return { data: INITIAL_HEAT_ANOMALIES, source: 'local_geojson' };
+    if (!supabase) return { data: [], source: 'unavailable', error: 'Supabase no configurado' };
+    const { data, error } = await supabase.rpc('get_heat_anomalies_geojson', {
+      p_min_confidence: params?.minConfidence || 'nominal',
+      p_limit: params?.limit || 4000
+    });
+    if (error) return { data: [], source: 'unavailable', error: error.message };
+    const parsed = Array.isArray(data) ? data : data?.features?.map((f: any) => f.properties) || [];
+    return { data: parsed, source: 'supabase_rpc' };
   },
 
   /**
-   * RPC: get_mining_clusters_geojson
+   * RPC: get_mining_clusters_geojson — perturbaciones SAR medidas (Nivel 2). Vacío hasta que existan.
    */
   async getMiningClusters(params?: { basinId?: string; minSeverity?: string }): Promise<{
     data: MiningCluster[];
-    source: 'supabase_rpc' | 'local_geojson';
+    source: 'supabase_rpc' | 'unavailable';
     error?: string;
   }> {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc('get_mining_clusters_geojson', {
-          p_basin_id: params?.basinId || null,
-          p_min_severity: params?.minSeverity || 'LOW'
-        });
-
-        if (!error && data) {
-          const parsed = Array.isArray(data) ? data : data.features?.map((f: any) => f.properties) || [];
-          return { data: parsed.length > 0 ? parsed : INITIAL_MINING_CLUSTERS, source: 'supabase_rpc' };
-        }
-      } catch (err: any) {
-        console.warn('Fallo llamada RPC get_mining_clusters_geojson:', err);
-      }
-    }
-    return { data: INITIAL_MINING_CLUSTERS, source: 'local_geojson' };
+    if (!supabase) return { data: [], source: 'unavailable', error: 'Supabase no configurado' };
+    const { data, error } = await supabase.rpc('get_mining_clusters_geojson', {
+      p_basin_id: params?.basinId || null,
+      p_min_severity: params?.minSeverity || 'LOW'
+    });
+    if (error) return { data: [], source: 'unavailable', error: error.message };
+    const parsed = Array.isArray(data) ? data : data?.features?.map((f: any) => f.properties) || [];
+    return { data: parsed, source: 'supabase_rpc' };
   },
 
   /**
-   * RPC: get_hydrological_telemetry
+   * RPC: get_hydrological_telemetry — estaciones INAMEH con su último boletín.
    */
   async getHydrologicalTelemetry(stationId?: string): Promise<{
     data: HydrologicalStation[];
-    source: 'supabase_rpc' | 'local_geojson';
+    source: 'supabase_rpc' | 'unavailable';
     error?: string;
   }> {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc('get_hydrological_telemetry', {
-          p_station_id: stationId || null
-        });
-
-        if (!error && data) {
-          return { data: Array.isArray(data) && data.length > 0 ? data : INITIAL_HYDROLOGICAL_STATIONS, source: 'supabase_rpc' };
-        }
-      } catch (err: any) {
-        console.warn('Fallo llamada RPC get_hydrological_telemetry:', err);
-      }
-    }
-    return { data: INITIAL_HYDROLOGICAL_STATIONS, source: 'local_geojson' };
+    if (!supabase) return { data: [], source: 'unavailable', error: 'Supabase no configurado' };
+    const { data, error } = await supabase.rpc('get_hydrological_telemetry', {
+      p_station_id: stationId || null
+    });
+    if (error) return { data: [], source: 'unavailable', error: error.message };
+    return { data: Array.isArray(data) ? data : [], source: 'supabase_rpc' };
   },
 
   /**
@@ -171,38 +140,20 @@ export const SupabaseRpcService = {
   },
 
   /**
-   * RPC: calculate_basin_risk_index
+   * RPC: calculate_basin_risk_index — conteos reales (el índice compuesto requiere el Nivel 2).
    */
   async calculateBasinRisk(basinId: string): Promise<{
-    riskScore: number;
-    riskCategory: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+    riskScore: number | null;
+    riskCategory: string | null;
+    note?: string;
     breakdown: Record<string, number>;
-    source: 'supabase_rpc' | 'local_geojson';
+    source: 'supabase_rpc' | 'unavailable';
+    error?: string;
   }> {
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc('calculate_basin_risk_index', {
-          p_basin_id: basinId
-        });
-        if (!error && data) {
-          return { ...data, source: 'supabase_rpc' };
-        }
-      } catch (err: any) {
-        console.warn('Fallo llamada RPC calculate_basin_risk_index:', err);
-      }
-    }
-
-    return {
-      riskScore: 78.4,
-      riskCategory: 'HIGH',
-      breakdown: {
-        deforestation_weight: 85,
-        mining_density: 76,
-        mercury_contamination: 82,
-        hydrological_stress: 68
-      },
-      source: 'local_geojson'
-    };
+    if (!supabase) return { riskScore: null, riskCategory: null, breakdown: {}, source: 'unavailable', error: 'Supabase no configurado' };
+    const { data, error } = await supabase.rpc('calculate_basin_risk_index', { p_basin_id: basinId });
+    if (error || !data) return { riskScore: null, riskCategory: null, breakdown: {}, source: 'unavailable', error: error?.message };
+    return { ...data, source: 'supabase_rpc' };
   },
 
   /**

@@ -41,9 +41,10 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
     const summaryStats = {
       totalThermalAnomalies: heatAnomalies.length,
       highConfidenceHotspots: heatAnomalies.filter((h) => h.confidence === 'high').length,
-      totalMiningClusters: miningClusters.length,
-      criticalMiningImpactHa: miningClusters.reduce((acc, curr) => acc + curr.estimatedHectares, 0),
+      monitoringZones: miningClusters.filter((m) => m.affectedAreaHa === undefined).length,
+      sarDisturbancesMeasured: miningClusters.filter((m) => m.affectedAreaHa !== undefined).length,
       stationsInAlert: hydrologicalStations.filter((s) => s.status === 'ALERT_CRECIDA' || s.status === 'ELEVATED').length,
+      staleStationBulletins: hydrologicalStations.filter((s) => s.isStale).length,
       activeIncidents: incidents.filter((i) => i.status === 'ACTIVO' || i.status === 'OPERATIVO_EN_CURSO').length,
     };
 

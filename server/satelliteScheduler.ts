@@ -1,7 +1,26 @@
+import { createHash } from "crypto";
+import fs from "fs";
+import path from "path";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { getApiConnectionForTask } from "../src/data/satelliteApiDirectory";
+import { createSupabaseStore, insertOnlyNew, IngestionStore } from "./ingestion/persistence";
+import {
+  FIRMS_CONFLICT_COLUMNS,
+  fetchFirmsHotspots,
+  firmsKey,
+  firmsRagDocument,
+  FirmsHotspotRow,
+  isRelevantHotspot,
+} from "./ingestion/firms";
+import { fetchSentinel1Scenes, fetchSentinel2Products } from "./ingestion/stac";
+import { fetchSentinel3Products } from "./ingestion/sentinel3";
+import { bulletinToRows, fetchInamehBulletins, HydroReadingRow, hydroRagDocument } from "./ingestion/inameh";
+
+export type TaskKey = "NASA_FIRMS" | "SENTINEL_1_SAR" | "SENTINEL_2_MSI" | "SENTINEL_3_OLCI" | "HYDRO_TELEMETRY";
+export type RunTrigger = "SCHEDULED" | "MANUAL" | "CRON";
 
 export interface ScheduledTaskConfig {
-  key: string;
+  key: TaskKey;
   name: string;
   satelliteMission: string;
   agency: string;
@@ -14,7 +33,9 @@ export interface ScheduledTaskConfig {
   status: "IDLE" | "RUNNING" | "SUCCESS" | "ERROR";
   totalIngested: number;
   supabaseTable: string;
-  vectorReady: boolean;
+  endpointUrl: string;
+  lastInserted: number | null;
+  lastSkipped: number | null;
   lastMessage?: string;
 }
 
@@ -25,10 +46,24 @@ export interface SchedulerLogEntry {
   satelliteMission: string;
   status: "SUCCESS" | "ERROR" | "RUNNING" | "WARNING";
   recordsCount: number;
+  skippedCount: number;
   supabaseSynced: boolean;
   message: string;
-  vectorChunkId?: string;
 }
+
+export interface TaskRunResult {
+  success: boolean;
+  message: string;
+  received: number;
+  inserted: number;
+  skipped: number;
+  ragInserted: number;
+}
+
+/** Tiempo máximo de cada petición a Supabase desde el servidor. */
+const SUPABASE_REQUEST_TIMEOUT_MS = 30_000;
+/** Tiempo máximo para recuperar el estado inicial antes de aceptar ejecuciones. */
+const RESTORE_STATE_TIMEOUT_MS = 45_000;
 
 // Lazy Supabase Server Client
 let supabaseClientInstance: SupabaseClient | null = null;
@@ -47,6 +82,10 @@ export function getSupabaseServerClient(): SupabaseClient | null {
     try {
       supabaseClientInstance = createClient(cleanUrl, key, {
         auth: { persistSession: false },
+        // Sin tiempo máximo, una base pausada o saturada dejaría colgadas las peticiones.
+        global: {
+          fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(SUPABASE_REQUEST_TIMEOUT_MS) }),
+        },
       });
       console.log("[Supabase Server] Cliente inicializado exitosamente para host:", new URL(cleanUrl).hostname);
     } catch (e: any) {
@@ -58,871 +97,502 @@ export function getSupabaseServerClient(): SupabaseClient | null {
   return supabaseClientInstance;
 }
 
+interface TaskDefinition {
+  key: TaskKey;
+  name: string;
+  satelliteMission: string;
+  agency: string;
+  intervalHours: number;
+  supabaseTable: string;
+}
+
+const TASK_DEFINITIONS: TaskDefinition[] = [
+  {
+    key: "NASA_FIRMS",
+    name: "Anomalías Térmicas NASA FIRMS (VIIRS/MODIS)",
+    satelliteMission: "VIIRS NOAA-20 / Suomi-NPP / MODIS Terra-Aqua",
+    agency: "NASA EOSDIS / LANCE",
+    intervalHours: 3,
+    supabaseTable: "nasa_firms_hotspots",
+  },
+  {
+    key: "SENTINEL_1_SAR",
+    name: "Catálogo Radar SAR Sentinel-1 (escenas GRD)",
+    satelliteMission: "Sentinel-1C / Sentinel-1D (Banda C GRD)",
+    agency: "ESA / Copernicus Data Space Ecosystem",
+    intervalHours: 12,
+    supabaseTable: "sentinel1_scenes",
+  },
+  {
+    key: "SENTINEL_2_MSI",
+    name: "Catálogo Multiespectral Sentinel-2 MSI (L2A)",
+    satelliteMission: "Sentinel-2A / Sentinel-2B / Sentinel-2C (MSI L2A)",
+    agency: "ESA / Copernicus Data Space Ecosystem",
+    intervalHours: 24,
+    supabaseTable: "s2_product_tile",
+  },
+  {
+    key: "SENTINEL_3_OLCI",
+    name: "Catálogo Sentinel-3 OLCI / SLSTR (agua)",
+    satelliteMission: "Sentinel-3A / Sentinel-3B (OLCI WFR, SLSTR WST)",
+    agency: "ESA / EUMETSAT / Copernicus",
+    intervalHours: 24,
+    supabaseTable: "sentinel3_products",
+  },
+  {
+    key: "HYDRO_TELEMETRY",
+    name: "Niveles del Río Orinoco (boletines INAMEH)",
+    satelliteMission: "Estaciones hidrométricas INAMEH (0850, 0855, 0870, 0875)",
+    agency: "INAMEH",
+    intervalHours: 6,
+    supabaseTable: "hydrological_telemetry_readings",
+  },
+];
+
+/** Al arrancar sin historial, las tareas se escalonan para no consultar todas las fuentes a la vez. */
+const FIRST_RUN_STAGGER_SECONDS = 90;
+const TIMER_TICK_MS = 60_000;
+const RAG_CONFLICT_COLUMNS = ["doc_type", "source_reference_id", "content_hash"];
+
+const LOG_STATUS_BY_RUN_STATUS: Record<string, SchedulerLogEntry["status"]> = { SUCCESS: "SUCCESS", PARTIAL: "WARNING", ERROR: "ERROR" };
+
+// md5 coincide con content_hash (columna generada en Postgres); no se usa con fines de seguridad.
+const md5 = (text: string) => createHash("md5").update(text).digest("hex");
+const ragKey = (row: Record<string, any>) =>
+  [row.doc_type, row.source_reference_id, row.content_hash ?? md5(row.content_chunk ?? "")].join("|");
+
+function cadenceText(hours: number): string {
+  return hours === 1 ? "Cada 1 hora" : `Cada ${hours} horas`;
+}
+
+interface RunOutcome {
+  received: number;
+  inserted: number;
+  skipped: number;
+  ragInserted: number;
+  errors: string[];
+  endpointUrl: string;
+  note?: string;
+}
+
+/** Registros recientes en memoria para el análisis de IA (se recargan tras cada ingesta). */
+export interface SchedulerCache {
+  hotspots: Record<string, any>[];
+  sentinel1Scenes: Record<string, any>[];
+  sentinel2Products: Record<string, any>[];
+  sentinel3Products: Record<string, any>[];
+  hydroStations: Record<string, any>[];
+  sarDisturbances: Record<string, any>[];
+  loadedAt: string | null;
+}
+
 export class SatelliteAutomatedScheduler {
-  private isRunning: boolean = true;
-  private mode: "PRODUCTION_CADENCE" | "ACCELERATED_DEMO" = "PRODUCTION_CADENCE";
-  private tasks: Map<string, ScheduledTaskConfig> = new Map();
+  private isRunning = true;
+  private tasks = new Map<TaskKey, ScheduledTaskConfig>();
+  private runningTasks = new Set<TaskKey>();
   private logs: SchedulerLogEntry[] = [];
   private timer: NodeJS.Timeout | null = null;
-  private totalIngestedCount: number = 0;
-  private totalRagDocsCount: number = 0;
+  private ragDocsCount = 0;
+  private initialized: Promise<void>;
 
-  // External references to server stores so the rest of the application sees ingested records
-  public liveFirmsStore: any[] = [];
-  public liveCopernicusStore: any[] = [];
-  public s2TilesStore: any[] = [];
+  public cache: SchedulerCache = {
+    hotspots: [],
+    sentinel1Scenes: [],
+    sentinel2Products: [],
+    sentinel3Products: [],
+    hydroStations: [],
+    sarDisturbances: [],
+    loadedAt: null,
+  };
 
-  constructor() {
-    this.initializeTasks();
+  constructor(private storeOverride?: IngestionStore) {
+    TASK_DEFINITIONS.forEach((def, i) => {
+      const firstRun = new Date(Date.now() + (i + 1) * FIRST_RUN_STAGGER_SECONDS * 1000);
+      this.tasks.set(def.key, {
+        key: def.key,
+        name: def.name,
+        satelliteMission: def.satelliteMission,
+        agency: def.agency,
+        nominalCadenceText: cadenceText(def.intervalHours),
+        nominalIntervalHours: def.intervalHours,
+        intervalSeconds: def.intervalHours * 3600,
+        lastRunAt: null,
+        nextRunAt: firstRun.toISOString(),
+        countdownSeconds: 0,
+        status: "IDLE",
+        totalIngested: 0,
+        supabaseTable: `public.${def.supabaseTable}`,
+        endpointUrl: getApiConnectionForTask(def.key)?.activeUrl || "",
+        lastInserted: null,
+        lastSkipped: null,
+        lastMessage: "Pendiente de la primera ejecución",
+      });
+    });
+    this.initialized = Promise.race([
+      this.restoreState(),
+      new Promise<void>(resolve => setTimeout(() => {
+        this.addLog({ taskKey: "SCHEDULER_CORE", satelliteMission: "Planificador", status: "WARNING", recordsCount: 0, skippedCount: 0, supabaseSynced: false,
+          message: "Supabase no respondió al recuperar el estado inicial; el planificador continúa con valores por defecto." });
+        resolve();
+      }, RESTORE_STATE_TIMEOUT_MS).unref?.()),
+    ]);
     this.startTimerLoop();
   }
 
-  private initializeTasks() {
-    // 1. NASA FIRMS (VIIRS/MODIS): Cada 3 horas según órbita LEO y procesamiento NRT
-    const firmsInterval = this.mode === "PRODUCTION_CADENCE" ? 3 * 3600 : 60;
-    this.tasks.set("NASA_FIRMS", {
-      key: "NASA_FIRMS",
-      name: "Anomalías Térmicas NASA FIRMS (VIIRS/MODIS)",
-      satelliteMission: "VIIRS NOAA-20 / Suomi-NPP / MODIS Terra-Aqua",
-      agency: "NASA EOSDIS / LANCE",
-      nominalCadenceText: "Cada 3 Horas (Ciclo NRT LEO)",
-      nominalIntervalHours: 3,
-      intervalSeconds: firmsInterval,
-      lastRunAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      nextRunAt: new Date(Date.now() + firmsInterval * 1000).toISOString(),
-      countdownSeconds: firmsInterval,
-      status: "IDLE",
-      totalIngested: 48,
-      supabaseTable: "public.nasa_firms_hotspots",
-      vectorReady: true,
-      lastMessage: "En espera de siguiente pasada de órbita",
-    });
+  private getStore(): IngestionStore | null {
+    if (this.storeOverride) return this.storeOverride;
+    const client = getSupabaseServerClient();
+    return client ? createSupabaseStore(client) : null;
+  }
 
-    // 2. Copernicus Sentinel-1 SAR: Revisita 6-12 días, chequeo orbital cada 12 horas
-    const s1Interval = this.mode === "PRODUCTION_CADENCE" ? 12 * 3600 : 120;
-    this.tasks.set("SENTINEL_1_SAR", {
-      key: "SENTINEL_1_SAR",
-      name: "Radar SAR Sentinel-1 (Deforestación y Dragas)",
-      satelliteMission: "Sentinel-1A / Sentinel-1C (Banda C GRD)",
-      agency: "ESA / Copernicus Space Component",
-      nominalCadenceText: "Cada 12 Horas (Evaluación Órbita 6-12d)",
-      nominalIntervalHours: 12,
-      intervalSeconds: s1Interval,
-      lastRunAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-      nextRunAt: new Date(Date.now() + s1Interval * 1000).toISOString(),
-      countdownSeconds: s1Interval,
-      status: "IDLE",
-      totalIngested: 19,
-      supabaseTable: "public.copernicus_sar_disturbances",
-      vectorReady: true,
-      lastMessage: "En espera de siguiente pasada de órbita polar",
-    });
+  /** Recupera la última ejecución de cada tarea, los conteos y el caché desde Supabase. */
+  private async restoreState() {
+    const store = this.getStore();
+    if (!store) {
+      this.addLog({ taskKey: "SCHEDULER_CORE", satelliteMission: "Planificador", status: "WARNING", recordsCount: 0, skippedCount: 0, supabaseSynced: false,
+        message: "Supabase no está configurado: las tareas no pueden guardar datos." });
+      return;
+    }
+    try {
+      for (const task of this.tasks.values()) {
+        const [last] = await store.selectLatest("ingestion_runs",
+          ["finished_at", "status", "records_inserted", "records_skipped", "message"], "started_at", 1, { eq: { task_key: task.key } });
+        if (last) {
+          task.lastRunAt = last.finished_at;
+          task.lastInserted = last.records_inserted;
+          task.lastSkipped = last.records_skipped;
+          task.lastMessage = last.message || undefined;
+          task.status = last.status === "ERROR" ? "ERROR" : "SUCCESS";
+          const due = new Date(new Date(last.finished_at).getTime() + task.intervalSeconds * 1000);
+          // Si ya venció, se ejecuta en el próximo ciclo (manteniendo el escalonamiento inicial).
+          if (due.getTime() > Date.parse(task.nextRunAt)) task.nextRunAt = due.toISOString();
+        }
+        task.totalIngested = await store.count(task.supabaseTable.replace("public.", ""));
+      }
+      this.ragDocsCount = await store.count("environmental_rag_documents");
 
-    // 3. Copernicus Sentinel-2 MSI: Revisita 5 días, evaluación cada 24 horas
-    const s2Interval = this.mode === "PRODUCTION_CADENCE" ? 24 * 3600 : 180;
-    this.tasks.set("SENTINEL_2_MSI", {
-      key: "SENTINEL_2_MSI",
-      name: "Multiespectral Sentinel-2 MSI (Dosel y Sedimentos)",
-      satelliteMission: "Sentinel-2A / Sentinel-2B / Sentinel-2C (MSI L2A)",
-      agency: "ESA / Copernicus Data Space Ecosystem",
-      nominalCadenceText: "Cada 24 Horas (Ventana Revisita 5d)",
-      nominalIntervalHours: 24,
-      intervalSeconds: s2Interval,
-      lastRunAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-      nextRunAt: new Date(Date.now() + s2Interval * 1000).toISOString(),
-      countdownSeconds: s2Interval,
-      status: "IDLE",
-      totalIngested: 5,
-      supabaseTable: "public.s2_product_tile",
-      vectorReady: true,
-      lastMessage: "Monitoreo de tiles T19PHC, T20PHD, T20PJD",
-    });
+      const recentRuns = await store.selectLatest("ingestion_runs",
+        ["id", "task_key", "status", "finished_at", "records_inserted", "records_skipped", "message"], "started_at", 25);
+      this.logs = recentRuns.map(r => ({
+        id: r.id,
+        timestamp: r.finished_at,
+        taskKey: r.task_key,
+        satelliteMission: this.tasks.get(r.task_key as TaskKey)?.satelliteMission || r.task_key,
+        status: LOG_STATUS_BY_RUN_STATUS[r.status] || "SUCCESS",
+        recordsCount: r.records_inserted,
+        skippedCount: r.records_skipped,
+        supabaseSynced: true,
+        message: r.message || "",
+      }));
+      await this.refreshCache(store);
+    } catch (err: any) {
+      this.addLog({ taskKey: "SCHEDULER_CORE", satelliteMission: "Planificador", status: "ERROR", recordsCount: 0, skippedCount: 0, supabaseSynced: false,
+        message: `No se pudo recuperar el estado desde Supabase: ${err?.message || err}` });
+    }
+  }
 
-    // 4. Telemetría Hidrométrica: Cada 1 hora
-    const hydroInterval = this.mode === "PRODUCTION_CADENCE" ? 1 * 3600 : 45;
-    this.tasks.set("HYDRO_TELEMETRY", {
-      key: "HYDRO_TELEMETRY",
-      name: "Red de Telemetría Hidrométrica de Cuenca",
-      satelliteMission: "Estaciones Telemétricas Automáticas INAMEH / Orinoco",
-      agency: "Red Hidrológica Nacional",
-      nominalCadenceText: "Cada 1 Hora (Tiempo Real Fluvial)",
-      nominalIntervalHours: 1,
-      intervalSeconds: hydroInterval,
-      lastRunAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      nextRunAt: new Date(Date.now() + hydroInterval * 1000).toISOString(),
-      countdownSeconds: hydroInterval,
-      status: "IDLE",
-      totalIngested: 36,
-      supabaseTable: "public.hydrological_telemetry_readings",
-      vectorReady: true,
-      lastMessage: "Vigilancia de cotas y turbidez",
-    });
+  /** Se resuelve cuando terminó la carga inicial del estado y del caché (o venció su tiempo máximo). */
+  public whenReady(): Promise<void> {
+    return this.initialized;
+  }
 
-    this.totalIngestedCount = 48 + 19 + 5 + 36;
-    this.totalRagDocsCount = 108;
-
-    this.addLog({
-      taskKey: "SCHEDULER_CORE",
-      satelliteMission: "Sistema de Ingesta Automatizada",
-      status: "SUCCESS",
-      recordsCount: 0,
-      supabaseSynced: !!getSupabaseServerClient(),
-      message: `Scheduler satelital inicializado en modo ${this.mode}. 4 misiones activadas según ciclo orbital.`,
-    });
+  public async refreshCache(store = this.getStore()) {
+    if (!store) return;
+    const since = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+    const [hotspots, s1, s2, s3, stations, sar] = await Promise.all([
+      store.selectLatest("nasa_firms_hotspots",
+        ["firms_id", "satellite", "latitude", "longitude", "brightness_temp_k", "frp_mw", "confidence", "acq_date", "acq_time", "day_night", "state_name", "sector_name", "source_product"],
+        // Solo focos dentro de los estados monitoreados: 7 días completos caben en memoria.
+        "acq_date", 6000, { gte: ["acq_date", since(7)], notNull: "state_name" }),
+      store.selectLatest("sentinel1_scenes",
+        ["scene_id", "platform", "acquired_at", "instrument_mode", "polarizations", "orbit_state", "relative_orbit", "center_lat", "center_lon", "stac_item_url"],
+        "acquired_at", 300),
+      store.selectLatest("s2_product_tile",
+        ["product_id", "tile_id", "spacecraft_name", "sensing_time", "cloud_pixel_pct", "relative_orbit", "center_lat", "center_lon", "stac_item_url"],
+        "sensing_time", 500),
+      store.selectLatest("sentinel3_products",
+        ["product_id", "product_name", "platform", "instrument", "product_type", "sensing_start", "center_lat", "center_lon", "odata_url"],
+        "sensing_start", 200),
+      store.selectLatest("environmental_monitoring_stations",
+        ["station_code", "name", "river", "state", "latitude", "longitude", "overflow_level_msnm", "historical_max_msnm", "historical_min_msnm",
+         "latest_reading_date", "latest_level_msnm", "latest_change_m", "latest_trend", "latest_alert_status", "latest_is_stale", "page_url", "updated_at"],
+        "station_code", 50),
+      store.selectLatest("copernicus_sar_disturbances",
+        ["code", "sector_name", "sub_basin", "centroid_lat", "centroid_lng", "backscatter_diff_db", "affected_area_ha", "severity", "created_at"],
+        "created_at", 100),
+    ]);
+    stations.sort((x, y) => String(x.station_code).localeCompare(String(y.station_code)));
+    this.cache = {
+      hotspots,
+      sentinel1Scenes: s1,
+      sentinel2Products: s2,
+      sentinel3Products: s3,
+      hydroStations: stations,
+      sarDisturbances: sar,
+      loadedAt: new Date().toISOString(),
+    };
   }
 
   private startTimerLoop() {
     if (this.timer) clearInterval(this.timer);
-
     this.timer = setInterval(() => {
-      if (!this.isRunning) return;
-
-      this.tasks.forEach((task, key) => {
-        if (task.countdownSeconds > 0) {
-          task.countdownSeconds -= 1;
-        } else {
-          // Time expired -> execute scheduled task
-          this.executeTask(key, false);
-        }
-      });
-    }, 1000);
+      if (this.isRunning) void this.runDueTasks("SCHEDULED");
+    }, TIMER_TICK_MS);
+    this.timer.unref?.();
   }
 
   private addLog(entry: Omit<SchedulerLogEntry, "id" | "timestamp">) {
-    const log: SchedulerLogEntry = {
-      ...entry,
-      id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      timestamp: new Date().toISOString(),
-    };
-    this.logs.unshift(log);
-    if (this.logs.length > 60) {
-      this.logs.pop();
-    }
+    this.logs.unshift({ ...entry, id: `LOG-${Date.now()}-${this.logs.length}`, timestamp: new Date().toISOString() });
+    if (this.logs.length > 60) this.logs.pop();
   }
 
-  /**
-   * Ejecuta una tarea satelital programada o forzada
-   */
-  public async executeTask(taskKey: string, isManualTrigger: boolean = false): Promise<{ success: boolean; message: string; record?: any }> {
-    const task = this.tasks.get(taskKey);
-    if (!task) {
-      return { success: false, message: `Tarea ${taskKey} no encontrada en el scheduler.` };
-    }
-
-    task.status = "RUNNING";
-    const supabase = getSupabaseServerClient();
-    const now = new Date();
-
-    try {
-      let ingestedRecord: any = null;
-      let ragDocumentText: string = "";
-      let sectorName: string = "";
-      let lat: number = 0;
-      let lng: number = 0;
-
-      if (taskKey === "NASA_FIRMS") {
-        // Generar anomalía térmica VIIRS/MODIS
-        const newId = `FIRMS-VEN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-        lat = Math.round((3.60 + Math.random() * 3.40) * 1000) / 1000;
-        lng = Math.round((-67.90 + Math.random() * 6.30) * 1000) / 1000;
-        const frp = Math.round((14 + Math.random() * 38) * 10) / 10;
-        const tempK = Math.round((335 + Math.random() * 40) * 10) / 10;
-        const subBasin = lat < 5.0 ? "Alto Orinoco / Caño Cotúa (Yapacana)" : "Cuenca Media Río Caura / Aripao";
-        sectorName = `Anomalía Térmica ${newId} (${subBasin})`;
-
-        ingestedRecord = {
-          firms_id: newId,
-          satellite: Math.random() > 0.5 ? "VIIRS-NOAA20" : "VIIRS-SNPP",
-          latitude: lat,
-          longitude: lng,
-          brightness_temp_k: tempK,
-          frp_mw: frp,
-          confidence: frp > 22 ? "high" : "nominal",
-          acq_date: now.toISOString().slice(0, 10),
-          acq_time: now.toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" }),
-          day_night: "D",
-          sub_basin: subBasin,
-          sector_name: sectorName,
-          geom_wkt: `POINT(${lng} ${lat})`,
-          metadata: {
-            sensor: "VIIRS_375M_NRT",
-            processing_engine: "NASA_LANCE_EOSDIS",
-            ingested_by_scheduler: true,
-            orbit_cycle_hours: 3,
-            scheduled_pass: true,
-          }
-        };
-
-        ragDocumentText = `Anomalía térmica satelital de alta energía detectada por sensor ${ingestedRecord.satellite} (NASA FIRMS) en el sector ${subBasin} (Coordenadas: ${lat}°N, ${lng}°W). Potencia radiativa (FRP): ${frp} MW, Temperatura de brillo: ${tempK} K. Presunción de foco de quema asociada a campamento minero o deforestación activa en margen ribereña.`;
-
-        // Store into in-memory store
-        this.liveFirmsStore.unshift({
-          id: newId,
-          source: "NASA_FIRMS",
-          satellite: ingestedRecord.satellite,
-          latitude: lat,
-          longitude: lng,
-          brightnessTempK: tempK,
-          frpMw: frp,
-          confidence: ingestedRecord.confidence,
-          acqDate: ingestedRecord.acq_date,
-          acqTime: ingestedRecord.acq_time,
-          subBasin,
-          sectorName,
-          postgisGeomText: ingestedRecord.geom_wkt,
-          embeddingGenerated: true,
-          embeddingDim: 768,
-        });
-
-      } else if (taskKey === "SENTINEL_1_SAR") {
-        // Generar perturbación SAR Sentinel-1
-        const code = `COP-SAR-2026-${Math.floor(100 + Math.random() * 900)}`;
-        lat = Math.round((3.72 + Math.random() * 3.10) * 1000) / 1000;
-        lng = Math.round((-67.10 + Math.random() * 5.20) * 1000) / 1000;
-        const areaHa = Math.round((35 + Math.random() * 115) * 10) / 10;
-        const backscatter = -Math.round((2.4 + Math.random() * 4.2) * 10) / 10;
-        const subBasin = lat < 4.5 ? "Parque Nacional Yapacana / Río Ventuari" : "Alto Caura / Río Erebato";
-        sectorName = `Firma SAR ${code} - Eje Aluvial ${subBasin}`;
-
-        const polyWkt = `POLYGON((${lng - 0.008} ${lat + 0.008}, ${lng + 0.008} ${lat + 0.008}, ${lng + 0.008} ${lat - 0.008}, ${lng - 0.008} ${lat - 0.008}, ${lng - 0.008} ${lat + 0.008}))`;
-
-        ingestedRecord = {
-          code,
-          mission: "SENTINEL_1_SAR",
-          sector_name: sectorName,
-          sub_basin: subBasin,
-          centroid_lat: lat,
-          centroid_lng: lng,
-          backscatter_diff_db: backscatter,
-          coherence_loss_pct: Math.round(58 + Math.random() * 32),
-          ndvi_drop_pct: Math.round(28 + Math.random() * 26),
-          affected_area_ha: areaHa,
-          presumed_activity: "MINERIA_ALUVION_BALSAS",
-          severity: areaHa > 75 ? "CRITICAL" : "HIGH",
-          geom_wkt: polyWkt,
-          metadata: {
-            polarization: "VV_VH_DUAL_POL",
-            orbit_direction: "DESCENDING",
-            copernicus_data_space_hub: "ESA_CDSE_STAC",
-            revisit_cycle_days: 6,
-            radar_pass_date: now.toISOString(),
-          }
-        };
-
-        ragDocumentText = `Detección de alteración de cobertura forestal y aluvial mediante Radar de Apertura Sintética (SAR Banda C Sentinel-1) en ${sectorName}. Pérdida de retrodispersión dB de ${backscatter} dB con pérdida de coherencia interferométrica del ${ingestedRecord.coherence_loss_pct}%. Afectación territorial estimada en ${areaHa} hectáreas continuas con evidencia de dragado y pozas de relave.`;
-
-        this.liveCopernicusStore.unshift({
-          id: code,
-          source: "COPERNICUS_SAR",
-          mission: "SENTINEL_1_SAR",
-          sectorName,
-          subBasin,
-          latitude: lat,
-          longitude: lng,
-          polygon: [
-            [lat + 0.008, lng - 0.008],
-            [lat + 0.008, lng + 0.008],
-            [lat - 0.008, lng + 0.008],
-            [lat - 0.008, lng - 0.008],
-            [lat + 0.008, lng - 0.008],
-          ],
-          backscatterDiffDb: backscatter,
-          coherenceLossPercent: ingestedRecord.coherence_loss_pct,
-          opticalNdviDropPercent: ingestedRecord.ndvi_drop_pct,
-          affectedAreaHa: areaHa,
-          presumedActivity: "MINERIA_ALUVION_BALSAS",
-          severity: ingestedRecord.severity,
-          postgisGeomText: polyWkt,
-          embeddingGenerated: true,
-          embeddingDim: 768,
-        });
-
-      } else if (taskKey === "SENTINEL_2_MSI") {
-        // Generar Tile Sentinel-2 MSI
-        const stateChoice = Math.random() > 0.5 ? "Amazonas" : "Bolivar";
-        const tileId = stateChoice === "Amazonas" ? "T19PHC" : "T20PHD";
-        const prodId = `COP-S2-${stateChoice.slice(0, 2).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
-        lat = stateChoice === "Amazonas" ? 3.82 : 6.15;
-        lng = stateChoice === "Amazonas" ? -66.85 : -64.48;
-        const areaHa = Math.round((50 + Math.random() * 85) * 10) / 10;
-        const cloudPct = Math.round((4 + Math.random() * 12) * 10) / 10;
-
-        const polyWkt = `SRID=4326;POLYGON((${lng-0.5} ${lat-0.5}, ${lng+0.5} ${lat-0.5}, ${lng+0.5} ${lat+0.5}, ${lng-0.5} ${lat+0.5}, ${lng-0.5} ${lat-0.5}))`;
-        
-        // Objeto adaptado al esquema real de public.s2_product_tile en Supabase
-        ingestedRecord = {
-          tile_id: tileId,
-          datatake_id: `GS2_${prodId}`,
-          spacecraft_name: "S2A",
-          sensing_time: now.toISOString(),
-          processing_level: "L2A",
-          cloud_pixel_pct: cloudPct,
-          geom_footprint: polyWkt,
-        };
-
-        ragDocumentText = `Observación satelital multiespectral Sentinel-2 MSI (Tile ${tileId} - ${stateChoice}). Sensor: S2A MSI Level-2A. Nubosidad: ${cloudPct}%. Detección de pérdida de dosel boscoso y sedimentación minera en ${stateChoice} (${areaHa} ha estimadas). Firmas en bandas SCL, TCI y SWIR.`;
-
-        this.s2TilesStore.unshift({
-          id: `s2-tile-${prodId.toLowerCase()}`,
-          productId: prodId,
-          tileId,
-          satelliteCode: "S2A",
-          sensingTime: now.toISOString(),
-          cloudPixelPct: cloudPct,
-          footprintGeometry: polyWkt,
-          wktText: polyWkt,
-          downloadStatus: "COMPLETED",
-          ngeoUri: `https://catalogue.dataspace.copernicus.eu/odata/v1/Products('${prodId}')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}`,
-          createdAt: now.toISOString(),
-          state: stateChoice,
-          anomalyDetected: true,
-          anomalyType: "MINERIA_ILEGAL",
-          affectedAreaHa: areaHa,
-          description: `Ingesta satelital Sentinel-2 L2A: Detección multiespectral de desmonte y turbidez en ${stateChoice}.`,
-        });
-
-      } else if (taskKey === "HYDRO_TELEMETRY") {
-        // Generar lectura de telemetría hidrométrica
-        const stations = [
-          { name: "Estación San Fernando de Atabapo", lat: 4.045, lng: -67.701, river: "Río Atabapo / Orinoco" },
-          { name: "Estación Puerto Ayacucho", lat: 5.663, lng: -67.625, river: "Río Orinoco Medio" },
-          { name: "Estación Aripao (Río Caura)", lat: 7.215, lng: -65.234, river: "Río Caura" },
-        ];
-        const st = stations[Math.floor(Math.random() * stations.length)];
-        lat = st.lat;
-        lng = st.lng;
-        sectorName = st.name;
-
-        const stageLevel = Math.round((11.5 + Math.random() * 4.5) * 100) / 100;
-        const turbidity = Math.round((45 + Math.random() * 55) * 10) / 10;
-        const mercury = Math.round((0.012 + Math.random() * 0.038) * 1000) / 1000;
-
-        ingestedRecord = {
-          station_name: st.name,
-          river_name: st.river,
-          latitude: lat,
-          longitude: lng,
-          stage_level_m: stageLevel,
-          turbidity_ntu: turbidity,
-          estimated_mercury_ppm: mercury,
-          alert_status: turbidity > 75 || mercury > 0.030 ? "ALERT_CRITICAL" : "NORMAL",
-          reading_time: now.toISOString(),
-          geom_wkt: `POINT(${lng} ${lat})`,
-        };
-
-        ragDocumentText = `Telemetría hidrométrica automática en ${st.name} (${st.river}). Cota de nivel: ${stageLevel} m, Turbidez medida: ${turbidity} NTU, Concentración de mercurio elemental (Hg): ${mercury} ppm. Estado operativo: ${ingestedRecord.alert_status}.`;
-      }
-
-      // Inserción en Supabase si está disponible
-      let supabasePushed = false;
-      let syncMessage = "";
-
-      if (supabase && ingestedRecord) {
-        try {
-          // 1. Insert into main satellite table with upsert protection for tiles
-          const targetTable = task.supabaseTable.replace("public.", "");
-          let insertErr: any = null;
-
-          if (taskKey === "SENTINEL_2_MSI") {
-            const { error: upsertErr } = await supabase
-              .from(targetTable)
-              .upsert([ingestedRecord], { onConflict: "tile_id" });
-            insertErr = upsertErr;
-          } else {
-            const { error: rawInsertErr } = await supabase
-              .from(targetTable)
-              .insert([ingestedRecord]);
-            insertErr = rawInsertErr;
-          }
-
-          // Si es Sentinel-2, insertar también las bandas asociadas en s2_tile_bands
-          if (!insertErr && taskKey === "SENTINEL_2_MSI") {
-            const bandsToInsert = [
-              { tile_id: ingestedRecord.tile_id, band_index: 'SCL', resolution_meters: 20, file_path: `copernicus-dataspace/${ingestedRecord.tile_id}/SCL_20m.jp2` },
-              { tile_id: ingestedRecord.tile_id, band_index: 'TCI', resolution_meters: 10, file_path: `copernicus-dataspace/${ingestedRecord.tile_id}/TCI_10m.jp2` },
-              { tile_id: ingestedRecord.tile_id, band_index: 'B04', resolution_meters: 10, file_path: `copernicus-dataspace/${ingestedRecord.tile_id}/B04_10m.jp2` },
-              { tile_id: ingestedRecord.tile_id, band_index: 'B08', resolution_meters: 10, file_path: `copernicus-dataspace/${ingestedRecord.tile_id}/B08_10m.jp2` },
-            ];
-            await supabase.from("s2_tile_bands").insert(bandsToInsert);
-          }
-
-          // 2. Insert into environmental_rag_documents for semantic vectorization
-          if (ragDocumentText) {
-            const refId = ingestedRecord.firms_id || ingestedRecord.code || ingestedRecord.tile_id || ingestedRecord.station_name || "S2-PASS";
-            const { error: ragErr } = await supabase.from("environmental_rag_documents").insert([{
-              doc_type: taskKey,
-              source_reference_id: refId,
-              title: `${task.name}: ${sectorName || ingestedRecord.tile_id || taskKey}`,
-              location_name: sectorName || (ingestedRecord.tile_id ? `Tile ${ingestedRecord.tile_id}` : "Cuenca del Orinoco"),
-              sub_basin: ingestedRecord.sub_basin || "Amazonas / Bolívar",
-              latitude: lat,
-              longitude: lng,
-              content_chunk: ragDocumentText,
-              metadata: {
-                task_key: taskKey,
-                ingestion_type: isManualTrigger ? "MANUAL_TRIGGER" : "SCHEDULED_PASS",
-                satellite: task.satelliteMission,
-                timestamp: now.toISOString(),
-                tile_id: ingestedRecord.tile_id,
-                ready_for_pgvector_trigger: true,
-              }
-            }]);
-
-            if (ragErr) {
-              console.warn("[Supabase] Aviso en inserción RAG:", ragErr.message);
-            }
-          }
-
-          if (!insertErr) {
-            supabasePushed = true;
-            syncMessage = `✅ Sincronizado exitosamente en Supabase tabla ${task.supabaseTable}`;
-          } else {
-            syncMessage = `Supabase error: ${insertErr.message} (Almacenado en buffer local resiliente)`;
-          }
-        } catch (dbErr: any) {
-          syncMessage = `Supabase offline/error: ${dbErr?.message || dbErr} (Persistido en memoria)`;
-        }
+  /** Ejecuta las tareas cuya próxima ejecución ya venció. Las ejecuta en serie para limitar la carga. */
+  public async runDueTasks(trigger: RunTrigger): Promise<Record<string, TaskRunResult | "NOT_DUE">> {
+    await this.initialized;
+    const results: Record<string, TaskRunResult | "NOT_DUE"> = {};
+    for (const task of this.tasks.values()) {
+      if (Date.parse(task.nextRunAt) <= Date.now() && !this.runningTasks.has(task.key)) {
+        results[task.key] = await this.executeTask(task.key, trigger);
       } else {
-        syncMessage = `Persistido en búfer de memoria local (Supabase listo para conectar via variables de entorno)`;
+        results[task.key] = "NOT_DUE";
       }
+    }
+    return results;
+  }
 
-      // Actualizar contadores y estado de la tarea
-      task.status = "SUCCESS";
-      task.lastRunAt = now.toISOString();
-      task.totalIngested += 1;
-      this.totalIngestedCount += 1;
-      this.totalRagDocsCount += 1;
+  public async executeTask(taskKey: string, trigger: RunTrigger = "MANUAL"): Promise<TaskRunResult> {
+    await this.initialized;
+    const task = this.tasks.get(taskKey as TaskKey);
+    const empty = { received: 0, inserted: 0, skipped: 0, ragInserted: 0 };
+    if (!task) return { success: false, message: `Tarea ${taskKey} no encontrada en el planificador.`, ...empty };
+    if (this.runningTasks.has(task.key)) return { success: false, message: `La tarea ${task.key} ya se está ejecutando.`, ...empty };
 
-      // Reset timer countdown to scheduled cadence
-      task.countdownSeconds = task.intervalSeconds;
-      task.nextRunAt = new Date(Date.now() + task.intervalSeconds * 1000).toISOString();
-      task.lastMessage = `${isManualTrigger ? "[Manual]" : "[Programado]"} 1 evento ingestado. ${syncMessage}`;
-
-      this.addLog({
-        taskKey,
-        satelliteMission: task.satelliteMission,
-        status: "SUCCESS",
-        recordsCount: 1,
-        supabaseSynced: supabasePushed,
-        message: `${task.name}: Ingesta de evento satelital completada. ${syncMessage}`,
-      });
-
-      return {
-        success: true,
-        message: task.lastMessage,
-        record: ingestedRecord,
-      };
-
-    } catch (error: any) {
+    const store = this.getStore();
+    if (!store) {
       task.status = "ERROR";
-      task.lastMessage = `Fallo en ingesta: ${error?.message || error}`;
-      this.addLog({
-        taskKey,
-        satelliteMission: task.satelliteMission,
-        status: "ERROR",
-        recordsCount: 0,
-        supabaseSynced: false,
-        message: `Error ejecutando tarea ${taskKey}: ${error?.message || error}`,
+      task.lastMessage = "Supabase no está configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).";
+      return { success: false, message: task.lastMessage, ...empty };
+    }
+
+    this.runningTasks.add(task.key);
+    task.status = "RUNNING";
+    const startedAt = new Date();
+
+    let outcome: RunOutcome;
+    try {
+      outcome = await this.runConnector(task.key, store);
+    } catch (err: any) {
+      outcome = { ...empty, errors: [err?.message || String(err)], endpointUrl: task.endpointUrl };
+    }
+
+    const finishedAt = new Date();
+    const failed = outcome.errors.length > 0 && outcome.received === 0;
+    let runStatus: "SUCCESS" | "PARTIAL" | "ERROR" = "SUCCESS";
+    if (failed) runStatus = "ERROR";
+    else if (outcome.errors.length > 0) runStatus = "PARTIAL";
+    const message = [
+      `${outcome.inserted} nuevos, ${outcome.skipped} repetidos omitidos (de ${outcome.received} recibidos).`,
+      outcome.ragInserted > 0 ? `${outcome.ragInserted} documentos RAG.` : "",
+      outcome.note || "",
+      outcome.errors.length > 0 ? `Errores: ${outcome.errors.join(" | ")}` : "",
+    ].filter(Boolean).join(" ");
+
+    task.status = failed ? "ERROR" : "SUCCESS";
+    task.lastRunAt = finishedAt.toISOString();
+    task.nextRunAt = new Date(finishedAt.getTime() + task.intervalSeconds * 1000).toISOString();
+    task.lastInserted = outcome.inserted;
+    task.lastSkipped = outcome.skipped;
+    task.totalIngested += outcome.inserted;
+    task.lastMessage = message;
+    this.ragDocsCount += outcome.ragInserted;
+    this.runningTasks.delete(task.key);
+
+    let recorded = true;
+    try {
+      await store.insert("ingestion_runs", {
+        task_key: task.key,
+        trigger,
+        status: runStatus,
+        started_at: startedAt.toISOString(),
+        finished_at: finishedAt.toISOString(),
+        records_received: outcome.received,
+        records_inserted: outcome.inserted,
+        records_skipped: outcome.skipped,
+        rag_documents_inserted: outcome.ragInserted,
+        message: message.slice(0, 2000),
+        endpoint_url: outcome.endpointUrl,
       });
-      return { success: false, message: task.lastMessage };
+    } catch (err: any) {
+      recorded = false;
+      console.warn(`[Scheduler] No se pudo registrar la ejecución de ${task.key}:`, err?.message || err);
+    }
+
+    this.addLog({
+      taskKey: task.key,
+      satelliteMission: task.satelliteMission,
+      status: LOG_STATUS_BY_RUN_STATUS[runStatus],
+      recordsCount: outcome.inserted,
+      skippedCount: outcome.skipped,
+      supabaseSynced: recorded && !failed,
+      message: `[${trigger}] ${task.name}: ${message}`,
+    });
+
+    if (outcome.inserted > 0) {
+      await this.refreshCache(store).catch(err => console.warn("[Scheduler] Error recargando caché:", err?.message || err));
+    }
+
+    return { success: !failed, message, received: outcome.received, inserted: outcome.inserted, skipped: outcome.skipped, ragInserted: outcome.ragInserted };
+  }
+
+  private async insertRagDocuments(store: IngestionStore, docs: Record<string, any>[]): Promise<number> {
+    if (docs.length === 0) return 0;
+    const result = await insertOnlyNew(store, "environmental_rag_documents", docs, {
+      conflictColumns: RAG_CONFLICT_COLUMNS,
+      keyOf: ragKey,
+      prefilterColumn: "source_reference_id",
+    });
+    return result.inserted;
+  }
+
+  private async runConnector(taskKey: TaskKey, store: IngestionStore): Promise<RunOutcome> {
+    switch (taskKey) {
+      case "NASA_FIRMS": {
+        const { rows, discardedOutside, errors, urls } = await fetchFirmsHotspots();
+        const result = await insertOnlyNew(store, "nasa_firms_hotspots", rows, {
+          conflictColumns: FIRMS_CONFLICT_COLUMNS,
+          keyOf: firmsKey,
+          prefilterColumn: "acq_date",
+        });
+        const relevant = (result.sent as FirmsHotspotRow[]).filter(isRelevantHotspot);
+        const ragInserted = await this.insertRagDocuments(store, relevant.map(firmsRagDocument));
+        return { ...result, ragInserted, errors, endpointUrl: urls[0] || "",
+          note: `${relevant.length} focos relevantes (confianza alta o FRP ≥ 10 MW). ${discardedOutside} focos fuera de Amazonas, Bolívar, Delta Amacuro y Guayana Esequiba descartados.` };
+      }
+      case "SENTINEL_1_SAR": {
+        const { rows, url, truncated } = await fetchSentinel1Scenes();
+        const result = await insertOnlyNew(store, "sentinel1_scenes", rows, {
+          conflictColumns: ["scene_id"], keyOf: r => r.scene_id, prefilterColumn: "scene_id",
+        });
+        return { ...result, ragInserted: 0, errors: [], endpointUrl: url,
+          note: truncated ? "Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución." : undefined };
+      }
+      case "SENTINEL_2_MSI": {
+        const { rows, url, truncated } = await fetchSentinel2Products();
+        const result = await insertOnlyNew(store, "s2_product_tile", rows, {
+          conflictColumns: ["product_id"], keyOf: r => r.product_id, prefilterColumn: "product_id",
+        });
+        return { ...result, ragInserted: 0, errors: [], endpointUrl: url,
+          note: truncated ? "Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución." : undefined };
+      }
+      case "SENTINEL_3_OLCI": {
+        const { rows, urls, truncated } = await fetchSentinel3Products();
+        const result = await insertOnlyNew(store, "sentinel3_products", rows, {
+          conflictColumns: ["product_id"], keyOf: r => r.product_id, prefilterColumn: "product_id",
+        });
+        return { ...result, ragInserted: 0, errors: [], endpointUrl: urls[0] || "",
+          note: truncated ? "Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución." : undefined };
+      }
+      case "HYDRO_TELEMETRY":
+        return this.runHydro(store);
     }
   }
 
-  /**
-   * Cambia entre modo de producción (plazos reales de satélite) y demostración acelerada
-   */
-  public setMode(newMode: "PRODUCTION_CADENCE" | "ACCELERATED_DEMO") {
-    this.mode = newMode;
-    this.initializeTasks();
-    return { success: true, mode: this.mode };
+  private async runHydro(store: IngestionStore): Promise<RunOutcome> {
+    const { bulletins, errors } = await fetchInamehBulletins();
+    const stations = await store.selectWhereIn("environmental_monitoring_stations",
+      ["station_code", "name", "river", "latitude", "longitude", "overflow_level_msnm"],
+      "station_code", bulletins.map(b => b.stationCode));
+    const stationByCode = new Map(stations.map(s => [s.station_code, s]));
+
+    const rows: HydroReadingRow[] = bulletins.flatMap(b => {
+      const station = stationByCode.get(b.stationCode);
+      const overflow = station?.overflow_level_msnm == null ? null : Number(station.overflow_level_msnm);
+      return bulletinToRows(b, overflow);
+    });
+
+    const result = await insertOnlyNew(store, "hydrological_telemetry_readings", rows, {
+      conflictColumns: ["station_code", "reading_date"],
+      keyOf: r => `${r.station_code}|${String(r.reading_date).slice(0, 10)}`,
+      prefilterColumn: "station_code",
+    });
+
+    // Estado más reciente de cada estación (una actualización por estación).
+    for (const b of bulletins) {
+      const latest = rows.find(r => r.station_code === b.stationCode && r.reading_date === b.readingDate);
+      if (!latest) continue;
+      await store.update("environmental_monitoring_stations", "station_code", b.stationCode, {
+        latest_reading_date: latest.reading_date,
+        latest_level_msnm: latest.level_msnm,
+        latest_change_m: latest.daily_change_m,
+        latest_trend: latest.trend,
+        latest_alert_status: latest.alert_status,
+        latest_is_stale: latest.is_stale,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    const docs = (result.sent as HydroReadingRow[]).map(r => {
+      const s = stationByCode.get(r.station_code);
+      return hydroRagDocument(r, s?.name || r.station_code, s?.river || "Río Orinoco", Number(s?.latitude), Number(s?.longitude));
+    });
+    const ragInserted = await this.insertRagDocuments(store, docs);
+    const stale = rows.filter(r => r.is_stale && bulletins.some(b => b.readingDate === r.reading_date && b.stationCode === r.station_code));
+
+    return {
+      ...result,
+      ragInserted,
+      errors,
+      endpointUrl: getApiConnectionForTask("HYDRO_TELEMETRY")?.baseUrlTemplate || "",
+      note: stale.length > 0 ? `Boletines desactualizados: ${stale.map(r => `${r.station_code} (${r.reading_date})`).join(", ")}.` : undefined,
+    };
   }
 
   public toggleRunning() {
     this.isRunning = !this.isRunning;
     this.addLog({
       taskKey: "SCHEDULER_CORE",
-      satelliteMission: "Orquestador Satelital",
+      satelliteMission: "Planificador",
       status: "WARNING",
       recordsCount: 0,
-      supabaseSynced: !!getSupabaseServerClient(),
-      message: this.isRunning ? "Scheduler satelital reanudado." : "Scheduler satelital pausado temporalmente.",
+      skippedCount: 0,
+      supabaseSynced: !!this.getStore(),
+      message: this.isRunning ? "Planificador reanudado." : "Planificador pausado (el cron externo sigue pudiendo ejecutar tareas).",
     });
     return { isRunning: this.isRunning };
   }
 
   public getStatus() {
-    const supabase = getSupabaseServerClient();
-    const activeTasksList: ScheduledTaskConfig[] = Array.from(this.tasks.values());
-
+    const now = Date.now();
+    const activeTasks = Array.from(this.tasks.values()).map(task => ({
+      ...task,
+      countdownSeconds: Math.max(0, Math.round((Date.parse(task.nextRunAt) - now) / 1000)),
+    }));
     return {
       isRunning: this.isRunning,
-      mode: this.mode,
-      supabaseConnected: !!supabase,
-      supabaseHost: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "Modo Demostración Local (Resiliente)",
-      activeTasks: activeTasksList,
+      mode: "PRODUCTION_CADENCE" as const,
+      supabaseConnected: !!this.getStore(),
+      supabaseHost: (() => {
+        const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        try { return raw ? new URL(raw).hostname : "Supabase no configurado"; } catch { return "Supabase no configurado"; }
+      })(),
+      activeTasks,
       recentLogs: this.logs.slice(0, 25),
-      totalSatelliteEventsIngested: this.totalIngestedCount,
-      vectorRagDocsCount: this.totalRagDocsCount,
+      totalSatelliteEventsIngested: activeTasks.reduce((sum, t) => sum + t.totalIngested, 0),
+      vectorRagDocsCount: this.ragDocsCount,
     };
   }
 
-  /**
-   * Genera el DDL SQL de automatización para ejecutar en Supabase (PostGIS + pgvector + triggers)
-   */
+  /** SQL de las migraciones aplicadas en Supabase (supabase/migrations). */
   public getAutomationSqlScript(): string {
-    return `-- ==============================================================================
--- CENTINELA ORINOCO: AUTOMATIZACIÓN DE INGESTA SATELITAL, EMBEDDINGS Y RAG VECTORIAL
--- ARQUITECTURA SUPABASE: POSTGRESQL 15+ / POSTGIS 3.4 / PGVECTOR 0.7+
--- ==============================================================================
-
--- 1. HABILITAR EXTENSIONES CRÍTICAS
-CREATE EXTENSION IF NOT EXISTS "postgis" WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS "vector" WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA extensions;
-
--- 2. TABLA MASTER PARA DOCUMENTOS Y CORPUS RAG VECTORIAL (768 DIMENSIONES GEMINI)
-CREATE TABLE IF NOT EXISTS public.environmental_rag_documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    doc_type VARCHAR(50) NOT NULL, -- 'NASA_FIRMS', 'SENTINEL_1_SAR', 'SENTINEL_2_MSI', 'HYDRO_TELEMETRY'
-    source_reference_id TEXT,
-    title TEXT NOT NULL,
-    location_name TEXT NOT NULL,
-    sub_basin TEXT NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    geom geometry(Point, 4326),
-    content_chunk TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    embedding vector(768), -- Vectorial para búsqueda por similitud de cosenos
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Índices HNSW y GiST para máximo rendimiento en tiempo real
-CREATE INDEX IF NOT EXISTS idx_environmental_rag_geom 
-    ON public.environmental_rag_documents USING GIST (geom);
-
-CREATE INDEX IF NOT EXISTS idx_environmental_rag_embedding 
-    ON public.environmental_rag_documents USING hnsw (embedding vector_cosine_ops)
-    WITH (m = 16, ef_construction = 64);
-
--- 3. TABLA: HISTORIAL DE EJECUCIONES DEL SCHEDULER SATELITAL
-CREATE TABLE IF NOT EXISTS public.satellite_ingestion_jobs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_key VARCHAR(50) NOT NULL,
-    satellite_mission VARCHAR(100) NOT NULL,
-    execution_type VARCHAR(20) DEFAULT 'SCHEDULED', -- 'SCHEDULED' | 'MANUAL'
-    status VARCHAR(20) NOT NULL, -- 'SUCCESS' | 'ERROR' | 'RUNNING'
-    items_ingested INTEGER DEFAULT 0,
-    sync_message TEXT,
-    next_run_at TIMESTAMPTZ,
-    executed_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. FUNCIÓN DISPARADORA (TRIGGER): AUTO-VECTORIZACIÓN Y EMBEDDING
--- Cuando se inserta un documento sin embedding, invoca la API de embeddings o prepara la cola
-CREATE OR REPLACE FUNCTION public.trg_auto_populate_spatial_geom()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Si vienen coordenadas lat/lng y el campo geom es nulo, autogenerar Point PostGIS SRID 4326
-    IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL AND NEW.geom IS NULL THEN
-        NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_set_geom_rag_docs ON public.environmental_rag_documents;
-CREATE TRIGGER trg_set_geom_rag_docs
-    BEFORE INSERT OR UPDATE ON public.environmental_rag_documents
-    FOR EACH ROW
-    EXECUTE FUNCTION public.trg_auto_populate_spatial_geom();
-
--- 5. RPC: BÚSQUEDA VECTORIAL ESPACIAL RAG HÍBRIDA (POSTGIS + PGVECTOR)
-CREATE OR REPLACE FUNCTION public.match_spatial_environmental_rag(
-    query_embedding vector(768),
-    filter_lat DOUBLE PRECISION DEFAULT NULL,
-    filter_lng DOUBLE PRECISION DEFAULT NULL,
-    radius_km DOUBLE PRECISION DEFAULT NULL,
-    match_threshold DOUBLE PRECISION DEFAULT 0.60,
-    match_count INT DEFAULT 8
-)
-RETURNS TABLE (
-    id UUID,
-    doc_type VARCHAR(50),
-    title TEXT,
-    location_name TEXT,
-    sub_basin TEXT,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    distance_km DOUBLE PRECISION,
-    similarity DOUBLE PRECISION,
-    content_chunk TEXT,
-    metadata JSONB
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        d.id,
-        d.doc_type,
-        d.title,
-        d.location_name,
-        d.sub_basin,
-        d.latitude,
-        d.longitude,
-        CASE 
-            WHEN filter_lat IS NOT NULL AND filter_lng IS NOT NULL THEN
-                ST_Distance(
-                    d.geom::geography,
-                    ST_SetSRID(ST_MakePoint(filter_lng, filter_lat), 4326)::geography
-                ) / 1000.0
-            ELSE 0.0
-        END AS distance_km,
-        (1 - (d.embedding <=> query_embedding)) AS similarity,
-        d.content_chunk,
-        d.metadata
-    FROM public.environmental_rag_documents d
-    WHERE 
-        (d.embedding IS NOT NULL)
-        AND (1 - (d.embedding <=> query_embedding)) >= match_threshold
-        AND (
-            filter_lat IS NULL 
-            OR filter_lng IS NULL 
-            OR radius_km IS NULL 
-            OR ST_DWithin(
-                d.geom::geography,
-                ST_SetSRID(ST_MakePoint(filter_lng, filter_lat), 4326)::geography,
-                radius_km * 1000.0
-            )
-        )
-    ORDER BY similarity DESC
-    LIMIT match_count;
-END;
-$$;
-
--- 6. RPC: GET_MINING_CLUSTERS_GEOJSON (CLUSTERS DE MINERÍA ILEGAL Y DEFORESTACIÓN SAR)
-CREATE OR REPLACE FUNCTION public.get_mining_clusters_geojson(
-    p_basin_id TEXT DEFAULT NULL,
-    p_min_severity TEXT DEFAULT 'LOW'
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    result JSONB;
-BEGIN
-    SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features', COALESCE(jsonb_agg(
-            jsonb_build_object(
-                'type', 'Feature',
-                'geometry', jsonb_build_object(
-                    'type', 'Point',
-                    'coordinates', jsonb_build_array(
-                        COALESCE(d.longitude, -65.22),
-                        COALESCE(d.latitude, 4.88)
-                    )
-                ),
-                'properties', jsonb_build_object(
-                    'id', d.id,
-                    'title', d.title,
-                    'location_name', d.location_name,
-                    'sub_basin', d.sub_basin,
-                    'severity', COALESCE(d.metadata->>'severity', 'HIGH'),
-                    'dredge_count', COALESCE((d.metadata->>'dredge_count')::int, 2),
-                    'deforested_ha', COALESCE((d.metadata->>'deforested_ha')::numeric, 45.5),
-                    'radar_coherence_loss', COALESCE((d.metadata->>'radar_coherence_loss')::numeric, 0.42),
-                    'timestamp', d.created_at
-                )
-            )
-        ), '[]'::jsonb)
-    ) INTO result
-    FROM public.environmental_rag_documents d
-    WHERE (p_basin_id IS NULL OR d.sub_basin ILIKE '%' || p_basin_id || '%')
-      AND (d.doc_type IN ('SENTINEL_1_SAR', 'MINING_ALERT', 'SCIENTIFIC_CORPUS'));
-
-    RETURN result;
-END;
-$$;
-
--- 7. RPC: GET_HEAT_ANOMALIES_GEOJSON (FOCOS TÉRMICOS NASA FIRMS)
-CREATE OR REPLACE FUNCTION public.get_heat_anomalies_geojson(
-    p_min_confidence TEXT DEFAULT 'nominal',
-    p_limit INT DEFAULT 100
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    result JSONB;
-BEGIN
-    SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features', COALESCE(jsonb_agg(
-            jsonb_build_object(
-                'type', 'Feature',
-                'geometry', jsonb_build_object(
-                    'type', 'Point',
-                    'coordinates', jsonb_build_array(
-                        COALESCE(d.longitude, -64.21),
-                        COALESCE(d.latitude, 5.48)
-                    )
-                ),
-                'properties', jsonb_build_object(
-                    'id', d.id,
-                    'title', d.title,
-                    'location', d.location_name,
-                    'brightness_temp_k', COALESCE((d.metadata->>'brightness_temp_k')::numeric, 345.2),
-                    'confidence', COALESCE(d.metadata->>'confidence', 'high'),
-                    'satellite', COALESCE(d.metadata->>'satellite', 'VIIRS-NOAA20'),
-                    'frp_mw', COALESCE((d.metadata->>'frp_mw')::numeric, 28.4),
-                    'acq_time', d.created_at
-                )
-            )
-        ), '[]'::jsonb)
-    ) INTO result
-    FROM (
-        SELECT * FROM public.environmental_rag_documents
-        WHERE doc_type IN ('NASA_FIRMS', 'HEAT_ANOMALY')
-        ORDER BY created_at DESC
-        LIMIT p_limit
-    ) d;
-
-    RETURN result;
-END;
-$$;
-
--- 8. RPC: GET_HYDROLOGICAL_TELEMETRY (SERIES TEMPORALES HIDROMÉTRICAS Y MERCURIO)
-CREATE OR REPLACE FUNCTION public.get_hydrological_telemetry(
-    p_station_id TEXT DEFAULT NULL,
-    p_hours INT DEFAULT 24
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    result JSONB;
-BEGIN
-    SELECT COALESCE(jsonb_agg(
-        jsonb_build_object(
-            'station_id', COALESCE(d.source_reference_id, 'EST-01'),
-            'station_name', d.location_name,
-            'sub_basin', d.sub_basin,
-            'water_level_m', COALESCE((d.metadata->>'water_level_m')::numeric, 14.85),
-            'flow_rate_m3s', COALESCE((d.metadata->>'flow_rate_m3s')::numeric, 28500),
-            'turbidity_ntu', COALESCE((d.metadata->>'turbidity_ntu')::numeric, 88.5),
-            'mercury_ppm', COALESCE((d.metadata->>'mercury_ppm')::numeric, 0.048),
-            'timestamp', d.created_at
-        )
-    ), '[]'::jsonb) INTO result
-    FROM public.environmental_rag_documents d
-    WHERE (p_station_id IS NULL OR d.source_reference_id = p_station_id)
-      AND (d.doc_type IN ('HYDRO_TELEMETRY', 'SCIENTIFIC_CORPUS'))
-    LIMIT 20;
-
-    RETURN result;
-END;
-$$;
-
--- 9. RPC: GET_PROTECTED_AREAS_GEOJSON (VECTORES ABRAE Y TERRITORIOS INDÍGENAS)
-CREATE OR REPLACE FUNCTION public.get_protected_areas_geojson()
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    result JSONB;
-BEGIN
-    SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features', '[]'::jsonb
-    ) INTO result;
-    RETURN result;
-END;
-$$;
-
--- 10. RPC: CALCULATE_BASIN_RISK_INDEX (ÍNDICE TÁCTICO DE RIESGO DE CUENCA)
-CREATE OR REPLACE FUNCTION public.calculate_basin_risk_index(
-    p_basin_id TEXT DEFAULT 'Río Caura'
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN jsonb_build_object(
-        'basin_id', p_basin_id,
-        'riskScore', 84.2,
-        'riskCategory', 'CRITICAL',
-        'breakdown', jsonb_build_object(
-            'deforestation_rate', 88,
-            'mining_dredge_density', 85,
-            'mercury_contamination_index', 82,
-            'indigenous_vulnerability', 80
-        ),
-        'calculated_at', NOW()
-    );
-END;
-$$;
-
--- 11. RPC: REGISTER_INCIDENT_REPORT (REGISTRO TÁCTICO DE INCIDENTE)
-CREATE OR REPLACE FUNCTION public.register_incident_report(
-    p_title TEXT,
-    p_category TEXT,
-    p_severity TEXT,
-    p_lat DOUBLE PRECISION,
-    p_lng DOUBLE PRECISION,
-    p_description TEXT,
-    p_reported_by TEXT
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    new_id TEXT := 'INC-' || TO_CHAR(NOW(), 'YYYY') || '-' || LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
-BEGIN
-    INSERT INTO public.environmental_rag_documents (
-        doc_type,
-        source_reference_id,
-        title,
-        location_name,
-        sub_basin,
-        latitude,
-        longitude,
-        content_chunk,
-        metadata
-    ) VALUES (
-        'INCIDENT_REPORT',
-        new_id,
-        p_title,
-        'Ubicación (' || ROUND(p_lat::numeric, 3) || ', ' || ROUND(p_lng::numeric, 3) || ')',
-        'Amazonía Venezolana',
-        p_lat,
-        p_lng,
-        p_description,
-        jsonb_build_object(
-            'category', p_category,
-            'severity', p_severity,
-            'reported_by', p_reported_by,
-            'status', 'ACTIVO'
-        )
-    );
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'incident_id', new_id,
-        'status', 'ACTIVO',
-        'registered_at', NOW()
-    );
-END;
-$$;
-
--- Permisos de lectura anónima y de servicio
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
-`;
+    const candidates = [path.join(process.cwd(), "supabase", "migrations")];
+    // __dirname solo existe en el bundle CJS de producción (en desarrollo corre como ESM).
+    if (typeof __dirname !== "undefined") candidates.push(path.join(__dirname, "..", "supabase", "migrations"));
+    const dir = candidates.find(d => fs.existsSync(d));
+    if (!dir) return "-- No se encontró la carpeta supabase/migrations en el servidor.";
+    return fs.readdirSync(dir)
+      .filter(f => f.endsWith(".sql"))
+      .sort((a, b) => a.localeCompare(b))
+      .map(f => `-- ===== ${f} =====\n${fs.readFileSync(path.join(dir, f), "utf8")}`)
+      .join("\n\n");
   }
 }

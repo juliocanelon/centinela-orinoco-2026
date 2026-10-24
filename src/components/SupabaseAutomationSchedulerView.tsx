@@ -22,7 +22,6 @@ import {
   Radio,
   ArrowRight,
   ShieldAlert,
-  Sliders,
   Cpu
 } from 'lucide-react';
 import { 
@@ -49,6 +48,7 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
   const [sqlScript, setSqlScript] = useState<string>('');
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [showSqlModal, setShowSqlModal] = useState<boolean>(false);
+  const [triggerFeedback, setTriggerFeedback] = useState<Record<string, { ok: boolean; message: string }>>({});
 
   // Cargar estado inicial y refrescar cada segundo
   useEffect(() => {
@@ -67,12 +67,12 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 1500);
+    const interval = setInterval(fetchStatus, 5000);
 
     // Cargar script SQL
-    LivePipelineService.getAutomationSql().then(sql => {
-      if (isMounted) setSqlScript(sql);
-    });
+    LivePipelineService.getAutomationSql()
+      .then(sql => { if (isMounted) setSqlScript(sql); })
+      .catch(err => { if (isMounted) setSqlScript(`-- No se pudo cargar el SQL: ${err?.message || err}`); });
 
     return () => {
       isMounted = false;
@@ -83,13 +83,14 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
   const handleTriggerManual = async (taskKey: string) => {
     setTriggeringTaskKey(taskKey);
     try {
-      await LivePipelineService.triggerScheduledTask(taskKey);
+      const result = await LivePipelineService.triggerScheduledTask(taskKey);
+      setTriggerFeedback(prev => ({ ...prev, [taskKey]: { ok: result.success, message: result.message } }));
       const updated = await LivePipelineService.getSchedulerStatus();
       setSchedulerStatus(updated);
-    } catch (e) {
-      console.warn('Error triggering task:', e);
+    } catch (e: any) {
+      setTriggerFeedback(prev => ({ ...prev, [taskKey]: { ok: false, message: e?.message || String(e) } }));
     } finally {
-      setTimeout(() => setTriggeringTaskKey(null), 800);
+      setTriggeringTaskKey(null);
     }
   };
 
@@ -102,20 +103,8 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
     }
   };
 
-  const handleToggleMode = async () => {
-    if (!schedulerStatus) return;
-    const targetMode = schedulerStatus.mode === 'PRODUCTION_CADENCE' ? 'ACCELERATED_DEMO' : 'PRODUCTION_CADENCE';
-    try {
-      await LivePipelineService.setSchedulerMode(targetMode);
-      const updated = await LivePipelineService.getSchedulerStatus();
-      setSchedulerStatus(updated);
-    } catch (e) {
-      console.warn('Error changing scheduler mode:', e);
-    }
-  };
-
   const formatCountdown = (seconds: number) => {
-    if (seconds <= 0) return 'Ejecutando ahora...';
+    if (seconds <= 0) return 'En el próximo ciclo';
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
@@ -137,6 +126,8 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
         return <Radar className="w-5 h-5 text-sky-400" />;
       case 'SENTINEL_2_MSI':
         return <Satellite className="w-5 h-5 text-emerald-400" />;
+      case 'SENTINEL_3_OLCI':
+        return <Layers className="w-5 h-5 text-teal-400" />;
       case 'HYDRO_TELEMETRY':
         return <Droplets className="w-5 h-5 text-cyan-400" />;
       default:
@@ -152,6 +143,8 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
         return 'bg-sky-950/80 text-sky-300 border-sky-800';
       case 'SENTINEL_2_MSI':
         return 'bg-emerald-950/80 text-emerald-300 border-emerald-800';
+      case 'SENTINEL_3_OLCI':
+        return 'bg-teal-950/80 text-teal-300 border-teal-800';
       case 'HYDRO_TELEMETRY':
         return 'bg-cyan-950/80 text-cyan-300 border-cyan-800';
       default:
@@ -159,60 +152,26 @@ export const SupabaseAutomationSchedulerView: React.FC<SupabaseAutomationSchedul
     }
   };
 
-  const technicalReportText = `# INFORME TÉCNICO: AUTOMATIZACIÓN DE INGESTA SATELITAL, BASE DE DATOS SUPABASE Y PIPELINE VECTORIAL RAG
-**SISTEMA DE ALERTA TEMPRANA Y VIGILANCIA AMBIENTAL "CENTINELA ORINOCO"**  
-**Fecha de Generación:** ${new Date().toLocaleDateString('es-VE')}  
-**Clasificación:** TÉCNICO-OPERACIONAL  
-**Motor de Datos:** Supabase (PostgreSQL 15+ / PostGIS 3.4 / pgvector 0.7+)  
 
----
+  const technicalReportText = `# INFORME TÉCNICO: INGESTA AUTOMATIZADA DE DATOS SATELITALES E HIDROLÓGICOS
+**Sistema "Centinela Orinoco"** · Generado: ${new Date().toLocaleDateString('es-VE')}
 
-## 1. RESUMEN EJECUTIVO Y JUSTIFICACIÓN
-La cuenca del Río Orinoco y la Amazonía venezolana (estados Amazonas, Bolívar y Delta Amacuro) abarcan más de 880.000 km² de selva tropical, con alta nubosidad persistente y áreas remotas de difícil acceso. La recolección manual o reactiva de datos resulta insuficiente para frenar la minería ilegal y la contaminación por mercurio.
+## 1. Fuentes y tareas programadas
+| Tarea | Fuente | Frecuencia | Tabla en Supabase | Registros |
+| :--- | :--- | :--- | :--- | :--- |
+${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t.nominalCadenceText} | \`${t.supabaseTable}\` | ${t.totalIngested} |`).join('\n')}
 
-Este sistema implementa un **Orquestador Satelital Automatizado (Scheduler)** que sincroniza la ingesta de telemetría respetando con precisión los **plazos orbitales y frecuencias de revisita** determinados por las constelaciones satelitales. Al depositar los datos de manera continua y estructurada en Supabase, se habilita la vectorización automática (embeddings 768-D), indexación HNSW y el consumo semántico para Retrieval-Augmented Generation (RAG).
+## 2. Flujo de datos
+1. **Planificador** en el servidor Node.js. Como AI Studio (Cloud Run) apaga la instancia sin tráfico, un cron externo llama a \`POST /api/scheduler/run-due\` con el token de ingesta.
+2. **Conectores**: NASA FIRMS (CSV por área), Copernicus Sentinel-1/2 (STAC), Sentinel-3 (OData) e INAMEH (PDF del boletín). Las URLs salen del directorio de conexiones.
+3. **Sin duplicados**: antes de insertar se consultan las claves existentes y se envían solo las nuevas; los índices únicos de cada tabla rechazan cualquier repetido.
+4. **Supabase**: tablas por fuente (\`nasa_firms_hotspots\`, \`sentinel1_scenes\`, \`s2_product_tile\`, \`sentinel3_products\`, \`hydrological_telemetry_readings\`) y documentos de texto en \`environmental_rag_documents\` para los focos relevantes y las lecturas de INAMEH. Cada ejecución queda en \`ingestion_runs\`.
+5. **Consumo**: el mapa (RPCs), el análisis de zonas, el boletín y el chat usan solo estos registros.
 
----
-
-## 2. PLAZOS DETERMINADOS POR CADA SATÉLITE Y TAREAS PROGRAMADAS
-
-| Misión Satelital / Sensor | Agencia Operadora | Intervalo Físico de Satélite | Intervalo Automatizado en Tarea | Vector de Detección Primario | Destino Supabase |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **NASA FIRMS (VIIRS / MODIS)** | NASA EOSDIS / LANCE | Órbita heliosincrónica LEO ~3h NRT | **Cada 3 horas (10.800 s)** | Focos térmicos, quemas de campamentos, motobombas | \`public.nasa_firms_hotspots\` |
-| **Copernicus Sentinel-1 SAR** | Agencia Espacial Europea (ESA) | Constelación revisit 6 a 12 días | **Cada 12 horas (43.200 s)** | Caída de retrodispersión dB, dragas de aluvión bajo nubes | \`public.copernicus_sar_disturbances\` |
-| **Copernicus Sentinel-2 MSI** | ESA / Copernicus CDSE | Revisita óptica de 5 días por Tile | **Cada 24 horas (86.400 s)** | Pérdida de dosel boscoso, sedimentación, bandas SCL/TCI | \`public.s2_product_tile\` |
-| **Telemetría Hidrométrica** | INAMEH / Red Orinoco | Lectura telemétrica horaria | **Cada 1 hora (3.600 s)** | Cotas de nivel, turbidez (NTU) y concentración de mercurio | \`public.hydrological_telemetry_readings\` |
-
----
-
-## 3. ARQUITECTURA SUPABASE: VECTORIZACIÓN, EMBEDDINGS Y RAG SEMÁNTICO
-El flujo end-to-end de datos satelitales se divide en 5 etapas secuenciales:
-
-1. **Ingesta Programada en Backend (Node.js Daemon):**
-   - El scheduler ejecuta las consultas según el temporizador de cada satélite.
-   - Normaliza la telemetría, asigna BBox espacial y genera el texto sintético explicativo.
-
-2. **Inserción en Tablas de Supabase:**
-   - Escribe el registro crudo en su respectiva tabla especializada.
-   - Inserta paralelamente un bloque documental en \`public.environmental_rag_documents\`.
-
-3. **Disparadores (Triggers) de Autocompletado y PostGIS:**
-   - La función PL/pgSQL \`trg_auto_populate_spatial_geom()\` convierte automáticamente la latitud y longitud en un punto espacial \`geometry(Point, 4326)\`.
-   - Se genera el vector embedding de 768 dimensiones (modelo Gemini \`text-embedding-004\`).
-
-4. **Indexación Vectorial de Alta Velocidad (pgvector HNSW):**
-   - La tabla de documentos está indexada mediante:
-     \`CREATE INDEX idx_environmental_rag_embedding ON public.environmental_rag_documents USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);\`
-   - Esto permite resolver similitud de cosenos en < 4 ms sobre miles de registros.
-
-5. **Consumo RAG Semántico Espacial (RPC \`match_spatial_environmental_rag\`):**
-   - Combina la distancia geográfica PostGIS (\`ST_DWithin\` en km) con la distancia vectorial de cosenos (\`1 - (embedding <=> query_embedding)\`).
-   - El motor de Inteligencia Artificial consume este contexto enriquecido para dictámenes operacionales, alertas tempranas y respuestas tácticas sin alucinaciones.
-
----
-
-## 4. CONCLUSIÓN Y ESTADO OPERACIONAL
-El orquestador se encuentra plenamente operativo en la plataforma Centinela Orinoco, permitiendo alternar entre el ciclo de producción orbital y el modo de verificación acelerada, garantizando que Supabase reciba la telemetría en tiempo y forma para su explotación analítica.`;
+## 3. Limitaciones actuales
+- Los catálogos Copernicus registran escenas, no detecciones. Turbidez (Nechad), NDVI y perturbaciones SAR requieren procesar píxeles (Nivel 2, con credenciales de Copernicus).
+- Turbidez, pH, conductividad y mercurio no se miden: INAMEH publica solo el nivel y no son observables desde satélite.
+- La búsqueda RAG es por coincidencia de texto: la tabla de documentos no tiene embeddings.`;
 
   return (
     <div className="flex-1 bg-[#070d14] text-slate-200 overflow-y-auto p-6 flex flex-col gap-6">
@@ -236,14 +195,14 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
                       ? 'bg-emerald-950 text-emerald-300 border-emerald-700' 
                       : 'bg-amber-950 text-amber-300 border-amber-700'
                   }`}>
-                    {schedulerStatus?.isRunning ? 'CRON DAEMON ACTIVO' : 'PAUSADO'}
+                    {schedulerStatus?.isRunning ? 'PLANIFICADOR ACTIVO' : 'PAUSADO'}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-950 text-violet-300 border border-violet-800">
-                    SUPABASE + PGVECTOR
+                    DATOS REALES · SIN DUPLICADOS
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tareas programadas en los plazos físicos de cada constelación espacial para auto-vectorización, embeddings y RAG semántico
+                  NASA FIRMS, Copernicus Sentinel-1/2/3 e INAMEH. Solo se insertan registros nuevos en Supabase.
                 </p>
               </div>
             </div>
@@ -251,21 +210,6 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
 
           {/* Controls Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleToggleMode}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                schedulerStatus?.mode === 'PRODUCTION_CADENCE'
-                  ? 'bg-sky-950 text-sky-300 border-sky-700 hover:bg-sky-900'
-                  : 'bg-amber-950 text-amber-300 border-amber-700 hover:bg-amber-900'
-              }`}
-              title="Alternar entre plazos nominales de satélites y demo acelerado"
-            >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>
-                Modo: {schedulerStatus?.mode === 'PRODUCTION_CADENCE' ? 'Plazos Reales (3h/12h/24h)' : 'Demostración Acelerada'}
-              </span>
-            </button>
-
             <button
               onClick={handleToggleRunning}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
@@ -291,7 +235,7 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-all"
             >
               <Database className="w-3.5 h-3.5 text-sky-400" />
-              <span>SQL Supabase DDL</span>
+              <span>Migraciones SQL</span>
             </button>
           </div>
         </div>
@@ -305,18 +249,18 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
                 ? 'bg-emerald-950 text-emerald-300 border-emerald-800' 
                 : 'bg-indigo-950 text-indigo-300 border-indigo-800'
             }`}>
-              {schedulerStatus?.supabaseConnected ? 'CONEXIÓN ACTIVA (REST/RPC)' : 'BUFFER LOCAL RESILIENTE (PREPARADO PARA SUPABASE)'}
+              {schedulerStatus?.supabaseConnected ? 'CONFIGURADO' : 'SUPABASE NO CONFIGURADO'}
             </span>
             <span className="text-slate-500 truncate max-w-xs">{schedulerStatus?.supabaseHost}</span>
           </div>
 
           <div className="flex items-center gap-4 text-slate-300">
             <div>
-              <span className="text-slate-500 mr-1">Eventos Satelitales:</span>
+              <span className="text-slate-500 mr-1">Registros almacenados:</span>
               <span className="font-bold text-sky-400">{schedulerStatus?.totalSatelliteEventsIngested || 0}</span>
             </div>
             <div>
-              <span className="text-slate-500 mr-1">Corpus RAG (768-D):</span>
+              <span className="text-slate-500 mr-1">Documentos RAG:</span>
               <span className="font-bold text-violet-400">{schedulerStatus?.vectorRagDocsCount || 0} docs</span>
             </div>
           </div>
@@ -328,14 +272,14 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Satellite className="w-4 h-4 text-sky-400" />
-            <span>Misiones Satelitales Programadas en Plazos Determinados</span>
+            <span>Tareas de ingesta programadas</span>
           </h3>
           <span className="text-xs text-slate-400">
-            Actualización en vivo de temporizadores orbitales
+            Ejecución manual: mínimo 15 min entre ejecuciones de la misma tarea
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           {schedulerStatus?.activeTasks.map((task) => {
             const isTriggering = triggeringTaskKey === task.key;
             const progressPct = task.intervalSeconds > 0 
@@ -395,13 +339,32 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
 
                   {/* Metrics and Status */}
                   <div className="mt-3 flex items-center justify-between text-xs border-t border-slate-800/60 pt-2 font-mono">
-                    <span className="text-slate-400">Total Ingestados:</span>
-                    <span className="font-bold text-emerald-400">{task.totalIngested} eventos</span>
+                    <span className="text-slate-400">En la tabla:</span>
+                    <span className="font-bold text-emerald-400">{task.totalIngested} registros</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-slate-500">Última ejecución:</span>
+                    <span className="text-slate-300">
+                      {task.lastInserted === null ? 'sin ejecutar' : `${task.lastInserted} nuevos · ${task.lastSkipped} omitidos`}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-500 font-mono">
+                    {task.lastRunAt ? new Date(task.lastRunAt).toLocaleString('es-VE') : '—'}
                   </div>
 
-                  <div className="mt-1 text-[10px] text-slate-400 truncate" title={task.lastMessage}>
-                    <span className="text-slate-500">Estado:</span> {task.lastMessage || 'Monitoreo activo'}
+                  <div className={`mt-1 text-[10px] truncate ${task.status === 'ERROR' ? 'text-red-400' : 'text-slate-400'}`} title={task.lastMessage}>
+                    <span className="text-slate-500">Detalle:</span> {task.lastMessage || 'Pendiente'}
                   </div>
+                  {task.endpointUrl && (
+                    <div className="mt-1 text-[10px] text-slate-500 font-mono truncate" title={task.endpointUrl}>
+                      URL: {task.endpointUrl}
+                    </div>
+                  )}
+                  {triggerFeedback[task.key] && (
+                    <div className={`mt-2 text-[10px] p-1.5 rounded border ${triggerFeedback[task.key].ok ? 'bg-emerald-950/50 text-emerald-300 border-emerald-800' : 'bg-amber-950/50 text-amber-300 border-amber-800'}`}>
+                      {triggerFeedback[task.key].message}
+                    </div>
+                  )}
                 </div>
 
                 {/* Trigger Button */}
@@ -412,7 +375,7 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
                     className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-all disabled:opacity-50"
                   >
                     <Zap className={`w-3.5 h-3.5 text-amber-400 ${isTriggering ? 'animate-spin' : ''}`} />
-                    <span>{isTriggering ? 'Ingestando y Vectorizando...' : 'Disparar Ingesta Ahora'}</span>
+                    <span>{isTriggering ? 'Consultando la fuente...' : 'Ejecutar ahora'}</span>
                   </button>
                 </div>
               </div>
@@ -427,10 +390,10 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Cpu className="w-4 h-4 text-violet-400" />
-              <span>Flujo de Ingesta, Supabase, Embedding, Vectorización y RAG Semántico</span>
+              <span>Flujo de ingesta hacia Supabase</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Cómo la ingesta programada alimenta automáticamente la base de datos Supabase y la inteligencia territorial
+              Cómo las tareas programadas guardan datos reales sin duplicados
             </p>
           </div>
           <button
@@ -450,12 +413,12 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 1
               </div>
-              <h5 className="text-xs font-bold text-white">Cron Orbital</h5>
+              <h5 className="text-xs font-bold text-white">Planificador + cron</h5>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                El scheduler en segundo plano consulta FIRMS cada 3h, Sentinel-1 cada 12h y Sentinel-2 cada 24h.
+                FIRMS cada 3 h, INAMEH cada 6 h, Sentinel-1 cada 12 h, Sentinel-2 y 3 cada 24 h. Un cron externo cubre los periodos sin tráfico.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-amber-400/80 mt-2">Node.js Daemon</span>
+            <span className="text-[10px] font-mono text-amber-400/80 mt-2">/api/scheduler/run-due</span>
           </div>
 
           {/* Step 2 */}
@@ -464,12 +427,12 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 2
               </div>
-              <h5 className="text-xs font-bold text-white">Supabase Insert</h5>
+              <h5 className="text-xs font-bold text-white">Conectores</h5>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                Inserción de registros crudos en tablas específicas con coordenadas lat/lng y metadatos de satélite.
+                CSV de FIRMS, catálogos STAC/OData de Copernicus y PDF del boletín INAMEH, con las URLs del directorio.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-sky-400/80 mt-2">PostgreSQL 15</span>
+            <span className="text-[10px] font-mono text-sky-400/80 mt-2">server/ingestion</span>
           </div>
 
           {/* Step 3 */}
@@ -478,12 +441,12 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 3
               </div>
-              <h5 className="text-xs font-bold text-white">Trigger & PostGIS</h5>
+              <h5 className="text-xs font-bold text-white">Sin duplicados</h5>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                Trigger PL/pgSQL construye la geometría <code className="text-emerald-300">Point(4326)</code> y encola el texto para vectorización.
+                Se consultan las claves existentes y se envían solo las nuevas; los índices únicos rechazan cualquier repetido.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400/80 mt-2">PostGIS 3.4 Spatial</span>
+            <span className="text-[10px] font-mono text-emerald-400/80 mt-2">ON CONFLICT DO NOTHING</span>
           </div>
 
           {/* Step 4 */}
@@ -492,12 +455,12 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="w-6 h-6 rounded-md bg-violet-500/20 text-violet-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 4
               </div>
-              <h5 className="text-xs font-bold text-white">pgvector HNSW</h5>
+              <h5 className="text-xs font-bold text-white">Supabase</h5>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                Generación de embedding de 768-D indexado con HNSW para búsqueda por similitud de cosenos en milisegundos.
+                Tablas por fuente con geometría PostGIS, documentos de texto para la IA y registro de cada ejecución.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-violet-400/80 mt-2">pgvector 0.7 HNSW</span>
+            <span className="text-[10px] font-mono text-violet-400/80 mt-2">ingestion_runs</span>
           </div>
 
           {/* Step 5 */}
@@ -506,12 +469,12 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="w-6 h-6 rounded-md bg-cyan-500/20 text-cyan-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 5
               </div>
-              <h5 className="text-xs font-bold text-white">RAG Semántico</h5>
+              <h5 className="text-xs font-bold text-white">Consumo</h5>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                La RPC <code className="text-cyan-300">match_spatial_environmental_rag</code> filtra por radio espacial y similitud para alimentar a Gemini AI.
+                Mapa (RPCs), análisis de zonas, boletín y chat usan solo estos registros. La búsqueda RAG es por texto.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-cyan-400/80 mt-2">Consumo Operacional</span>
+            <span className="text-[10px] font-mono text-cyan-400/80 mt-2">Gemini + datos reales</span>
           </div>
         </div>
       </div>
@@ -521,10 +484,10 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Terminal className="w-4 h-4 text-emerald-400" />
-            <span>Auditoría en Tiempo Real de Ejecuciones del Scheduler</span>
+            <span>Últimas ejecuciones del planificador</span>
           </h3>
           <span className="text-xs font-mono text-slate-400">
-            {schedulerStatus?.recentLogs.length || 0} registros en memoria
+            {schedulerStatus?.recentLogs.length || 0} registros (tabla ingestion_runs)
           </span>
         </div>
 
@@ -532,10 +495,11 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
           {schedulerStatus?.recentLogs && schedulerStatus.recentLogs.length > 0 ? (
             schedulerStatus.recentLogs.map((log) => (
               <div key={log.id} className="flex items-start gap-2 text-slate-300 border-b border-slate-900/60 pb-1">
-                <span className="text-slate-500 shrink-0">[{log.timestamp.slice(11, 19)}]</span>
+                <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toLocaleString('es-VE')}]</span>
                 <span className={`px-1 rounded text-[10px] shrink-0 font-semibold ${
                   log.status === 'SUCCESS' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
                   log.status === 'ERROR' ? 'bg-red-950 text-red-400 border border-red-800' :
+                  log.status === 'WARNING' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
                   'bg-sky-950 text-sky-400 border border-sky-800'
                 }`}>
                   {log.taskKey}
@@ -543,14 +507,14 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
                 <span className="text-slate-200 flex-1">{log.message}</span>
                 {log.supabaseSynced && (
                   <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1 rounded border border-emerald-800/40">
-                    SUPABASE SYNC
+                    GUARDADO
                   </span>
                 )}
               </div>
             ))
           ) : (
             <div className="text-slate-500 italic text-center py-4">
-              Esperando primer ciclo de ejecución...
+              Sin ejecuciones registradas todavía.
             </div>
           )}
         </div>
@@ -564,7 +528,7 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-violet-400" />
                 <h3 className="text-base font-bold text-white">
-                  Informe Técnico Oficial: Ingesta Satelital Automatizada y RAG en Supabase
+                  Informe técnico: ingesta automatizada
                 </h3>
               </div>
               <div className="flex items-center gap-2">
@@ -605,7 +569,7 @@ El orquestador se encuentra plenamente operativo en la plataforma Centinela Orin
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-sky-400" />
                 <h3 className="text-base font-bold text-white">
-                  Script de Migración SQL: PostGIS, pgvector, Triggers y RPCs en Supabase
+                  Migraciones SQL aplicadas en Supabase
                 </h3>
               </div>
               <div className="flex items-center gap-2">

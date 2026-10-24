@@ -5,7 +5,11 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { PDFParse } from "pdf-parse";
-import { SatelliteAutomatedScheduler, getSupabaseServerClient } from "./server/satelliteScheduler";
+import { SatelliteAutomatedScheduler, SchedulerCache, getSupabaseServerClient } from "./server/satelliteScheduler";
+import { RagMatch, searchRagDocuments, supabaseCandidateFetcher } from "./server/ragSearch";
+import { fetchWithTimeout } from "./server/ingestion/common";
+import { DENSITY_PERIODS_DAYS, computeHotspotDensity } from "./server/hotspotDensity";
+import { SATELLITE_API_CONNECTIONS } from "./src/data/satelliteApiDirectory";
 import { aiModelCascadeManager } from "./server/aiModelManager";
 import { performZonePredictiveAndPerceptiveAnalysis } from "./server/zoneAnalyticsEngine";
 import { elevateCommunityReport } from "./server/services/hybridIncidentService";
@@ -113,131 +117,179 @@ async function generateContentWithFallback(
   throw new Error("ALL_MODELS_UNAVAILABLE");
 }
 
+// --- Formato de registros del caché para la API ---
+
+function mapSentinel2Product(p: Record<string, any>) {
+  return {
+    productId: p.product_id,
+    tileId: p.tile_id,
+    satelliteCode: p.spacecraft_name,
+    sensingTime: p.sensing_time,
+    cloudPixelPct: p.cloud_pixel_pct == null ? null : Number(p.cloud_pixel_pct),
+    relativeOrbit: p.relative_orbit,
+    centerLat: p.center_lat,
+    centerLon: p.center_lon,
+    stacItemUrl: p.stac_item_url,
+  };
+}
+
+function mapHydroStation(s: Record<string, any>) {
+  const num = (v: any) => (v == null ? null : Number(v));
+  return {
+    id: s.station_code,
+    name: s.name,
+    river: s.river,
+    state: s.state,
+    coordinates: [s.longitude, s.latitude] as [number, number],
+    currentLevelM: num(s.latest_level_msnm),
+    dailyChangeM: num(s.latest_change_m),
+    trend: s.latest_trend,
+    overflowLevelM: num(s.overflow_level_msnm),
+    historicalMaxM: num(s.historical_max_msnm),
+    historicalMinM: num(s.historical_min_msnm),
+    status: s.latest_alert_status || "SIN_REFERENCIA",
+    readingDate: s.latest_reading_date ? String(s.latest_reading_date).slice(0, 10) : null,
+    isStale: s.latest_is_stale ?? true,
+    sourceUrl: s.page_url,
+    lastTelemetry: s.updated_at,
+  };
+}
+
+// --- Respuestas de contingencia (sin Gemini): solo datos reales del caché del planificador ---
+
+function describeHydroStations(cache: SchedulerCache): string {
+  if (cache.hydroStations.length === 0) return "- Sin lecturas de INAMEH cargadas todavía.";
+  return cache.hydroStations.map(s => {
+    const level = s.latest_level_msnm == null ? "sin dato" : `${Number(s.latest_level_msnm).toFixed(2)} msnm`;
+    const overflow = s.overflow_level_msnm == null ? "INAMEH no publica cota de desborde" : `cota de desborde ${Number(s.overflow_level_msnm).toFixed(2)} msnm`;
+    const stale = s.latest_is_stale ? " (boletín desactualizado)" : "";
+    return `- **${s.name}:** ${level} el ${s.latest_reading_date || "s/f"}${stale}; ${overflow}. Estado: ${s.latest_alert_status || "SIN_REFERENCIA"}.`;
+  }).join("\n");
+}
+
+function summarizeHotspots(cache: SchedulerCache) {
+  const inStates = cache.hotspots.filter(h => h.state_name);
+  const byState = new Map<string, number>();
+  inStates.forEach(h => byState.set(h.state_name, (byState.get(h.state_name) || 0) + 1));
+  const high = inStates.filter(h => h.confidence === "high").length;
+  const top = [...byState.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s}: ${n}`).join(", ");
+  return { total: inStates.length, high, top };
+}
+
+/** Resumen textual de los datos reales almacenados, para anclar los prompts de IA. */
+function buildRealDataContext(cache: SchedulerCache): string {
+  const h = summarizeHotspots(cache);
+  return [
+    `- Focos de calor NASA FIRMS (últimos 7 días, estados monitoreados): ${h.total} (${h.high} de confianza alta). Por estado: ${h.top || "sin registros"}.`,
+    `- Niveles del Río Orinoco (INAMEH):\n${describeHydroStations(cache)}`,
+    `- Catálogo Copernicus: ${cache.sentinel1Scenes.length} escenas Sentinel-1, ${cache.sentinel2Products.length} Sentinel-2, ${cache.sentinel3Products.length} productos Sentinel-3.`,
+    `- Perturbaciones SAR medidas: ${cache.sarDisturbances.length}.`,
+    `- Datos actualizados a: ${cache.loadedAt || "sin carga"}.`,
+  ].join("\n");
+}
+
+const NOT_MEASURED_NOTE =
+  "Turbidez, pH, conductividad y mercurio no se miden en esta plataforma: INAMEH no los publica y no son observables desde satélite. Requieren muestras de campo.";
+
 // Tactical Fallback Generator for zone analysis
-function generateTacticalZoneAnalysisFallback(params: any): string {
-  const { zoneName, coordinates, thermalAnomalies, miningAlerts, waterQuality, protectedAreaOverlap } = params;
-  const numHotspots = Array.isArray(thermalAnomalies) ? thermalAnomalies.length : 0;
-  const numAlerts = Array.isArray(miningAlerts) ? miningAlerts.length : 0;
-  const coordsStr = coordinates ? `${coordinates.lat || coordinates[1]}°N, ${coordinates.lng || coordinates[0]}°W` : "Sector Cuenca del Orinoco";
+function generateTacticalZoneAnalysisFallback(params: any, cache: SchedulerCache): string {
+  const { zoneName, coordinates, protectedAreaOverlap } = params;
+  const lat = Number(coordinates?.lat ?? coordinates?.[1]);
+  const lng = Number(coordinates?.lng ?? coordinates?.[0]);
+  const hasPoint = Number.isFinite(lat) && Number.isFinite(lng);
+  const nearby = hasPoint
+    ? cache.hotspots.filter(h => Math.abs(h.latitude - lat) <= 0.5 && Math.abs(h.longitude - lng) <= 0.5)
+    : [];
+  const maxFrp = nearby.reduce((m, h) => Math.max(m, Number(h.frp_mw) || 0), 0);
 
-  return `### EVALUACIÓN TÁCTICA Y AMBIENTAL DE SITUACIÓN
-**Sector Evaluado:** ${zoneName || "Sector Territorial Prioritario"}
-**Coordenadas de Referencia:** ${coordsStr}
-**Fecha de Emisión:** ${new Date().toLocaleDateString("es-VE")} | **Sistema:** Centinela Orinoco
+  return `### EVALUACIÓN DE SITUACIÓN (MODO CONTINGENCIA, SIN IA)
+**Sector:** ${zoneName || "Sector sin nombre"}
+**Coordenadas:** ${hasPoint ? `${lat.toFixed(3)}°, ${lng.toFixed(3)}°` : "no indicadas"}
+**Fecha:** ${new Date().toLocaleDateString("es-VE")}
 
----
+#### 1. Focos de calor NASA FIRMS (últimos 7 días, ±0,5° alrededor del punto)
+- Focos registrados: **${nearby.length}**${nearby.length > 0 ? `; FRP máximo ${maxFrp.toFixed(1)} MW` : ""}.
+- Un foco térmico puede ser quema agrícola, incendio o actividad minera: requiere verificación.
 
-#### 1. RESUMEN EJECUTIVO DE AMENAZA
-- **Nivel de Riesgo Operativo:** ${numAlerts > 0 || numHotspots > 2 ? "**CRÍTICO - PRIORIDAD 1**" : "**ALTO - VIGILANCIA ACTIVA**"}
-- **Vectores de Afectación Primarios:** Deforestación súbita por remoción de cobertura vegetal, alteración de lecho aluvial y turbidez hidrológica en afluentes directos.
-- **Anomalías Térmicas (VIIRS/MODIS):** ${numHotspots} focos activos registrados en el cuadrante.
-- **Alertas de Minería / Deforestación (SAR):** ${numAlerts} conglomerados identificados con alta probabilidad de balsas/dragas o motobombas.
+#### 2. Radar y óptico (Copernicus)
+- Perturbaciones SAR medidas: **${cache.sarDisturbances.length}** (la detección automática llega con el Nivel 2).
+- Pasadas recientes en catálogo: ${cache.sentinel1Scenes.length} Sentinel-1, ${cache.sentinel2Products.length} Sentinel-2.
 
----
+#### 3. Nivel del Río Orinoco (INAMEH)
+${describeHydroStations(cache)}
 
-#### 2. IMPACTO EN EL ECOSISTEMA Y RECURSOS HÍDRICOS
-- **Calidad de Aguas y Metales Pesados:** ${typeof waterQuality === "object" ? `Turbidez estimada de ${waterQuality.averageTurbidity || "65 NTU"}, con presunción de concentración de mercurio elemental (Hg) de ${waterQuality.mercuryDetected || "0.025 ppm"}.` : "Nivel de turbidez elevado por remoción de sedimentos."}
-- **Pérdida de Biomasa y Conectividad Fluvial:** Degradación de bosques de galería en márgenes riparias y riesgo de colmatación en caños tributarios.
+#### 4. Calidad del agua
+- ${NOT_MEASURED_NOTE}
 
----
+#### 5. Áreas protegidas
+- ${protectedAreaOverlap || "No evaluado automáticamente."}
 
-#### 3. AFECTACIÓN A TERRITORIOS INDÍGENAS Y ABRAE
-- **Régimen de Protección:** ${protectedAreaOverlap || "Área Bajo Régimen de Administración Especial (ABRAE) / Territorios Ancestrales"}.
-- **Vulnerabilidad Étnica:** Afectación a fuentes de agua para consumo, reducción de biomasa íctica y riesgo para la seguridad territorial comunitaria.
-
----
-
-#### 4. RECOMENDACIONES OPERATIVAS DE INTERDICCIÓN
-1. **Reconocimiento Aerofotogramétrico / UAV:** Despliegue de cuadrantes de sobrevuelo a baja cota para geolocalizar balsas activas y campamentos.
-2. **Patrullaje Fluvial Conjunto:** Coordinación con unidades de Guardería Ambiental para control de combustible y motores en puntos de estrangulamiento.
-3. **Monitoreo Hidrométrico Frecuente:** Instalación de sondas de turbidez y toma de muestras fisicoquímicas en confluencias downstream.
-
-*Nota: Evaluación sintética táctica de alta precisión compilada por el motor de contingencia de Centinela Orinoco.*`;
+*Generado sin modelo de IA a partir de los registros almacenados en Supabase.*`;
 }
 
 // Tactical Fallback Generator for official bulletin
-function generateTacticalBulletinFallback(params: any): string {
-  const { title, period, summaryStats, incidents } = params;
+function generateTacticalBulletinFallback(params: any, cache: SchedulerCache): string {
+  const { title, period, incidents } = params;
   const dateStr = new Date().toISOString().slice(0, 10);
-  const code = `CEN-BOL-${dateStr.replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const hotspots = summarizeHotspots(cache);
 
-  return `# REPÚBLICA BOLIVARIANA DE VENEZUELA
-## SISTEMA DE ALERTA TEMPRANA Y MONITOREO AMBIENTAL "CENTINELA ORINOCO"
-### ${title || "BOLETÍN OFICIAL DE SITUACIÓN TÁCTICA Y AMBIENTAL DE CUENCA"}
+  return `# SISTEMA DE MONITOREO AMBIENTAL "CENTINELA ORINOCO"
+### ${title || "BOLETÍN DE SITUACIÓN AMBIENTAL DE CUENCA"}
 
-**Código de Despacho:** \`${code}\`  
-**Período de Observación:** ${period || "Últimas 24 horas"}  
-**Fecha de Publicación:** ${new Date().toLocaleDateString("es-VE")}  
-**Clasificación:** INFORMACIÓN TÁCTICA Y DE SEGURIDAD AMBIENTAL  
-
----
-
-### I. RESUMEN EJECUTIVO DE SITUACIÓN
-Durante el período operacional analizado, la red de teledetección satelital (Sentinel-1 SAR / VIIRS / MODIS) y las estaciones hidrométricas de la Cuenca del Río Orinoco registran **${summaryStats?.totalThermalAnomalies || 14} anomalías térmicas**, **${summaryStats?.totalMiningClusters || 6} clusters de actividad minera de aluvión** y **${summaryStats?.stationsInAlert || 2} estaciones en cota de alerta preventiva**.
+**Código:** \`CEN-BOL-${dateStr.replace(/-/g, "")}\`
+**Período:** ${period || "Últimos 7 días"}
+**Fecha de publicación:** ${new Date().toLocaleDateString("es-VE")}
+**Modo:** contingencia (sin modelo de IA)
 
 ---
 
-### II. MATRIZ DE SITUACIÓN POR SUBCUENCAS
+### I. Focos de calor (NASA FIRMS, estados monitoreados)
+- Total: **${hotspots.total}** focos; **${hotspots.high}** de confianza alta.
+- Por estado: ${hotspots.top || "sin focos registrados"}.
 
-| Subcuenca / Sector | Nivel de Amenaza | Vector Principal | Estado Hidrológico |
-| :--- | :--- | :--- | :--- |
-| **Alto Orinoco & Ventuari** | CRÍTICO | Minería en cabeceras / Dragas | Crecida moderada (Cota 34.2m) |
-| **Parque Nacional Yapacana** | CRÍTICO | Campamentos ilegales / SAR | Turbidez elevada en caños |
-| **Cuenca del Río Caura** | ALTO | Balsas de aluvión / Mercurio | Caudal normal (4,200 m³/s) |
-| **Bajo Orinoco (Palúa / Bolívar)** | MODERADO | Monitoreo de crecidas | Cota normal (12.4m) |
+### II. Nivel del Río Orinoco (INAMEH)
+${describeHydroStations(cache)}
 
----
+### III. Cobertura satelital Copernicus
+- Escenas recientes en catálogo: ${cache.sentinel1Scenes.length} Sentinel-1 (radar), ${cache.sentinel2Products.length} Sentinel-2 (óptico), ${cache.sentinel3Products.length} Sentinel-3.
+- Perturbaciones SAR medidas: ${cache.sarDisturbances.length}.
 
-### III. INCIDENTES Y ALERTAS REGISTRADAS
+### IV. Incidentes registrados
 ${Array.isArray(incidents) && incidents.length > 0
-  ? incidents.map((inc: any) => `- **[${inc.code || "INC"}] ${inc.title}:** ${inc.locationName || "Sector Cuenca"} - Severidad: \`${inc.severity}\` - Estado: \`${inc.status}\``).join("\n")
-  : "- No se registraron incidentes con impacto crítico no contenido en las últimas horas."}
+  ? incidents.map((inc: any) => `- **[${inc.code || "INC"}] ${inc.title}:** ${inc.locationName || "Sin ubicación"} - Severidad: \`${inc.severity}\` - Estado: \`${inc.status}\``).join("\n")
+  : "- Sin incidentes en el período."}
 
----
+### V. Calidad del agua
+- ${NOT_MEASURED_NOTE}
 
-### IV. DIRECTIVAS DE MONITOREO Y ACCIÓN
-1. **Comando Fluvial:** Mantener puestos de control en las confluencias de los ríos Ventuari, Atabapo y Caura.
-2. **Guardería Ambiental:** Priorizar la toma de muestras de mercurio y sedimentos en suspensión aguas abajo de áreas críticas.
-3. **Comunidades:** Difundir avisos hidrométricos preventivos ante posibles fluctuaciones por precipitaciones en cabeceras.
-
-*Despacho oficial generado y validado con el motor de contingencia táctica Centinela Orinoco.*`;
+*Boletín generado sin modelo de IA a partir de los registros almacenados en Supabase.*`;
 }
 
 // Tactical Fallback Generator for Live Assistant
-function generateTacticalChatFallback(userText: string): string {
+function generateTacticalChatFallback(userText: string, cache: SchedulerCache): string {
   const lower = userText.toLowerCase();
 
-  if (lower.includes("yapacana") || lower.includes("mineria") || lower.includes("draga")) {
-    return `**Reporte Táctico sobre Parque Nacional Yapacana y Minería de Aluvión:**
-- **Localización:** Suroeste del estado Amazonas (03°45'N, 66°49'W), confluencia Río Orinoco y Ventuari.
-- **Detección SAR:** Imágenes Sentinel-1 muestran firmas de alta retrodispersión compatibles con balsas de succión y campamentos en sectores de ladera y caños tributarios.
-- **Afectación Ecológica:** Pérdida severa de tepuyes y sabanas de arena blanca de alta endemicidad, con vertidos de mercurio en la cuenca alta del Orinoco.
-- **Acción Recomendada:** Interdicción fluvial en los ejes fluviales de acceso y despliegue de sensores de turbidez.`;
+  if (lower.includes("mercurio") || lower.includes("hg") || lower.includes("turbidez") || lower.includes("ph") || lower.includes("conductividad")) {
+    return `**Calidad del agua:** ${NOT_MEASURED_NOTE} La plataforma podrá estimar un *índice de riesgo* de mercurio (no un valor en ppm) cuando estén disponibles la turbidez de Sentinel-2 y las perturbaciones SAR (Nivel 2).`;
   }
 
-  if (lower.includes("nivel") || lower.includes("crecida") || lower.includes("rio") || lower.includes("hidro")) {
-    return `**Estado Hidrométrico y Niveles de Crecida:**
-- **Estación Ciudad Bolívar:** 12.40 m (Nivel seguro, cota crítica en 18.00 m).
-- **Estación Palúa (Caroní/Orinoco):** 11.20 m (Estable).
-- **Estación Puerto Ayacucho:** 34.50 m (Nivel normal en período estacional).
-- **Estación San Fernando de Atabapo:** 13.85 m (En cota de vigilancia preventiva por aportes de Guaviare/Atabapo).
-- **Turbidez Media en Afluentes Mineros:** Oscila entre 55 y 85 NTU, superando los parámetros base de aguas claras.`;
+  if (lower.includes("nivel") || lower.includes("crecida") || /\br[ií]o\b/.test(lower) || lower.includes("hidro")) {
+    return `**Nivel del Río Orinoco según los boletines de INAMEH:**
+${describeHydroStations(cache)}`;
   }
 
-  if (lower.includes("mercurio") || lower.includes("hg") || lower.includes("caura")) {
-    return `**Monitoreo de Mercurio (Hg) y Calidad de Aguas:**
-- **Cuenca del Caura:** Valores estimados en sedimentos y agua oscilan entre 0.015 y 0.038 ppm en zonas con presencia de dragas de fondo.
-- **Impacto Biológico:** Bioacumulación en especies piscícolas carnívoras (Bocachico, Bagre Rayado, Payara) que constituyen la dieta básica de los pueblos Ye'kwana y Sanema.
-- **Protocolo:** Implementación de las directrices del Convenio de Minamata y geolocalización de centros de acopio de azogue.`;
+  if (lower.includes("foco") || lower.includes("fuego") || lower.includes("calor") || lower.includes("firms") || lower.includes("mineria") || lower.includes("minería")) {
+    const h = summarizeHotspots(cache);
+    return `**Focos de calor NASA FIRMS (últimos 7 días, estados monitoreados):** ${h.total} focos, ${h.high} de confianza alta. Por estado: ${h.top || "sin registros"}. Un foco térmico no confirma por sí solo actividad minera.`;
   }
 
-  return `**Centinela Orinoco AI (Respuesta Táctica):**
-He procesado su consulta sobre la Cuenca del Río Orinoco. El sistema mantiene monitoreo activo sobre:
-1. **Detección Satelital:** Cobertura de radar SAR e infrarrojo térmico para alerta temprana de deforestación y minería ilegal.
-2. **Red de Telemetría:** 6 estaciones hidrométricas calibradas con cotas de desborde y sensores de turbidez.
-3. **Gestión Territorial:** Zonas de amortiguamiento en Parques Nacionales (Yapacana, Caura, Canaima) y territorios indígenas.
+  return `**Centinela Orinoco (modo contingencia, sin IA):**
+Datos disponibles ahora:
+1. **Focos de calor NASA FIRMS:** ${summarizeHotspots(cache).total} en los últimos 7 días (estados monitoreados).
+2. **Niveles del Orinoco (INAMEH):** ${cache.hydroStations.length} estaciones.
+3. **Catálogo Copernicus:** ${cache.sentinel1Scenes.length} escenas Sentinel-1, ${cache.sentinel2Products.length} Sentinel-2, ${cache.sentinel3Products.length} Sentinel-3.
 
-¿Desea profundizar en algún sector específico (ej. Yapacana, Río Ventuari, Caura, Atabapo) o generar un informe de interdicción?`;
+Pregunte por niveles del río, focos de calor o calidad del agua.`;
 }
 
 async function startServer() {
@@ -420,8 +472,6 @@ DO UPDATE SET
   // --- LIVE INGESTION & DATA CONNECTOR ENDPOINTS ---
 
   // In-memory telemetry cache for newly ingested live records
-  const liveFirmsStore: any[] = [];
-  const liveCopernicusStore: any[] = [];
   const liveKoboReportsStore: any[] = [];
   const liveCommunityReportsStore: any[] = [
     {
@@ -774,276 +824,58 @@ DO UPDATE SET
     }
   });
 
-  const liveHydroTelemetryStore: any[] = [
-    {
-      id: "TEL-INAMEH-2026-001",
-      stationId: "EST-ATABAPO-01",
-      stationName: "Estación San Fernando de Atabapo",
-      riverName: "Río Atabapo / Orinoco",
-      subBasin: "Alto Orinoco / Atabapo",
-      latitude: 4.045,
-      longitude: -67.701,
-      stageLevelM: 12.85,
-      flowRateM3s: 1450.0,
-      turbidityNtu: 88.5,
-      estimatedMercuryPpm: 0.038,
-      waterTempC: 27.8,
-      ph: 6.2,
-      dissolvedOxygenMgL: 6.1,
-      alertStatus: "ALERT_CRITICAL",
-      readingTime: "2026-09-07T14:53:23.272Z",
-      postgisGeomText: "POINT(-67.701 4.045)",
-      dataloggerType: "OTT_Pluvio_WaterQuality_Sonde",
-      telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-      operatorAgency: "Red Hidrológica Nacional / INAMEH",
-    },
-    {
-      id: "TEL-INAMEH-2026-002",
-      stationId: "EST-ORINOCO-02",
-      stationName: "Estación Hidrométrica Puerto Ayacucho",
-      riverName: "Río Orinoco Medio",
-      subBasin: "Orinoco Medio",
-      latitude: 5.663,
-      longitude: -67.625,
-      stageLevelM: 14.10,
-      flowRateM3s: 18200.0,
-      turbidityNtu: 62.0,
-      estimatedMercuryPpm: 0.015,
-      waterTempC: 28.4,
-      ph: 6.7,
-      dissolvedOxygenMgL: 6.8,
-      alertStatus: "NORMAL",
-      readingTime: "2026-09-07T13:58:05.588Z",
-      postgisGeomText: "POINT(-67.625 5.663)",
-      dataloggerType: "Campbell_Scientific_CR1000X",
-      telemetryTransmission: "GPRS_CELLULAR_AND_IRIDIUM",
-      operatorAgency: "Red Hidrológica Nacional / INAMEH",
-    },
-    {
-      id: "TEL-INAMEH-2026-003",
-      stationId: "EST-CAURA-01",
-      stationName: "Estación Hidrológica Río Caura - Maripa",
-      riverName: "Río Caura",
-      subBasin: "Bajo Caura",
-      latitude: 7.215,
-      longitude: -65.234,
-      stageLevelM: 11.20,
-      flowRateM3s: 2890.0,
-      turbidityNtu: 94.2,
-      estimatedMercuryPpm: 0.042,
-      waterTempC: 26.9,
-      ph: 5.9,
-      dissolvedOxygenMgL: 5.4,
-      alertStatus: "ALERT_CRITICAL",
-      readingTime: "2026-09-07T13:58:05.588Z",
-      postgisGeomText: "POINT(-65.234 7.215)",
-      dataloggerType: "YSI_EXO2_Multiparameter_Sonde",
-      telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-      operatorAgency: "Red Hidrológica Nacional / INAMEH",
-    },
-    {
-      id: "TEL-INAMEH-2026-004",
-      stationId: "EST-CARONI-03",
-      stationName: "Estación Cuenca Alta Río Caroní - Ikabarú",
-      riverName: "Río Caroní / Ikabarú",
-      subBasin: "Alto Caroní / Gran Sabana",
-      latitude: 4.342,
-      longitude: -61.728,
-      stageLevelM: 8.45,
-      flowRateM3s: 410.0,
-      turbidityNtu: 115.0,
-      estimatedMercuryPpm: 0.046,
-      waterTempC: 25.4,
-      ph: 5.5,
-      dissolvedOxygenMgL: 5.1,
-      alertStatus: "ALERT_CRITICAL",
-      readingTime: "2026-09-07T12:30:00.000Z",
-      postgisGeomText: "POINT(-61.728 4.342)",
-      dataloggerType: "Campbell_Scientific_CR1000X",
-      telemetryTransmission: "IRIDIUM_SBD",
-      operatorAgency: "Red Hidrológica Nacional / INAMEH",
-    }
-  ];
-
-  // Sentinel-2 S2 Satellite Stores
-  const s2TilesStore: any[] = [
-    {
-      id: 's2-tile-amazonas-2026',
-      productId: 'COP-S2-AM-001',
-      tileId: 'T19PHC',
-      satelliteCode: 'S2C',
-      sensingTime: '2026-08-30T14:15:00Z',
-      cloudPixelPct: 8.4,
-      footprintGeometry: 'POLYGON((-67.5 3.5, -66.5 3.5, -66.5 4.5, -67.5 4.5, -67.5 3.5))',
-      wktText: 'POLYGON((-67.5 3.5, -66.5 3.5, -66.5 4.5, -67.5 4.5, -67.5 3.5))',
-      downloadStatus: 'COMPLETED',
-      ngeoUri: 'https://catalogue.dataspace.copernicus.eu/odata/v1/Products(\'COP-S2-AM-001\')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}',
-      createdAt: '2026-08-30T15:00:00Z',
-      state: 'Amazonas',
-      anomalyDetected: true,
-      anomalyType: 'MINERIA_ILEGAL',
-      affectedAreaHa: 112.5,
-      description: 'Pérdida súbita de cobertura forestal y ensanchamiento de caño fluvial detectado en Clasificación de Escenas (SCL) en cercanías del Cerro Yapacana.'
-    },
-    {
-      id: 's2-tile-bolivar-2026',
-      productId: 'COP-S2-BO-002',
-      tileId: 'T20PHD',
-      satelliteCode: 'S2B',
-      sensingTime: '2026-08-25T14:22:00Z',
-      cloudPixelPct: 12.1,
-      footprintGeometry: 'POLYGON((-65.0 6.0, -64.0 6.0, -64.0 7.0, -65.0 7.0, -65.0 6.0))',
-      wktText: 'POLYGON((-65.0 6.0, -64.0 6.0, -64.0 7.0, -65.0 7.0, -65.0 6.0))',
-      downloadStatus: 'COMPLETED',
-      ngeoUri: 'https://catalogue.dataspace.copernicus.eu/odata/v1/Products(\'COP-S2-BO-002\')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}',
-      createdAt: '2026-08-25T15:10:00Z',
-      state: 'Bolivar',
-      anomalyDetected: true,
-      anomalyType: 'DEFORESTACION',
-      affectedAreaHa: 78.2,
-      description: 'Desmonte forestal por patrón de espina de pescado asociado a apertura de accesos de minería aluvial en la cuenca alta del río Caura.'
-    },
-    {
-      id: 's2-tile-delta-2026',
-      productId: 'COP-S2-DE-003',
-      tileId: 'T20PJD',
-      satelliteCode: 'S2A',
-      sensingTime: '2026-08-20T14:05:00Z',
-      cloudPixelPct: 4.8,
-      footprintGeometry: 'POLYGON((-62.5 8.5, -61.5 8.5, -61.5 9.5, -62.5 9.5, -62.5 8.5))',
-      wktText: 'POLYGON((-62.5 8.5, -61.5 8.5, -61.5 9.5, -62.5 9.5, -62.5 8.5))',
-      downloadStatus: 'COMPLETED',
-      ngeoUri: 'https://catalogue.dataspace.copernicus.eu/odata/v1/Products(\'COP-S2-DE-003\')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}',
-      createdAt: '2026-08-20T14:45:00Z',
-      state: 'Delta Amacuro',
-      anomalyDetected: true,
-      anomalyType: 'SEDIMENTACION',
-      affectedAreaHa: 45.0,
-      description: 'Incremento drástico de turbidez y carga de sedimentos amarillentos en ramales deltaicos producto de descargas de lavado de oro aguas arriba (Cuyuní/Caroní).'
-    },
-    {
-      id: 's2-tile-amazonas-hist',
-      productId: 'COP-S2-AM-HIST',
-      tileId: 'T19PHC',
-      satelliteCode: 'S2A',
-      sensingTime: '2024-08-30T14:10:00Z',
-      cloudPixelPct: 15.3,
-      footprintGeometry: 'POLYGON((-67.5 3.5, -66.5 3.5, -66.5 4.5, -67.5 4.5, -67.5 3.5))',
-      wktText: 'POLYGON((-67.5 3.5, -66.5 3.5, -66.5 4.5, -67.5 4.5, -67.5 3.5))',
-      downloadStatus: 'COMPLETED',
-      ngeoUri: 'https://catalogue.dataspace.copernicus.eu/odata/v1/Products(\'COP-S2-AM-HIST\')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}',
-      createdAt: '2024-08-30T16:00:00Z',
-      state: 'Amazonas',
-      anomalyDetected: false,
-      anomalyType: 'ESTABLE',
-      affectedAreaHa: 0,
-      description: 'Cobertura forestal de control histórico. Estado primario de vegetación densa sin alteraciones antrópicas visibles.'
-    },
-    {
-      id: 's2-tile-bolivar-hist',
-      productId: 'COP-S2-BO-HIST',
-      tileId: 'T20PHD',
-      satelliteCode: 'S2A',
-      sensingTime: '2024-08-25T14:18:00Z',
-      cloudPixelPct: 11.5,
-      footprintGeometry: 'POLYGON((-65.0 6.0, -64.0 6.0, -64.0 7.0, -65.0 7.0, -65.0 6.0))',
-      wktText: 'POLYGON((-65.0 6.0, -64.0 6.0, -64.0 7.0, -65.0 7.0, -65.0 6.0))',
-      downloadStatus: 'COMPLETED',
-      ngeoUri: 'https://catalogue.dataspace.copernicus.eu/odata/v1/Products(\'COP-S2-BO-HIST\')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}',
-      createdAt: '2024-08-25T15:30:00Z',
-      state: 'Bolivar',
-      anomalyDetected: false,
-      anomalyType: 'ESTABLE',
-      affectedAreaHa: 0,
-      description: 'Control histórico del Alto Caura. Muestra balance hídrico y selva húmeda tropical intacta previo a intrusiones de dragado.'
-    }
-  ];
-
-  const s2BandsStore: any[] = [
-    {
-      id: 's2-band-am-scl',
-      productTileId: 's2-tile-amazonas-2026',
-      bandName: 'SCL',
-      resolutionM: 20,
-      filePath: 's3://sentinel-safe-products/COP-S2-AM-001/IMG_DATA/R20m/T19PHC_20260830T141500_SCL_20m.jp2',
-      fileSizeBytes: 18450000,
-      createdAt: '2026-08-30T15:00:00Z'
-    },
-    {
-      id: 's2-band-am-tci',
-      productTileId: 's2-tile-amazonas-2026',
-      bandName: 'TCI',
-      resolutionM: 10,
-      filePath: 's3://sentinel-safe-products/COP-S2-AM-001/IMG_DATA/R10m/T19PHC_20260830T141500_TCI_10m.jp2',
-      fileSizeBytes: 84120000,
-      createdAt: '2026-08-30T15:00:00Z'
-    },
-    {
-      id: 's2-band-bo-scl',
-      productTileId: 's2-tile-bolivar-2026',
-      bandName: 'SCL',
-      resolutionM: 20,
-      filePath: 's3://sentinel-safe-products/COP-S2-BO-002/IMG_DATA/R20m/T20PHD_20260825T142200_SCL_20m.jp2',
-      fileSizeBytes: 17210000,
-      createdAt: '2026-08-25T15:10:00Z'
-    },
-    {
-      id: 's2-band-bo-tci',
-      productTileId: 's2-tile-bolivar-2026',
-      bandName: 'TCI',
-      resolutionM: 10,
-      filePath: 's3://sentinel-safe-products/COP-S2-BO-002/IMG_DATA/R10m/T20PHD_20260825T142200_TCI_10m.jp2',
-      fileSizeBytes: 79150000,
-      createdAt: '2026-08-25T15:10:00Z'
-    }
-  ];
-
-  const orbitSchedulesStore: any[] = [
-    {
-      id: 'sched-am',
-      satellite: 'S2C',
-      nextPassTime: 'En 3 horas (Aprox 17:15 UTC)',
-      targetRegion: 'Amazonas',
-      expectedDurationMin: 8,
-      status: 'SCHEDULED',
-      kafkaTopic: 'sentinel.s2.pass.amazonas'
-    },
-    {
-      id: 'sched-bo',
-      satellite: 'S2B',
-      nextPassTime: 'Mañana 10:45 UTC',
-      targetRegion: 'Bolivar',
-      expectedDurationMin: 12,
-      status: 'SCHEDULED',
-      kafkaTopic: 'sentinel.s2.pass.bolivar'
-    },
-    {
-      id: 'sched-de',
-      satellite: 'S2A',
-      nextPassTime: 'En 2 días 11:20 UTC',
-      targetRegion: 'Delta Amacuro',
-      expectedDurationMin: 10,
-      status: 'SCHEDULED',
-      kafkaTopic: 'sentinel.s2.pass.delta'
-    }
-  ];
-
   // --- AUTOMATED SATELLITE SCHEDULER ENGINE ---
   const scheduler = new SatelliteAutomatedScheduler();
-  scheduler.liveFirmsStore = liveFirmsStore;
-  scheduler.liveCopernicusStore = liveCopernicusStore;
-  scheduler.s2TilesStore = s2TilesStore;
+
+  /** Espera mínima entre ejecuciones manuales sin token, para no saturar las fuentes ni el Disk IO de Supabase. */
+  const MANUAL_TRIGGER_COOLDOWN_MS = 15 * 60 * 1000;
+
+  const hasValidIngestionToken = (req: express.Request): boolean => {
+    const expected = (process.env.INGESTION_TRIGGER_TOKEN || "").trim();
+    const provided = String(req.headers["x-ingestion-token"] || "").trim();
+    return expected.length >= 16 && provided === expected;
+  };
+
+  /** Ejecuta una tarea a pedido. Sin token válido, respeta la espera mínima desde la última ejecución. */
+  const runTaskOnDemand = async (req: express.Request, res: express.Response, taskKey: string) => {
+    const task = scheduler.getStatus().activeTasks.find(t => t.key === taskKey);
+    if (!task) {
+      return res.status(404).json({ success: false, message: `Tarea ${taskKey} no encontrada.` });
+    }
+    if (!hasValidIngestionToken(req) && task.lastRunAt) {
+      const elapsed = Date.now() - Date.parse(task.lastRunAt);
+      if (elapsed < MANUAL_TRIGGER_COOLDOWN_MS) {
+        const waitMin = Math.ceil((MANUAL_TRIGGER_COOLDOWN_MS - elapsed) / 60000);
+        return res.status(429).json({
+          success: false,
+          message: `La tarea ${taskKey} se ejecutó hace menos de 15 minutos. Intente de nuevo en ${waitMin} min.`,
+        });
+      }
+    }
+    const trigger = hasValidIngestionToken(req) ? "CRON" : "MANUAL";
+    return res.json(await scheduler.executeTask(taskKey, trigger));
+  };
 
   // Scheduler Status & Metrics
   app.get("/api/scheduler/status", (req, res) => {
     return res.json(scheduler.getStatus());
   });
 
-  // Manual Trigger on-demand for any satellite pass
+  // Ejecución manual de una tarea
   app.post("/api/scheduler/trigger/:taskKey", async (req, res) => {
-    const { taskKey } = req.params;
-    const result = await scheduler.executeTask(taskKey, true);
-    return res.json(result);
+    return runTaskOnDemand(req, res, req.params.taskKey);
+  });
+
+  // Cron externo (GitHub Actions / pg_cron + pg_net): ejecuta las tareas vencidas. Requiere token.
+  app.post("/api/scheduler/run-due", async (req, res) => {
+    if (!(process.env.INGESTION_TRIGGER_TOKEN || "").trim()) {
+      return res.status(503).json({ success: false, message: "INGESTION_TRIGGER_TOKEN no está configurado en el servidor." });
+    }
+    if (!hasValidIngestionToken(req)) {
+      return res.status(401).json({ success: false, message: "Token de ingesta inválido (encabezado x-ingestion-token)." });
+    }
+    const results = await scheduler.runDueTasks("CRON");
+    return res.json({ success: true, results, timestamp: new Date().toISOString() });
   });
 
   // Toggle pause/resume
@@ -1051,16 +883,7 @@ DO UPDATE SET
     return res.json(scheduler.toggleRunning());
   });
 
-  // Switch between PRODUCTION_CADENCE and ACCELERATED_DEMO
-  app.post("/api/scheduler/mode", (req, res) => {
-    const { mode } = req.body;
-    if (mode === "PRODUCTION_CADENCE" || mode === "ACCELERATED_DEMO") {
-      return res.json(scheduler.setMode(mode));
-    }
-    return res.status(400).json({ error: "Modo inválido. Use PRODUCTION_CADENCE o ACCELERATED_DEMO" });
-  });
-
-  // Get full Supabase Automation SQL Migration (PostGIS + pgvector + Triggers + pg_cron)
+  // SQL de las migraciones aplicadas en Supabase
   app.get("/api/scheduler/sql-automation", (req, res) => {
     return res.json({ sql: scheduler.getAutomationSqlScript() });
   });
@@ -1171,578 +994,162 @@ DO UPDATE SET
     }
   });
 
-  // Connector Status Endpoint
+  // Estado de los conectores: lo que reporta el planificador (sin cifras fijas).
   app.get("/api/ingestion/status", (req, res) => {
+    const status = scheduler.getStatus();
     res.json({
       status: {
-        nasaFirms: {
-          status: "CONNECTED",
-          lastSync: new Date().toISOString(),
-          totalRecords: 48 + liveFirmsStore.length,
-          intervalHours: 3,
-          activeSatellites: ["VIIRS-NOAA20", "VIIRS-SNPP", "MODIS-AQUA", "MODIS-TERRA"],
-          endpointUrl: "https://firms.modaps.eosdis.nasa.gov/api/country/csv/[API_KEY]/VIIRS_NOAA20_NRT/VEN/1",
-        },
-        copernicusSar: {
-          status: "CONNECTED",
-          lastSync: new Date().toISOString(),
-          totalDisturbances: 19 + liveCopernicusStore.length,
-          missions: ["Sentinel-1 GRD (SAR dual pol VV+VH)", "Sentinel-2 MSI (L2A Optical)"],
-          endpointUrl: "https://catalogue.dataspace.copernicus.eu/stac/search",
-        },
-        hydroTelemetry: {
-          status: "CONNECTED",
-          network: "Red Hidrológica Nacional / INAMEH",
-          basin: "Cuenca Hidrográfica del Río Orinoco (Amazonas y Bolívar)",
-          lastSync: new Date().toISOString(),
-          totalReadings: 36 + liveHydroTelemetryStore.length,
-          activeStations: 5,
-          intervalHours: 1,
-          telemetryProtocols: ["GOES-DCS (401.5 MHz)", "Iridium SBD", "GPRS/Cellular"],
-          endpointUrl: "/api/telemetry/ingest",
-        },
-        koboWebhook: {
-          status: "LISTENING",
-          lastSubmission: liveKoboReportsStore.length > 0 
-            ? liveKoboReportsStore[0].submissionTime 
-            : new Date().toISOString(),
-          totalSubmissions: 34 + liveKoboReportsStore.length,
+        generatedAt: new Date().toISOString(),
+        supabaseConnected: status.supabaseConnected,
+        supabaseHost: status.supabaseHost,
+        tasks: status.activeTasks,
+        ragDocumentsCount: status.vectorRagDocsCount,
+        kobo: {
           webhookPath: "/api/webhooks/kobo",
+          totalSubmissions: liveKoboReportsStore.length,
+          lastSubmission: liveKoboReportsStore[0]?.submissionTime || null,
         },
-        supabasePostgis: {
-          status: (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) ? "CONNECTED" : "LOCAL_FALLBACK",
-          postgisVersion: "3.4 USE_GEOS=1 USE_PROJ=1",
-          pgvectorVersion: "0.7.0 (HNSW / IVFFlat)",
-          vectorDimension: 768,
-          hnswIndexed: true,
-        }
-      }
+        cacheLoadedAt: scheduler.cache.loadedAt,
+      },
     });
   });
 
-  // --- RED HIDROLÓGICA NACIONAL / INAMEH TELEMETRY REST API ---
+  // Registros reales recientes (caché del planificador, recargado tras cada ingesta).
+  app.get("/api/ingestion/feed", async (req, res) => {
+    await scheduler.whenReady();
+    const { hotspots, sentinel1Scenes, sentinel2Products, sentinel3Products, hydroStations, sarDisturbances, loadedAt } = scheduler.cache;
+    res.json({
+      loadedAt,
+      hotspots: hotspots
+        .filter(h => h.state_name)
+        .slice(0, 300)
+        .map(h => ({
+          id: h.firms_id,
+          satellite: h.satellite,
+          latitude: h.latitude,
+          longitude: h.longitude,
+          brightnessTempK: h.brightness_temp_k == null ? null : Number(h.brightness_temp_k),
+          frpMw: h.frp_mw == null ? null : Number(h.frp_mw),
+          confidence: h.confidence,
+          acqDate: String(h.acq_date).slice(0, 10),
+          acqTime: h.acq_time,
+          dayNight: h.day_night,
+          state: h.state_name,
+          sectorName: h.sector_name,
+          sourceProduct: h.source_product,
+        })),
+      sentinel1Scenes: sentinel1Scenes.slice(0, 200).map(s => ({
+        sceneId: s.scene_id,
+        platform: s.platform,
+        acquiredAt: s.acquired_at,
+        instrumentMode: s.instrument_mode,
+        polarizations: s.polarizations,
+        orbitState: s.orbit_state,
+        relativeOrbit: s.relative_orbit,
+        centerLat: s.center_lat,
+        centerLon: s.center_lon,
+        stacItemUrl: s.stac_item_url,
+      })),
+      sentinel2Products: sentinel2Products.slice(0, 300).map(mapSentinel2Product),
+      sentinel3Products: sentinel3Products.slice(0, 200).map(p => ({
+        productId: p.product_id,
+        productName: p.product_name,
+        platform: p.platform,
+        instrument: p.instrument,
+        productType: p.product_type,
+        sensingStart: p.sensing_start,
+        centerLat: p.center_lat,
+        centerLon: p.center_lon,
+        odataUrl: p.odata_url,
+      })),
+      hydroStations: hydroStations.map(mapHydroStation),
+      sarDisturbances,
+    });
+  });
 
-  // Obtener catálogo de estaciones hidrométricas de la cuenca
-  app.get("/api/telemetry/stations", (req, res) => {
-    const stations = [
-      {
-        stationId: "EST-ATABAPO-01",
-        name: "Estación San Fernando de Atabapo",
-        riverName: "Río Atabapo / Orinoco",
-        state: "Amazonas",
-        subBasin: "Alto Orinoco / Atabapo",
-        latitude: 4.045,
-        longitude: -67.701,
-        altitudeM: 118,
-        status: "OPERATIONAL",
-        sensorsInstalled: ["Radar de Nivel Fluvial", "Sonda Multiparamétrica Fisicoquímica (YSI)", "Sensor de Turbidez Óptica", "Termistor"],
-        telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-        operator: "INAMEH / Red Hidrológica Nacional",
-        normalStageM: 9.5,
-        warningStageM: 12.0,
-        criticalStageM: 13.5
-      },
-      {
-        stationId: "EST-ORINOCO-02",
-        name: "Estación Hidrométrica Puerto Ayacucho",
-        riverName: "Río Orinoco Medio",
-        state: "Amazonas",
-        subBasin: "Orinoco Medio",
-        latitude: 5.663,
-        longitude: -67.625,
-        altitudeM: 74,
-        status: "OPERATIONAL",
-        sensorsInstalled: ["Sensor de Nivel por Presión Hidrostática", "Turbidímetro de Dispersión", "Pluviómetro", "Conductivímetro"],
-        telemetryTransmission: "GPRS_CELLULAR_AND_IRIDIUM",
-        operator: "INAMEH / Red Hidrológica Nacional",
-        normalStageM: 11.0,
-        warningStageM: 14.5,
-        criticalStageM: 16.0
-      },
-      {
-        stationId: "EST-CAURA-01",
-        name: "Estación Hidrológica Río Caura - Maripa",
-        riverName: "Río Caura",
-        state: "Bolívar",
-        subBasin: "Bajo Caura",
-        latitude: 7.215,
-        longitude: -65.234,
-        altitudeM: 62,
-        status: "OPERATIONAL",
-        sensorsInstalled: ["Radar de Nivel Sin Contacto", "Fluorómetro de Mercurio Estimado", "Turbidímetro NTU", "Sensor de Oxígeno Disuelto"],
-        telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-        operator: "INAMEH / Red Hidrológica Nacional",
-        normalStageM: 8.5,
-        warningStageM: 11.5,
-        criticalStageM: 13.0
-      },
-      {
-        stationId: "EST-CARONI-03",
-        name: "Estación Cuenca Alta Río Caroní - Ikabarú",
-        riverName: "Río Caroní / Ikabarú",
-        state: "Bolívar",
-        subBasin: "Alto Caroní / Gran Sabana",
-        latitude: 4.342,
-        longitude: -61.728,
-        altitudeM: 860,
-        status: "OPERATIONAL",
-        sensorsInstalled: ["Sensor de Turbidez de Alta Concentración", "Aforador Doppler Fluvial", "Sonda pH / CE", "Sensor de Carga de Sedimentos"],
-        telemetryTransmission: "IRIDIUM_SBD",
-        operator: "INAMEH / Red Hidrológica Nacional",
-        normalStageM: 6.0,
-        warningStageM: 9.0,
-        criticalStageM: 10.5
-      },
-      {
-        stationId: "EST-VENTUARI-02",
-        name: "Estación Telemétrica Río Ventuari - Las Pavas",
-        riverName: "Río Ventuari",
-        state: "Amazonas",
-        subBasin: "Alto Ventuari / Manapiare",
-        latitude: 4.882,
-        longitude: -65.221,
-        altitudeM: 145,
-        status: "OPERATIONAL",
-        sensorsInstalled: ["Radar de Nivel", "Sonda Multiparámetro Subterránea y Superficial", "Muestreador Automático de Agua"],
-        telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-        operator: "INAMEH / Red Hidrológica Nacional",
-        normalStageM: 7.5,
-        warningStageM: 10.5,
-        criticalStageM: 12.0
-      }
-    ];
+  // Densidad de focos FIRMS en hexágonos de 25 km (periodo: 1, 3 o 7 días).
+  app.get("/api/firms/density", async (req, res) => {
+    await scheduler.whenReady();
+    const requested = Number(req.query.days);
+    const days = (DENSITY_PERIODS_DAYS as readonly number[]).includes(requested) ? requested : 7;
+    return res.json(computeHotspotDensity(scheduler.cache, days));
+  });
+
+  // Comprobación real de una conexión del directorio (sin exponer claves).
+  app.get("/api/ingestion/connections/:id/check", async (req, res) => {
+    const conn = SATELLITE_API_CONNECTIONS.find(c => c.id === req.params.id);
+    if (!conn) return res.status(404).json({ ok: false, message: "Conexión no encontrada en el directorio." });
+    if (conn.authType === "INTERNAL_PROXY") {
+      return res.json({ ok: true, latencyMs: 0, message: "Servidor Centinela activo." });
+    }
+    if (conn.authType === "BEARER_TOKEN_OAUTH2") {
+      return res.json({ ok: false, latencyMs: 0, message: conn.availabilityNote || "Requiere credenciales OAuth2 no configuradas." });
+    }
+
+    let testUrl = conn.healthCheckUrl || conn.activeUrl;
+    if (conn.authType === "MAP_KEY_PARAM") {
+      const key = (process.env.FIRMS_MAP_KEY || "").trim();
+      if (!key) return res.json({ ok: false, latencyMs: 0, message: "FIRMS_MAP_KEY no configurada en el servidor." });
+      testUrl = `https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY=${encodeURIComponent(key)}`;
+    }
+
+    const start = Date.now();
+    try {
+      const response = await fetchWithTimeout(testUrl.replace(/ /g, "%20"), 20_000);
+      const latencyMs = Date.now() - start;
+      const detail = conn.authType === "MAP_KEY_PARAM" ? ` · ${(await response.text()).trim().slice(0, 120)}` : "";
+      return res.json({ ok: true, latencyMs, message: `HTTP ${response.status} (${response.headers.get("content-type") || "sin tipo"})${detail}` });
+    } catch (err: any) {
+      return res.json({ ok: false, latencyMs: Date.now() - start, message: err?.message || String(err) });
+    }
+  });
+
+  // Disparadores heredados: ejecutan la tarea real del planificador.
+  app.post("/api/ingestion/telemetry/fetch", (req, res) => runTaskOnDemand(req, res, "HYDRO_TELEMETRY"));
+  app.post("/api/ingestion/nasa-firms/fetch", (req, res) => runTaskOnDemand(req, res, "NASA_FIRMS"));
+  app.post("/api/ingestion/copernicus/fetch", (req, res) => runTaskOnDemand(req, res, "SENTINEL_1_SAR"));
+
+  // --- RED HIDROMÉTRICA INAMEH ---
+
+  // Estaciones con su última lectura publicada.
+  app.get("/api/telemetry/stations", async (req, res) => {
+    await scheduler.whenReady();
     return res.json({
       success: true,
-      network: "Red Hidrológica Nacional / INAMEH",
-      basin: "Cuenca del Río Orinoco (Venezuela)",
-      totalStations: stations.length,
-      stations
+      network: "INAMEH - Red Hidrométrica del Río Orinoco",
+      totalStations: scheduler.cache.hydroStations.length,
+      stations: scheduler.cache.hydroStations.map(mapHydroStation),
     });
   });
 
-  // Consultar lecturas telemétricas registradas
-  app.get("/api/telemetry/readings", (req, res) => {
-    const { stationId, alertOnly, limit } = req.query;
-    let filtered = [...liveHydroTelemetryStore];
-    if (stationId) {
-      filtered = filtered.filter(r => r.stationId === stationId);
-    }
-    if (alertOnly === "true") {
-      filtered = filtered.filter(r => r.alertStatus === "ALERT_CRITICAL");
-    }
-    const max = limit ? parseInt(limit as string, 10) : 50;
-    return res.json({
-      success: true,
-      total: filtered.length,
-      readings: filtered.slice(0, max),
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  // Ingesta dinámica de telemetría (POST desde dataloggers INAMEH / sondas IoT / CR1000X)
-  app.post("/api/telemetry/ingest", async (req, res) => {
-    try {
-      const {
-        stationId,
-        stationName,
-        riverName,
-        subBasin,
-        latitude,
-        longitude,
-        stageLevelM,
-        flowRateM3s,
-        turbidityNtu,
-        estimatedMercuryPpm,
-        waterTempC,
-        ph,
-        dissolvedOxygenMgL,
-        readingTime,
-        dataloggerType,
-        telemetryTransmission
-      } = req.body;
-
-      if (!stationId || !latitude || !longitude || stageLevelM === undefined || turbidityNtu === undefined) {
-        return res.status(400).json({
-          error: "Campos obligatorios requeridos: stationId, latitude, longitude, stageLevelM, turbidityNtu"
-        });
-      }
-
-      const now = readingTime ? new Date(readingTime) : new Date();
-      const readingId = `TEL-INAMEH-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-      const turb = Number(turbidityNtu);
-      const hg = estimatedMercuryPpm !== undefined ? Number(estimatedMercuryPpm) : 0;
-      const isCritical = turb > 75 || hg > 0.030 || Number(stageLevelM) > 13.0;
-      const alertStatus = isCritical ? "ALERT_CRITICAL" : "NORMAL";
-
-      const geomWkt = `POINT(${longitude} ${latitude})`;
-
-      const telemetryRecord = {
-        id: readingId,
-        stationId,
-        stationName: stationName || `Estación ${stationId}`,
-        riverName: riverName || "Afluente Cuenca Orinoco",
-        subBasin: subBasin || "Amazonas / Bolívar",
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        stageLevelM: Number(stageLevelM),
-        flowRateM3s: flowRateM3s ? Number(flowRateM3s) : null,
-        turbidityNtu: turb,
-        estimatedMercuryPpm: hg,
-        waterTempC: waterTempC ? Number(waterTempC) : 27.5,
-        ph: ph ? Number(ph) : 6.5,
-        dissolvedOxygenMgL: dissolvedOxygenMgL ? Number(dissolvedOxygenMgL) : 6.0,
-        alertStatus,
-        readingTime: now.toISOString(),
-        postgisGeomText: geomWkt,
-        dataloggerType: dataloggerType || "Campbell_Scientific_CR1000X",
-        telemetryTransmission: telemetryTransmission || "GOES_DCS_SATELLITE_401MHZ",
-        operatorAgency: "Red Hidrológica Nacional / INAMEH",
-        ingestedAt: new Date().toISOString()
-      };
-
-      liveHydroTelemetryStore.unshift(telemetryRecord);
-
-      // Sincronizar en Supabase si está disponible
-      const supabase = getSupabaseServerClient();
-      let supabasePushed = false;
-
-      if (supabase) {
-        try {
-          const ragChunk = `Telemetría hidrométrica y fisicoquímica en tiempo real desde ${telemetryRecord.stationName} (${telemetryRecord.riverName}, Cuenca: ${telemetryRecord.subBasin}). Cota: ${telemetryRecord.stageLevelM} m, Turbidez: ${telemetryRecord.turbidityNtu} NTU, Mercurio estimado: ${telemetryRecord.estimatedMercuryPpm} ppm, pH: ${telemetryRecord.ph}, Temp: ${telemetryRecord.waterTempC} °C. Estado de alerta: ${alertStatus}.`;
-
-          const { error: ragErr } = await supabase.from("environmental_rag_documents").insert([{
-            doc_type: "HYDRO_TELEMETRY",
-            source_reference_id: stationId,
-            title: `Telemetría Hidrométrica INAMEH: ${telemetryRecord.stationName}`,
-            location_name: telemetryRecord.stationName,
-            sub_basin: telemetryRecord.subBasin,
-            latitude: Number(latitude),
-            longitude: Number(longitude),
-            content_chunk: ragChunk,
-            metadata: {
-              task_key: "HYDRO_TELEMETRY",
-              station_id: stationId,
-              stage_level_m: telemetryRecord.stageLevelM,
-              turbidity_ntu: telemetryRecord.turbidityNtu,
-              estimated_mercury_ppm: telemetryRecord.estimatedMercuryPpm,
-              alert_status: alertStatus,
-              datalogger: telemetryRecord.dataloggerType,
-              transmission: telemetryRecord.telemetryTransmission,
-              timestamp: now.toISOString(),
-            }
-          }]);
-
-          if (!ragErr) {
-            supabasePushed = true;
-          }
-        } catch (dbErr) {
-          console.warn("[Telemetry API] Supabase offline, persisted in memory:", dbErr);
-        }
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: "Lectura de telemetría hidrométrica registrada y vectorizada exitosamente.",
-        recordId: readingId,
-        alertStatus,
-        supabaseSynced: supabasePushed,
-        telemetry: telemetryRecord
-      });
-    } catch (error: any) {
-      return res.status(500).json({
-        error: error?.message || "Error procesando ingesta de telemetría hidrométrica"
-      });
-    }
-  });
-
-  // Disparar sondeo manual de estaciones hidrométricas
-  app.post("/api/ingestion/telemetry/fetch", async (req, res) => {
-    try {
-      const stations = [
-        { name: "Estación San Fernando de Atabapo", id: "EST-ATABAPO-01", lat: 4.045, lng: -67.701, river: "Río Atabapo / Orinoco", basin: "Alto Orinoco" },
-        { name: "Estación Hidrométrica Puerto Ayacucho", id: "EST-ORINOCO-02", lat: 5.663, lng: -67.625, river: "Río Orinoco Medio", basin: "Orinoco Medio" },
-        { name: "Estación Hidrológica Río Caura - Maripa", id: "EST-CAURA-01", lat: 7.215, lng: -65.234, river: "Río Caura", basin: "Bajo Caura" },
-      ];
-      const st = stations[Math.floor(Math.random() * stations.length)];
-      const turb = Math.round((45 + Math.random() * 65) * 10) / 10;
-      const hg = Math.round((0.015 + Math.random() * 0.035) * 1000) / 1000;
-      const stage = Math.round((10.5 + Math.random() * 4.2) * 100) / 100;
-      const isCritical = turb > 75 || hg > 0.030;
-
-      const reading = {
-        id: `TEL-POLL-${Date.now()}`,
-        stationId: st.id,
-        stationName: st.name,
-        riverName: st.river,
-        subBasin: st.basin,
-        latitude: st.lat,
-        longitude: st.lng,
-        stageLevelM: stage,
-        flowRateM3s: Math.round(1500 + Math.random() * 12000),
-        turbidityNtu: turb,
-        estimatedMercuryPpm: hg,
-        waterTempC: 27.2,
-        ph: 6.3,
-        dissolvedOxygenMgL: 6.0,
-        alertStatus: isCritical ? "ALERT_CRITICAL" : "NORMAL",
-        readingTime: new Date().toISOString(),
-        postgisGeomText: `POINT(${st.lng} ${st.lat})`,
-        dataloggerType: "Campbell_Scientific_CR1000X",
-        telemetryTransmission: "GOES_DCS_SATELLITE_401MHZ",
-        operatorAgency: "Red Hidrológica Nacional / INAMEH"
-      };
-
-      liveHydroTelemetryStore.unshift(reading);
-
-      return res.json({
-        success: true,
-        source: "INAMEH_RED_HIDROLOGICA",
-        reading,
-        totalInStore: liveHydroTelemetryStore.length,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: error?.message || "Error sondeando telemetría hidrométrica" });
-    }
-  });
-
-  // NASA FIRMS Live Fetcher / Polling Trigger
-  app.post("/api/ingestion/nasa-firms/fetch", async (req, res) => {
-    try {
-      // Ingest live FIRMS thermal anomaly over Amazonas / Bolívar basin
-      const newId = `FIRMS-VEN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const lat = 3.65 + Math.random() * 3.5;
-      const lng = -67.8 + Math.random() * 6.5;
-      const frp = Math.round((12 + Math.random() * 35) * 10) / 10;
-      const tempK = Math.round((330 + Math.random() * 35) * 10) / 10;
-
-      const hotspot = {
-        id: newId,
-        source: "NASA_FIRMS",
-        satellite: Math.random() > 0.5 ? "VIIRS-NOAA20" : "VIIRS-SNPP",
-        latitude: Math.round(lat * 1000) / 1000,
-        longitude: Math.round(lng * 1000) / 1000,
-        brightnessTempK: tempK,
-        frpMw: frp,
-        confidence: frp > 25 ? "high" : "nominal",
-        acqDate: new Date().toISOString().slice(0, 10),
-        acqTime: new Date().toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" }),
-        dayNight: "D",
-        subBasin: lat < 5.0 ? "Alto Orinoco / Río Ventuari" : "Cuenca del Río Caura / Caroní",
-        sectorName: `Sector Térmico VIIRS (Cuadrante ${Math.round(lat * 10)/10}°N, ${Math.round(lng * 10)/10}°W)`,
-        postgisGeomText: `POINT(${Math.round(lng * 1000)/1000} ${Math.round(lat * 1000)/1000})`,
-        embeddingGenerated: true,
-        embeddingDim: 768,
-      };
-
-      liveFirmsStore.unshift(hotspot);
-
-      return res.json({
-        success: true,
-        source: "NASA_FIRMS_VIIRS",
-        count: 1,
-        hotspot,
-        totalInStore: liveFirmsStore.length,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: error?.message || "Error fetching NASA FIRMS" });
-    }
-  });
-
-  // Copernicus Sentinel-1 SAR Scan Trigger
-  app.post("/api/ingestion/copernicus/fetch", async (req, res) => {
-    try {
-      const code = `COP-SAR-2026-${Math.floor(100 + Math.random() * 900)}`;
-      const lat = 3.8 + Math.random() * 3.0;
-      const lng = -67.2 + Math.random() * 5.5;
-      const areaHa = Math.round((40 + Math.random() * 120) * 10) / 10;
-      const backscatter = -Math.round((2.0 + Math.random() * 4.5) * 10) / 10;
-
-      const disturbance = {
-        id: code,
-        source: "COPERNICUS_SAR",
-        mission: "SENTINEL_1_SAR",
-        sectorName: `Firma SAR ${code} - Eje Fluvial Orinoco/Ventuari`,
-        subBasin: "Alto Orinoco / Ventuari",
-        latitude: Math.round(lat * 1000) / 1000,
-        longitude: Math.round(lng * 1000) / 1000,
-        polygon: [
-          [lat + 0.008, lng - 0.008],
-          [lat + 0.008, lng + 0.008],
-          [lat - 0.008, lng + 0.008],
-          [lat - 0.008, lng - 0.008],
-          [lat + 0.008, lng - 0.008],
-        ],
-        backscatterDiffDb: backscatter,
-        coherenceLossPercent: Math.round(55 + Math.random() * 35),
-        opticalNdviDropPercent: Math.round(25 + Math.random() * 30),
-        affectedAreaHa: areaHa,
-        presumedActivity: "MINERIA_ALUVION_BALSAS",
-        severity: areaHa > 80 ? "CRITICAL" : "HIGH",
-        postgisGeomText: `POLYGON((${lng-0.008} ${lat+0.008}, ${lng+0.008} ${lat+0.008}, ${lng+0.008} ${lat-0.008}, ${lng-0.008} ${lat-0.008}, ${lng-0.008} ${lat+0.008}))`,
-        embeddingGenerated: true,
-        embeddingDim: 768,
-      };
-
-      liveCopernicusStore.unshift(disturbance);
-
-      return res.json({
-        success: true,
-        source: "COPERNICUS_SENTINEL_1_SAR",
-        disturbance,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: error?.message || "Error scanning Copernicus" });
-    }
-  });
-
-  // --- SENTINEL-2 S2 SATELLITE API ENDPOINTS ---
-
-  // Obtener todos los tiles de Sentinel-2
-  app.get("/api/s2/tiles", (req, res) => {
-    const { state, anomalyOnly } = req.query;
-    let filtered = [...s2TilesStore];
-    if (state) {
-      filtered = filtered.filter(t => t.state.toLowerCase() === (state as string).toLowerCase());
-    }
-    if (anomalyOnly === "true") {
-      filtered = filtered.filter(t => t.anomalyDetected);
-    }
-    return res.json(filtered);
-  });
-
-  // Obtener bandas espectrales para un tile específico
-  app.get("/api/s2/tiles/:productTileId/bands", (req, res) => {
-    const { productTileId } = req.params;
-    const filtered = s2BandsStore.filter(b => b.productTileId === productTileId);
-    return res.json(filtered);
-  });
-
-  // Consultar metadatos (Fase A)
-  app.post("/api/s2/query", (req, res) => {
-    const { startDate, endDate, cloudPixelPct } = req.body;
-    let filtered = [...s2TilesStore];
-    if (cloudPixelPct !== undefined) {
-      filtered = filtered.filter(t => t.cloudPixelPct <= Number(cloudPixelPct));
-    }
-    if (startDate) {
-      filtered = filtered.filter(t => t.sensingTime >= (startDate as string));
-    }
-    if (endDate) {
-      filtered = filtered.filter(t => t.sensingTime <= (endDate as string));
-    }
-    return res.json(filtered);
-  });
-
-  // Ingesta manual / simulada de un tile específico (Fases B, C, D)
-  app.post("/api/s2/ingest", (req, res) => {
-    const { productId } = req.body;
-    const foundTile = s2TilesStore.find(t => t.productId === productId);
-    if (!foundTile) {
-      return res.status(404).json({ error: `Producto satelital con ID ${productId} no encontrado.` });
-    }
-
-    foundTile.downloadStatus = "COMPLETED";
-    foundTile.ngeoUri = `https://catalogue.dataspace.copernicus.eu/odata/v1/Products('${productId}')/$value?ngEO_DO={bands:[SCL,TCI],outputFormat:SAFE_COMPACT}`;
-
-    const bands = s2BandsStore.filter(b => b.productTileId === foundTile.id);
-    return res.json({
-      success: true,
-      tile: foundTile,
-      bands
-    });
-  });
-
-  // Obtener itinerarios de órbita
-  app.get("/api/s2/orbit-schedule", (req, res) => {
-    return res.json(orbitSchedulesStore);
-  });
-
-  // Disparar pasada de órbita (Sincronización simulada Kafka + Embeddings)
-  app.post("/api/s2/orbit-schedule/:id/trigger", async (req, res) => {
-    const { id } = req.params;
-    const sched = orbitSchedulesStore.find(s => s.id === id);
-    if (!sched) {
-      return res.status(404).json({ error: "Horario de órbita no encontrado" });
-    }
-
-    sched.status = "COMPLETED";
-
-    const logs = [
-      `[Kafka] Inicializando consumidor en tópico ${sched.kafkaTopic}`,
-      `[Orbit] Satélite ${sched.satellite} entra en rango sobre ${sched.targetRegion}`,
-      `[OData] Consultando catálogo Copernicus dataspace para región ${sched.targetRegion}...`,
-      `[OData] Encontrado 1 producto L2A con nubosidad < 20%`,
-      `[ngEO] Resolviendo URI optimizada con banderas ngEO_DO: bands=[SCL, TCI], format=SAFE_COMPACT`,
-      `[SAFE] Descargando y descomprimiendo estructura SAFE_COMPACT para el Tile...`,
-      `[SAFE] Analizando XML de metadatos (sensing_time, footprint, satellite_code)...`,
-      `[PostGIS] Almacenando geometría footprint ST_GeomFromText...`,
-      `[pgvector] Extrayendo narrativa de anomalías y generando embeddings (768-D)...`,
-      `[Supabase] Inserción exitosa en public.s2_product_tile y public.s2_tile_bands`,
-      `[Kafka] Publicado mensaje de sincronización del frontend.`
-    ];
-
-    const matchedTile = s2TilesStore.find(t => t.state === sched.targetRegion);
-
-    // Inserción real en Supabase si está disponible
+  // Historial de lecturas (boletines diarios) desde Supabase.
+  app.get("/api/telemetry/readings", async (req, res) => {
     const supabase = getSupabaseServerClient();
-    let supabaseSaved = false;
-    if (supabase && matchedTile) {
-      try {
-        const polyWkt = `SRID=4326;POLYGON((${matchedTile.state === "Amazonas" ? -67.3 : -64.9} 4.0, ${matchedTile.state === "Amazonas" ? -66.3 : -63.9} 4.0, ${matchedTile.state === "Amazonas" ? -66.3 : -63.9} 5.0, ${matchedTile.state === "Amazonas" ? -67.3 : -64.9} 5.0, ${matchedTile.state === "Amazonas" ? -67.3 : -64.9} 4.0))`;
-        const tileId = matchedTile.tileId || (matchedTile.state === "Amazonas" ? "T19PHC" : "T20PHD");
-        
-        const { error: s2Err } = await supabase.from("s2_product_tile").upsert({
-          tile_id: tileId,
-          datatake_id: `GS2_${matchedTile.productId || 'PROD_S2'}`,
-          spacecraft_name: "S2A",
-          sensing_time: matchedTile.sensingTime || new Date().toISOString(),
-          processing_level: "L2A",
-          cloud_pixel_pct: matchedTile.cloudPixelPct || 10.5,
-          geom_footprint: polyWkt
-        }, { onConflict: "tile_id" });
-
-        if (!s2Err) {
-          supabaseSaved = true;
-          // Guardar bandas
-          await supabase.from("s2_tile_bands").insert([
-            { tile_id: tileId, band_index: 'SCL', resolution_meters: 20, file_path: `copernicus-dataspace/${tileId}/SCL_20m.jp2` },
-            { tile_id: tileId, band_index: 'TCI', resolution_meters: 10, file_path: `copernicus-dataspace/${tileId}/TCI_10m.jp2` },
-            { tile_id: tileId, band_index: 'B04', resolution_meters: 10, file_path: `copernicus-dataspace/${tileId}/B04_10m.jp2` },
-            { tile_id: tileId, band_index: 'B08', resolution_meters: 10, file_path: `copernicus-dataspace/${tileId}/B08_10m.jp2` },
-          ]);
-
-          // Guardar documento RAG
-          await supabase.from("environmental_rag_documents").insert({
-            doc_type: "SENTINEL_2_MSI",
-            source_reference_id: `S2-${tileId}`,
-            title: `Copernicus Sentinel-2 MSI: Órbita ${sched.satellite} sobre ${sched.targetRegion}`,
-            location_name: `Sector ${sched.targetRegion} (Tile ${tileId})`,
-            sub_basin: sched.targetRegion === "Amazonas" ? "Alto Orinoco" : "Cuenca del Caura / Caroní",
-            latitude: sched.targetRegion === "Amazonas" ? 3.82 : 6.15,
-            longitude: sched.targetRegion === "Amazonas" ? -66.85 : -64.48,
-            content_chunk: `Pasada orbital de satélite Sentinel-2 (${sched.satellite}) sobre región ${sched.targetRegion}. Detección multiespectral L2A con nubosidad evaluada. Metadatos procesados en PostGIS y sincronizados en base de datos.`,
-            metadata: {
-              tile_id: tileId,
-              orbit_id: sched.id,
-              kafka_topic: sched.kafkaTopic,
-              bands: ['SCL', 'TCI', 'B04', 'B08']
-            }
-          });
-        }
-      } catch (e: any) {
-        console.warn("[S2 Orbit Trigger] Error en persistencia Supabase:", e?.message || e);
-      }
+    if (!supabase) {
+      return res.status(503).json({ success: false, error: "Supabase no está configurado." });
     }
+    const limit = Math.min(Number.parseInt(String(req.query.limit || "60"), 10) || 60, 500);
+    let query = supabase
+      .from("hydrological_telemetry_readings")
+      .select("station_code,reading_date,level_msnm,daily_change_m,trend,overflow_level_msnm,margin_to_overflow_m,alert_status,is_stale,bulletin_pdf_url")
+      .order("reading_date", { ascending: false })
+      .limit(limit);
+    if (req.query.stationCode) query = query.eq("station_code", String(req.query.stationCode));
+    const { data, error } = await query;
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    return res.json({ success: true, total: data?.length || 0, readings: data || [] });
+  });
 
-    return res.json({
-      success: true,
-      logs,
-      supabaseSaved,
-      tileAdded: matchedTile
-    });
+  // --- SENTINEL-2: catálogo real de productos L2A ---
+  app.get("/api/s2/tiles", async (req, res) => {
+    await scheduler.whenReady();
+    const maxCloud = req.query.maxCloud === undefined ? undefined : Number(req.query.maxCloud);
+    const tiles = scheduler.cache.sentinel2Products
+      .filter(p => maxCloud === undefined || (p.cloud_pixel_pct != null && Number(p.cloud_pixel_pct) <= maxCloud))
+      .map(mapSentinel2Product);
+    return res.json(tiles);
   });
 
   // ODK & KoboToolbox Webhook Ingestion Receiver
@@ -1751,8 +1158,16 @@ DO UPDATE SET
       const payload = req.body || {};
       const submissionId = payload.id || payload._id || `KOBO-SUB-2026-${Math.floor(1000 + Math.random() * 9000)}`;
       
-      const lat = Number(payload.latitude || (payload._geolocation && payload._geolocation[0]) || 3.991);
-      const lng = Number(payload.longitude || (payload._geolocation && payload._geolocation[1]) || -67.682);
+      const lat = Number(payload.latitude ?? payload._geolocation?.[0]);
+      const lng = Number(payload.longitude ?? payload._geolocation?.[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({ error: "El reporte debe incluir coordenadas (latitude/longitude o _geolocation)." });
+      }
+      // Mediciones de campo: solo si el reporte las trae.
+      const optionalNumber = (...values: any[]) => {
+        const v = values.find(x => x !== undefined && x !== null && x !== "");
+        return v === undefined ? undefined : Number(v);
+      };
 
       const report = {
         id: submissionId,
@@ -1767,16 +1182,14 @@ DO UPDATE SET
         longitude: lng,
         category: payload.category || payload.incident_type || "MINERIA_ILEGAL",
         severity: payload.severity || "HIGH",
-        mercuryDetectedPpm: Number(payload.mercuryDetectedPpm || payload.mercury_ppm || 0.0),
-        turbidityNtu: Number(payload.turbidityNtu || payload.turbidity_ntu || 45.0),
+        mercuryDetectedPpm: optionalNumber(payload.mercuryDetectedPpm, payload.mercury_ppm),
+        turbidityNtu: optionalNumber(payload.turbidityNtu, payload.turbidity_ntu),
         dredgesConfiscatedCount: Number(payload.dredgesConfiscatedCount || payload.dredges_count || 0),
         arrestsCount: Number(payload.arrestsCount || payload.arrests || 0),
         fuelConfiscatedLiters: Number(payload.fuelConfiscatedLiters || payload.fuel_liters || 0),
         narrative: payload.narrative || payload.description || "Minuta de patrullaje fluvial registrada vía webhook KoboToolbox.",
-        evidencePhotoCount: payload.evidencePhotoCount || 2,
+        evidencePhotoCount: Number(payload.evidencePhotoCount || 0),
         postgisGeomText: `POINT(${lng} ${lat})`,
-        embeddingGenerated: true,
-        embeddingDim: 768,
       };
 
       liveKoboReportsStore.unshift(report);
@@ -1785,11 +1198,8 @@ DO UPDATE SET
 
       return res.status(201).json({
         success: true,
-        message: "Webhook procesado e inyectado en PostGIS + pgvector",
+        message: "Reporte de campo recibido. Se conserva en la memoria del servidor (aún no se persiste en Supabase).",
         report,
-        databaseStatus: "POSTGIS_GEOM_INDEXED",
-        embeddingGenerated: true,
-        vectorDimension: 768,
       });
     } catch (error: any) {
       console.error("[Webhook Error]", error);
@@ -2998,130 +2408,80 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
     }
   });
 
-  // Vector RAG Search & Intelligence Synthesis
+  // Búsqueda RAG sobre documentos reales (coincidencia de texto + distancia) y síntesis con IA
   app.post("/api/rag/vector-search", async (req, res) => {
-    const { query, filterLat, filterLng, radiusKm, matchThreshold, maxMatches } = req.body;
-
-    // Build tactical context from query and store
-    const prompt = `Actúa como el Motor Principal de Inteligencia y RAG Vectorial del Sistema "Centinela Orinoco" (PostgreSQL + PostGIS + pgvector).
-El oficial de operaciones ha ejecutado la siguiente consulta de búsqueda semántica espacial:
-CONSULTA DEL OPERADOR: "${query || "Detección de minería y contaminación de mercurio"}"
-
-PARÁMETROS ESPACIALES POSTGIS:
-- Coordenadas de Referencia: ${filterLat ? `${filterLat}°N, ${filterLng}°W` : "Cuenca General del Orinoco"}
-- Radio de Búsqueda PostGIS (ST_DWithin): ${radiusKm ? `${radiusKm} km` : "Sin límite de distancia"}
-- Umbral de Similitud Coseno pgvector (1 - cosine_distance): ${matchThreshold || 0.65}
-
-FUENTES DE DATOS EN VIVO INGESTADAS EN POSTGIS:
-1. NASA FIRMS (Anomalías térmicas VIIRS/MODIS cada 3h): ${liveFirmsStore.length > 0 ? JSON.stringify(liveFirmsStore.slice(0, 3)) : "5 focos activos en Yapacana, Caura, Ventuari e Ikabarú"}
-2. Copernicus Sentinel-1 SAR (Pérdida de retrodispersión y deforestación aluvial): ${liveCopernicusStore.length > 0 ? JSON.stringify(liveCopernicusStore.slice(0, 2)) : "Firmas de radar SAR en Cerro Yapacana, Río Sipapo y Bajo Caura"}
-3. Minutas KoboToolbox / ODK (Patrullajes fluviales y decomisos de dragas/mercurio): ${liveKoboReportsStore.length > 0 ? JSON.stringify(liveKoboReportsStore.slice(0, 2)) : "Reportes de Guardería Ambiental en Atabapo (3 dragas retenidas) y cabeceras de Caroní"}
-
-INSTRUCCIONES DE RESPUESTA:
-- Redacta una síntesis técnica de inteligencia ambiental estructurada en Markdown limpio en español.
-- NO uses LaTeX ni fórmulas matemáticas con símbolos $ ni \\frac{}.
-- Detalla:
-  1. EVIDENCIAS CRÍTICAS ENCONTRADAS (correlación satelital FIRMS/Sentinel-1 + minutas Kobo de campo)
-  2. IMPACTO EN RECURSOS HÍDRICOS Y PUEBLOS INDÍGENAS
-  3. DIRECTIVA DE INTERDICCIÓN RECOMENDADA
-- Sé conciso, directo, preciso y riguroso.`;
-
-    try {
-      const text = await generateContentWithFallback(prompt);
-
-      const matches = [
-        {
-          id: "RAG-MATCH-01",
-          source: "KOBO_TOOLBOX",
-          title: "Minuta Kobo: Interdicción de balsas dragas en Río Atabapo",
-          location: "Río Atabapo - Sector Guasare (3.991°N, -67.682°W)",
-          latitude: 3.991,
-          longitude: -67.682,
-          distanceKmFromQueryTarget: 14.2,
-          cosineSimilarity: 0.941,
-          severity: "CRITICAL",
-          postgisGeometry: "POINT(-67.682 3.991)",
-          contentSnippet: "Interdicción de 3 balsas tipo dragona de 8 cilindros. Turbidez de 96.5 NTU y presencia de mercurio elemental (0.048 ppm) en canal navegable.",
-        },
-        {
-          id: "RAG-MATCH-02",
-          source: "NASA_FIRMS",
-          title: "Foco Térmico VIIRS: 358.4 K / 24.6 MW en Caño Cotúa",
-          location: "Parque Nacional Yapacana - Caño Cotúa (3.755°N, -66.824°W)",
-          latitude: 3.755,
-          longitude: -66.824,
-          distanceKmFromQueryTarget: 38.5,
-          cosineSimilarity: 0.887,
-          severity: "CRITICAL",
-          postgisGeometry: "POINT(-66.824 3.755)",
-          contentSnippet: "Foco de calor de alta intensidad registrado por VIIRS NOAA-20 correspondiente a campamento minero en margen del Caño Cotúa.",
-        },
-        {
-          id: "RAG-MATCH-03",
-          source: "COPERNICUS_SAR",
-          title: "Radar Sentinel-1 SAR: Caída de retrodispersión -4.8 dB en Yapacana",
-          location: "Falda Suroeste Cerro Yapacana (3.684°N, -66.852°W)",
-          latitude: 3.684,
-          longitude: -66.852,
-          distanceKmFromQueryTarget: 42.1,
-          cosineSimilarity: 0.862,
-          severity: "CRITICAL",
-          postgisGeometry: "POLYGON((-66.860 3.690, -66.845 3.692, -66.842 3.678, -66.858 3.676, -66.860 3.690))",
-          contentSnippet: "Pérdida de coherencia del 78.4% y caída de NDVI del 44.2%. Superficie afectada estimada en 142.6 hectáreas.",
-        }
-      ];
-
-      return res.json({
-        query: query || "Consulta de Cuenca",
-        timestamp: new Date().toISOString(),
-        matchesFoundCount: matches.length,
-        topMatches: matches,
-        synthesisMarkdown: text,
-        tacticalRecommendation: "Ejecutar interdicción fluvial coordinada con Guardería Ambiental en el eje del Río Atabapo y Caño Cotúa.",
-        threatMatrix: {
-          deforestationRisk: "CRÍTICO (142.6 Ha por Sentinel-1)",
-          mercuryExposureRisk: "EXTREMO (0.048 ppm reportado en minuta Kobo)",
-          indigenousTerritoryOverlap: "Pueblos Piaroa y Curripaco",
-          immediateInterdictionZone: "Río Atabapo / Caño Cotúa",
-        }
-      });
-    } catch (e: any) {
-      console.warn("Fallo Gemini RAG, usando síntesis de contingencia:", e?.message || e);
-      return res.json({
-        query: query || "Consulta de Cuenca",
-        timestamp: new Date().toISOString(),
-        matchesFoundCount: 3,
-        topMatches: [
-          {
-            id: "RAG-MATCH-01",
-            source: "KOBO_TOOLBOX",
-            title: "Minuta Kobo: Interdicción de balsas dragas en Río Atabapo",
-            location: "Río Atabapo - Sector Guasare (3.991°N, -67.682°W)",
-            latitude: 3.991,
-            longitude: -67.682,
-            distanceKmFromQueryTarget: 14.2,
-            cosineSimilarity: 0.941,
-            severity: "CRITICAL",
-            postgisGeometry: "POINT(-67.682 3.991)",
-            contentSnippet: "Interdicción de 3 balsas tipo dragona de 8 cilindros. Turbidez de 96.5 NTU y presencia de mercurio elemental (0.048 ppm).",
-          }
-        ],
-        synthesisMarkdown: `### SÍNTESIS DE INTELIGENCIA AMBIENTAL (RAG + POSTGIS)
-**Consulta:** \`${query || "Consulta Táctica"}\`  
-**Base de Datos:** PostgreSQL / Supabase con pgvector y PostGIS
-
-1. **Evidencias Satelitales y de Campo:** Se corroboran anomalías térmicas NASA FIRMS y firmas de radar Copernicus Sentinel-1 coincidentes con minutas de patrullaje fluvial KoboToolbox en el Río Atabapo y Yapacana.
-2. **Impacto Ambiental:** Vertidos activos de mercurio y sedimentación severa en corrientes fluviales críticas.
-3. **Recomendación:** Despacho de patrulla fluvial de Guardería Ambiental en puntos de confluencia.`,
-        tacticalRecommendation: "Despacho inmediato de unidad fluvial de Guardería Ambiental.",
-        threatMatrix: {
-          deforestationRisk: "ALTO",
-          mercuryExposureRisk: "CRÍTICO",
-          indigenousTerritoryOverlap: "Comunidades del Atabapo",
-          immediateInterdictionZone: "Río Atabapo",
-        }
-      });
+    await scheduler.whenReady();
+    const { query, filterLat, filterLng, radiusKm, maxMatches } = req.body || {};
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return res.status(503).json({ error: "Supabase no está configurado." });
     }
+
+    let terms: string[] = [];
+    let matches: RagMatch[] = [];
+    try {
+      ({ terms, matches } = await searchRagDocuments(supabaseCandidateFetcher(supabase), {
+        query: String(query || ""),
+        filterLat: filterLat === undefined ? undefined : Number(filterLat),
+        filterLng: filterLng === undefined ? undefined : Number(filterLng),
+        radiusKm: radiusKm === undefined ? undefined : Number(radiusKm),
+        maxMatches: maxMatches === undefined ? undefined : Number(maxMatches),
+      }));
+    } catch (err: any) {
+      return res.status(500).json({ error: `Error consultando documentos: ${err?.message || err}` });
+    }
+
+    const evidence = matches.map((m, i) =>
+      `${i + 1}. [${m.source}] ${m.title} (${m.location}${m.distanceKmFromQueryTarget === undefined ? "" : `, a ${m.distanceKmFromQueryTarget} km`}): ${m.contentSnippet}`
+    ).join("\n");
+
+    const top = matches[0];
+    const threatMatrix = {
+      deforestationRisk: scheduler.cache.sarDisturbances.length > 0
+        ? `${scheduler.cache.sarDisturbances.length} perturbaciones SAR medidas`
+        : "Sin medición SAR (Nivel 2 pendiente)",
+      mercuryExposureRisk: "No medido: requiere muestras de campo (índice de riesgo en Nivel 2)",
+      indigenousTerritoryOverlap: "No evaluado automáticamente",
+      immediateInterdictionZone: top ? top.location : "Sin coincidencias",
+    };
+
+    let synthesisMarkdown: string;
+    let engine = "gemini";
+    if (matches.length === 0) {
+      engine = "none";
+      synthesisMarkdown = `No se encontraron documentos que contengan los términos: ${terms.join(", ") || "(consulta vacía)"}.`;
+    } else {
+      const prompt = `Eres el analista de "Centinela Orinoco". Resume en español, en Markdown claro y sin LaTeX, lo que muestran ÚNICAMENTE estas evidencias recuperadas de la base de datos. No inventes cifras, lugares ni mediciones que no estén en ellas. Si una conclusión requiere verificación de campo, dilo. Turbidez, pH, conductividad y mercurio no se miden en esta plataforma.
+
+CONSULTA: "${query}"
+
+EVIDENCIAS:
+${evidence}
+
+Estructura: 1) Hallazgos, 2) Limitaciones de los datos, 3) Siguiente paso recomendado.`;
+      try {
+        synthesisMarkdown = await generateContentWithFallback(prompt);
+      } catch (e: any) {
+        console.warn("Fallo Gemini RAG, respuesta sin IA:", e?.message || e);
+        engine = "contingency";
+        synthesisMarkdown = `### Documentos encontrados (sin síntesis de IA)\n${matches.map(m => `- **${m.title}** (${m.location}): ${m.contentSnippet}`).join("\n")}`;
+      }
+    }
+
+    return res.json({
+      query: query || "",
+      timestamp: new Date().toISOString(),
+      searchMethod: "Coincidencia de texto sobre environmental_rag_documents (sin embeddings) + distancia geodésica",
+      terms,
+      engine,
+      matchesFoundCount: matches.length,
+      topMatches: matches,
+      synthesisMarkdown,
+      tacticalRecommendation: top
+        ? `Verificar en campo la evidencia más relevante: ${top.title} (${top.location}).`
+        : "Sin evidencias para recomendar una acción.",
+      threatMatrix,
+    });
   });
 
   // Endpoints para el Pool de 10 Modelos de IA con gestión de tokens y cuotas
@@ -3142,28 +2502,27 @@ INSTRUCCIONES DE RESPUESTA:
 
   // AI Endpoint: Analítica Predictiva y Perceptiva de la Zona (RAG Semántico Supabase + Cascada de hasta 10 Modelos)
   app.post("/api/ai/zone-predictive-analytics", async (req, res) => {
+    await scheduler.whenReady();
     try {
       const result = await performZonePredictiveAndPerceptiveAnalysis(req.body, {
-        liveFirmsStore,
-        liveCopernicusStore,
-        s2TilesStore,
+        cache: scheduler.cache,
         liveKoboReportsStore,
         liveCorpusArticlesStore,
       });
       return res.json(result);
     } catch (err: any) {
-      console.error("[API] Error en analítica predictiva de zona:", err);
-      return res.status(500).json({ error: "Error procesando analítica de zona: " + err?.message });
+      const isInputError = String(err?.message || "").startsWith("Se requieren coordenadas");
+      if (!isInputError) console.error("[API] Error en analítica predictiva de zona:", err);
+      return res.status(isInputError ? 400 : 500).json({ error: "Error procesando analítica de zona: " + err?.message });
     }
   });
 
   // AI Endpoint: Analizar zona geoespacial y vectores de amenaza (Compatible y potenciado)
   app.post("/api/ai/analyze-zone", async (req, res) => {
+    await scheduler.whenReady();
     try {
       const result = await performZonePredictiveAndPerceptiveAnalysis(req.body, {
-        liveFirmsStore,
-        liveCopernicusStore,
-        s2TilesStore,
+        cache: scheduler.cache,
         liveKoboReportsStore,
         liveCorpusArticlesStore,
       });
@@ -3173,7 +2532,7 @@ INSTRUCCIONES DE RESPUESTA:
       });
     } catch (error: any) {
       console.warn("Fallo en Gemini API, utilizando generador táctico de contingencia:", error?.message || error);
-      const fallbackAnalysis = generateTacticalZoneAnalysisFallback(req.body);
+      const fallbackAnalysis = generateTacticalZoneAnalysisFallback(req.body, scheduler.cache);
       return res.json({
         analysis: fallbackAnalysis,
         timestamp: new Date().toISOString(),
@@ -3184,6 +2543,7 @@ INSTRUCCIONES DE RESPUESTA:
 
   // AI Endpoint: Generador de Boletín Táctico Oficial
   app.post("/api/ai/generate-bulletin", async (req, res) => {
+    await scheduler.whenReady();
     const { title, period, summaryStats, incidents } = req.body;
 
     const prompt = `Genera un "BOLETÍN OFICIAL DE SITUACIÓN TÁCTICA Y AMBIENTAL - CENTINELA ORINOCO".
@@ -3192,20 +2552,24 @@ Título: ${title || "Reporte Periódico de Cuenca"}
 Estadísticas Clave: ${JSON.stringify(summaryStats || {})}
 Incidentes Relevantes: ${JSON.stringify(incidents || [])}
 
-DIRECTRICES OBLIGATORIAS DE FORMATO:
+DATOS REALES DISPONIBLES (única fuente de cifras permitida):
+${buildRealDataContext(scheduler.cache)}
+
+DIRECTRICES OBLIGATORIAS:
 - Redacta el boletín en lenguaje natural, fluido, técnico y oficial en español.
 - Formatea la salida usando Markdown limpio (títulos claros con ###, tablas bien formateadas, viñetas - y énfasis en negrita **).
 - NO utilices fórmulas o símbolos matemáticos en LaTeX ni variables crudas (no uses $, no uses \\frac{}, no uses \\text{}, ni etiquetas de escape no procesadas).
-- Expresa las cifras, hectáreas, cotas y mediciones físico-químicas de forma directa y legible.
+- Usa SOLO las cifras de las estadísticas, los incidentes y los datos reales de arriba. No inventes niveles, caudales, hectáreas ni mediciones.
+- Turbidez, pH, conductividad y mercurio NO se miden en esta plataforma: indícalo así si los mencionas.
 
 El boletín debe incluir:
 - Código de Despacho (ej. CEN-ORI-2026-XXXX)
-- Clasificación de Seguridad Territorial
 - Resumen Ejecutivo
-- Desglose por Subcuencas (Bajo Orinoco, Alto Orinoco, Cuenca del Caura, Cuenca del Caroní)
-- Matriz de Alerta Hidrológica y Anomalías Térmicas
-- Matriz de Interdicción y Protección Étnica-Territorial
-- Directiva de Comandancia y Monitoreo Ambiental`;
+- Focos de calor NASA FIRMS por estado
+- Niveles del Río Orinoco por estación INAMEH (con fecha del boletín y cota de desborde)
+- Cobertura satelital Copernicus (escenas disponibles)
+- Incidentes registrados
+- Recomendaciones de verificación en campo`;
 
     try {
       const text = await generateContentWithFallback(prompt);
@@ -3216,7 +2580,7 @@ El boletín debe incluir:
       });
     } catch (error: any) {
       console.warn("Fallo en Gemini API boletín, utilizando generador de contingencia:", error?.message || error);
-      const fallbackBulletin = generateTacticalBulletinFallback(req.body);
+      const fallbackBulletin = generateTacticalBulletinFallback(req.body, scheduler.cache);
       return res.json({
         bulletin: fallbackBulletin,
         timestamp: new Date().toISOString(),
@@ -3227,6 +2591,7 @@ El boletín debe incluir:
 
   // AI Endpoint: Chat Táctico Asistente Centinela
   app.post("/api/ai/chat", async (req, res) => {
+    await scheduler.whenReady();
     const { messages, context } = req.body;
 
     const formattedContents = (messages || []).map((m: { role: string; content: string }) => ({
@@ -3245,11 +2610,15 @@ Posees conocimiento exhaustivo sobre:
 
 Contexto del estado actual de la plataforma: ${JSON.stringify(context || {})}.
 
+DATOS REALES DE LA PLATAFORMA (única fuente de cifras permitida):
+${buildRealDataContext(scheduler.cache)}
+
 REGLAS DE RESPUESTA:
 - Responde siempre en lenguaje natural, claro, fluido y estructurado en español.
 - Utiliza formato Markdown legible (negritas para énfasis, listas ordenadas o con viñetas, títulos breves).
 - NUNCA incluyas fórmulas LaTeX, etiquetas crudas o funciones matemáticas con simbología markdown (no uses $, \\text{}, \\frac{}, etc.).
-- Comunica las mediciones y coordenadas de forma directa y comprensible.`;
+- Cita solo cifras presentes en los datos reales. Si no hay dato, dilo; no lo estimes.
+- Turbidez, pH, conductividad y mercurio NO se miden en esta plataforma (INAMEH no los publica y no son observables por satélite). Nunca des valores de ellos.`;
 
     try {
       const lastUserMsg = (messages && messages.length > 0) 
@@ -3265,7 +2634,7 @@ REGLAS DE RESPUESTA:
     } catch (error: any) {
       console.warn("Fallo en Gemini API chat, utilizando generador táctico:", error?.message || error);
       const lastUserMsg = (messages && messages.length > 0) ? messages[messages.length - 1].content : "";
-      const fallbackReply = generateTacticalChatFallback(lastUserMsg);
+      const fallbackReply = generateTacticalChatFallback(lastUserMsg, scheduler.cache);
       return res.json({
         reply: fallbackReply,
         timestamp: new Date().toISOString(),

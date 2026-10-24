@@ -107,11 +107,8 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
     const satelliteLocation = ctx ? ctx.satelliteLocation : undefined;
     const thermalAnomalies = ctx?.thermalAnomalies || heatAnomalies.slice(0, 4);
     const miningAlerts = ctx?.miningAlerts || miningClusters.slice(0, 3);
-    const waterQuality = ctx?.waterQuality || {
-      averageTurbidity: '64 NTU',
-      mercuryDetected: '0.028 ppm',
-      floodRisk: 'Elevado en confluencias',
-    };
+    // Calidad del agua: solo si el contexto trae mediciones reales (no se miden en la plataforma).
+    const waterQuality = ctx?.waterQuality;
     const protectedAreaOverlap = ctx?.protectedAreaOverlap || targetPreset.overlap;
 
     setIsZoneModalOpen(true);
@@ -187,11 +184,8 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
     const satelliteLocation = ctx ? ctx.satelliteLocation : undefined;
     const thermalAnomalies = ctx?.thermalAnomalies || heatAnomalies.slice(0, 4);
     const miningAlerts = ctx?.miningAlerts || miningClusters.slice(0, 3);
-    const waterQuality = ctx?.waterQuality || {
-      averageTurbidity: '64 NTU',
-      mercuryDetected: '0.028 ppm',
-      floodRisk: 'Elevado en confluencias',
-    };
+    // Calidad del agua: solo si el contexto trae mediciones reales (no se miden en la plataforma).
+    const waterQuality = ctx?.waterQuality;
     const protectedAreaOverlap = ctx?.protectedAreaOverlap || targetPreset.overlap;
 
     try {

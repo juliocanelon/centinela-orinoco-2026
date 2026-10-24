@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Radar, 
   Satellite, 
@@ -16,8 +16,60 @@ import {
   Activity,
   Flame
 } from 'lucide-react';
-import { SarRadarAnomaly } from '../types';
+import { SarRadarAnomaly, Sentinel1Scene } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { LivePipelineService } from '../services/liveDataPipelineService';
+
+/**
+ * Sin perturbaciones SAR medidas (Nivel 2 pendiente): muestra las pasadas reales de Sentinel-1
+ * que ya están en el catálogo y explica qué falta para detectar cambios.
+ */
+const SarLevel2Pending: React.FC = () => {
+  const [scenes, setScenes] = useState<Sentinel1Scene[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    LivePipelineService.getIngestionFeed()
+      .then((feed) => setScenes(feed.sentinel1Scenes))
+      .catch((err) => setError(err?.message || String(err)));
+  }, []);
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-4 text-slate-200">
+      <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-5 space-y-2">
+        <div className="flex items-center gap-2">
+          <Radar className="w-5 h-5 text-sky-400" />
+          <h2 className="text-lg font-bold text-white">Radar SAR Sentinel-1</h2>
+        </div>
+        <p className="text-sm text-slate-300">
+          Todavía no hay perturbaciones SAR medidas. Detectar desmonte o dragado requiere comparar la retrodispersión de pasadas sucesivas
+          (Sentinel Hub con credenciales de Copernicus, Nivel 2). Mientras tanto, estas son las pasadas reales disponibles sobre Amazonas, Bolívar, Delta Amacuro y la Guayana Esequiba.
+        </p>
+      </div>
+      {error && <p className="text-xs text-amber-300">No se pudo cargar el catálogo: {error}</p>}
+      <div className="bg-[#0b121c] border border-slate-800 rounded-xl overflow-x-auto">
+        <table className="w-full text-xs font-mono">
+          <thead>
+            <tr className="text-slate-500 text-left border-b border-slate-800">
+              <th className="p-2">Satélite</th><th className="p-2">Adquisición</th><th className="p-2">Modo</th><th className="p-2">Órbita</th><th className="p-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {scenes.map((s) => (
+              <tr key={s.sceneId} className="border-b border-slate-800/60">
+                <td className="p-2 text-sky-300">{s.platform}</td>
+                <td className="p-2">{new Date(s.acquiredAt).toLocaleString('es-VE')}</td>
+                <td className="p-2">{s.instrumentMode} · {(s.polarizations || []).join('+')}</td>
+                <td className="p-2">{s.relativeOrbit} ({s.orbitState})</td>
+                <td className="p-2">{s.stacItemUrl && <a href={s.stacItemUrl} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">STAC</a>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {scenes.length === 0 && !error && <p className="p-6 text-center text-slate-500 text-xs">Sin escenas en el catálogo todavía.</p>}
+      </div>
+    </div>
+  );
+};
 
 interface SarAnomalyViewerProps {
   anomalies: SarRadarAnomaly[];
@@ -47,6 +99,10 @@ export const SarAnomalyViewer: React.FC<SarAnomalyViewerProps> = ({
   });
 
   const currentAnomaly = anomalies.find((a) => a.id === activeAnomalyId) || anomalies[0];
+
+  if (anomalies.length === 0) {
+    return <SarLevel2Pending />;
+  }
 
   const handleEvaluateWithAi = async () => {
     if (!currentAnomaly) return;

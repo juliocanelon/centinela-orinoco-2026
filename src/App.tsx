@@ -9,7 +9,6 @@ import { BulletinGenerator } from './components/BulletinGenerator';
 import { AIChatDrawer } from './components/AIChatDrawer';
 import { ScientificCorpusReader } from './components/ScientificCorpusReader';
 import { SarAnomalyViewer } from './components/SarAnomalyViewer';
-import { SyntheticTelemetryGenerator } from './components/SyntheticTelemetryGenerator';
 import { LiveIngestionPipelineView } from './components/LiveIngestionPipelineView';
 import { SatelliteApiConnectionsModal } from './components/SatelliteApiConnectionsModal';
 import { AboutProjectModal } from './components/AboutProjectModal';
@@ -29,30 +28,29 @@ import {
   CommunityReportStatus
 } from './types';
 import { SupabaseRpcService } from './lib/supabaseClient';
-import { 
-  INITIAL_HEAT_ANOMALIES, 
-  INITIAL_MINING_CLUSTERS, 
-  INITIAL_HYDROLOGICAL_STATIONS, 
-  INITIAL_PROTECTED_AREAS, 
-  INITIAL_INCIDENT_REPORTS 
+import {
+  MONITORING_ZONES,
+  INITIAL_PROTECTED_AREAS,
+  INITIAL_INCIDENT_REPORTS
 } from './data/mockGeoJSON';
-import { 
-  INITIAL_SCIENTIFIC_ARTICLES, 
-  INITIAL_SAR_RADAR_ANOMALIES 
-} from './data/scientificAndSarData';
+import { INITIAL_SCIENTIFIC_ARTICLES } from './data/scientificAndSarData';
 import { INITIAL_COMMUNITY_REPORTS } from './data/communityReportsData';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewMode>('MAP_SITUATION');
   
   // Data states - y2k
-  const [heatAnomalies, setHeatAnomalies] = useState<HeatAnomaly[]>(INITIAL_HEAT_ANOMALIES);
-  const [miningClusters, setMiningClusters] = useState<MiningCluster[]>(INITIAL_MINING_CLUSTERS);
-  const [hydrologicalStations, setHydrologicalStations] = useState<HydrologicalStation[]>(INITIAL_HYDROLOGICAL_STATIONS);
+  // Focos FIRMS y estaciones INAMEH reales: arrancan vacíos y se cargan desde Supabase.
+  const [heatAnomalies, setHeatAnomalies] = useState<HeatAnomaly[]>([]);
+  // Zonas de vigilancia de referencia + perturbaciones SAR medidas (Nivel 2).
+  const [miningClusters, setMiningClusters] = useState<MiningCluster[]>(MONITORING_ZONES);
+  const [hydrologicalStations, setHydrologicalStations] = useState<HydrologicalStation[]>([]);
+  const [dataLoadErrors, setDataLoadErrors] = useState<string[]>([]);
   const [protectedAreas, setProtectedAreas] = useState<ProtectedArea[]>(INITIAL_PROTECTED_AREAS);
   const [incidents, setIncidents] = useState<IncidentReport[]>(INITIAL_INCIDENT_REPORTS);
   const [scientificArticles, setScientificArticles] = useState<ScientificArticle[]>(INITIAL_SCIENTIFIC_ARTICLES);
-  const [sarAnomalies, setSarAnomalies] = useState<SarRadarAnomaly[]>(INITIAL_SAR_RADAR_ANOMALIES);
+  // Perturbaciones SAR medidas: llegan con el Nivel 2 (procesamiento de píxeles Sentinel-1).
+  const [sarAnomalies, setSarAnomalies] = useState<SarRadarAnomaly[]>([]);
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>(() => {
     try {
       const local = localStorage.getItem('centinela_community_reports_local');
@@ -102,10 +100,15 @@ export default function App() {
         SupabaseRpcService.getProtectedAreas(),
       ]);
 
-      if (heatRes.data) setHeatAnomalies(heatRes.data);
-      if (miningRes.data) setMiningClusters(miningRes.data);
-      if (hydroRes.data) setHydrologicalStations(hydroRes.data);
+      setHeatAnomalies(heatRes.data);
+      setMiningClusters([...MONITORING_ZONES, ...miningRes.data]);
+      setHydrologicalStations(hydroRes.data);
       if (protectedRes.data) setProtectedAreas(protectedRes.data);
+      setDataLoadErrors(
+        [heatRes, miningRes, hydroRes]
+          .map((r, i) => (r.error ? `${['Focos FIRMS', 'Perturbaciones SAR', 'Estaciones INAMEH'][i]}: ${r.error}` : ''))
+          .filter(Boolean)
+      );
 
       // Ingesta y sincronización del corpus científico
       try {
@@ -166,10 +169,6 @@ export default function App() {
     setSarAnomalies((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
     );
-  };
-
-  const handleInjectSyntheticStations = (newStations: HydrologicalStation[]) => {
-    setHydrologicalStations((prev) => [...newStations, ...prev]);
   };
 
   // Handler for adding an incident
@@ -291,6 +290,12 @@ export default function App() {
         thermalAnomaliesCount={heatAnomalies.length}
       />
 
+      {dataLoadErrors.length > 0 && (
+        <div className="px-4 py-2 bg-amber-950/80 border-b border-amber-800 text-amber-200 text-xs">
+          No se pudieron cargar algunos datos desde Supabase: {dataLoadErrors.join(' · ')}
+        </div>
+      )}
+
       {/* Main View Router */}
       <main className="flex-1 relative overflow-x-hidden">
         {currentView === 'MAP_SITUATION' && (
@@ -389,13 +394,6 @@ export default function App() {
               setCurrentView('MAP_SITUATION');
             }}
             onDispatchAlert={handleDispatchSarAlert}
-          />
-        )}
-
-        {currentView === 'SYNTHETIC_TELEMETRY' && (
-          <SyntheticTelemetryGenerator
-            onInjectStations={handleInjectSyntheticStations}
-            existingStationsCount={hydrologicalStations.length}
           />
         )}
 

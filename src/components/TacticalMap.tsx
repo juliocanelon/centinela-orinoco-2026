@@ -40,7 +40,11 @@ import {
   ScientificArticle,
   CommunityReport,
   CommunityReportMedia,
-  ZoneAnalyticsResult
+  ZoneAnalyticsResult,
+  S2ProductTile,
+  FirmsDensityResponse,
+  FirmsDensityCell,
+  HotspotPriority
 } from '../types';
 import { GeospatialLayerToolbar } from './GeospatialLayerToolbar';
 import { ZoneAnalyticsModal } from './ZoneAnalyticsModal';
@@ -54,6 +58,22 @@ import {
   VENEZUELA_STRATEGIC_SECTORS 
 } from '../data/venezuelaTerritorialData';
 import { SupabaseRpcService } from '../lib/supabaseClient';
+import { LivePipelineService } from '../services/liveDataPipelineService';
+
+/** Nubosidad máxima para mostrar una escena Sentinel-2 como útil en el mapa. */
+const S2_USEFUL_CLOUD_PCT = 20;
+
+/** A partir de este zoom se muestran los focos individuales en lugar de los hexágonos. */
+const HEX_TO_POINTS_ZOOM = 9;
+const DENSITY_PERIODS: { days: 1 | 3 | 7; label: string }[] = [
+  { days: 1, label: '24 h' },
+  { days: 3, label: '3 días' },
+  { days: 7, label: '7 días' },
+];
+/** Color de relleno por nivel de densidad (0 = solo prioridad baja). */
+const DENSITY_LEVEL_COLORS = ['#64748b', '#fde047', '#fb923c', '#ef4444', '#991b1b'];
+const PRIORITY_COLORS: Record<HotspotPriority, string> = { ALTA: '#dc2626', MEDIA: '#f97316', BAJA: '#facc15' };
+const PRIORITY_LABELS: Record<HotspotPriority, string> = { ALTA: 'Alta', MEDIA: 'Media', BAJA: 'Baja' };
 
 interface TacticalMapProps {
   heatAnomalies: HeatAnomaly[];
@@ -122,6 +142,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     incidents?: L.LayerGroup;
     communityReports?: L.LayerGroup;
     sentinelS2?: L.LayerGroup;
+    firmsWms?: L.LayerGroup;
     scientific?: L.LayerGroup;
     amazonasBolivarDelta?: L.LayerGroup;
     selectionHighlight?: L.LayerGroup;
@@ -149,7 +170,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     hydro: true,
     incidents: true,
     communityReports: true,
-    sentinelS2: true,
+    // Escenas Sentinel-2 apagadas por defecto: son cientos de marcadores y tapan los hexágonos.
+    sentinelS2: false,
+    firmsWms: false,
     scientific: true,
     amazonasBolivarDelta: true,
   });
@@ -165,7 +188,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   };
 
   const [selectedFeature, setSelectedFeature] = useState<{
-    type: 'heat' | 'mining' | 'hydro' | 'protected' | 'incident' | 'sentinelS2' | 'scientific' | 'communityReport';
+    type: 'heat' | 'hexDensity' | 'mining' | 'hydro' | 'protected' | 'incident' | 'sentinelS2' | 'scientific' | 'communityReport';
     data: any;
     latlng?: [number, number];
   } | null>(null);
@@ -509,6 +532,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       incidents: L.layerGroup().addTo(map),
       communityReports: L.layerGroup().addTo(map),
       sentinelS2: L.layerGroup().addTo(map),
+      firmsWms: L.layerGroup().addTo(map),
       scientific: L.layerGroup().addTo(map),
       amazonasBolivarDelta: L.layerGroup().addTo(map),
       selectionHighlight: L.layerGroup().addTo(map),
@@ -1015,7 +1039,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         setSelectedCoordinates([e.latlng.lat, e.latlng.lng]);
       });
 
-      polygon.bindTooltip(`<b>${area.name}</b><br/><span style="font-size: 11px;">${area.category} • Riesgo: ${area.threatIndex}%</span>`, {
+      polygon.bindTooltip(`<b>${area.name}</b><br/><span style="font-size: 11px;">${area.category} • polígono aproximado</span>`, {
         sticky: true,
         className: 'tactical-tooltip',
       });
@@ -1058,7 +1082,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         setSelectedCoordinates([cluster.latitude, cluster.longitude]);
       });
 
-      marker.bindTooltip(`<b>${cluster.name}</b><br/>⛏️ ${cluster.estimatedHectares} ha • ${cluster.dredgeCountEstimate} dragas`, {
+      marker.bindTooltip(cluster.affectedAreaHa === undefined
+        ? `<b>${cluster.name}</b><br/>Zona de vigilancia (referencia)`
+        : `<b>${cluster.name}</b><br/>Perturbación SAR medida: ${cluster.affectedAreaHa} ha`, {
         direction: 'top',
         className: 'tactical-tooltip',
       });
@@ -1067,48 +1093,97 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
   }, [miningClusters, visibleLayers.mining]);
 
-  // Render Heat Anomalies (VIIRS/MODIS)
+  // Densidad de focos NASA FIRMS (hexágonos de 25 km) para el periodo elegido
+  const [densityDays, setDensityDays] = useState<1 | 3 | 7>(7);
+  const [density, setDensity] = useState<FirmsDensityResponse | null>(null);
+  const [densityError, setDensityError] = useState<string | null>(null);
+  const [showLowPriority, setShowLowPriority] = useState<boolean>(false);
+
+  useEffect(() => {
+    setDensityError(null);
+    LivePipelineService.getFirmsDensity(densityDays)
+      .then(setDensity)
+      .catch((err) => setDensityError(err?.message || String(err)));
+  }, [densityDays]);
+
+  const showHotspotPoints = currentZoom >= HEX_TO_POINTS_ZOOM;
+
+  // Render focos: hexágonos con zoom alejado, puntos por prioridad al acercar
   useEffect(() => {
     const group = layerGroupsRef.current.heat;
     if (!group) return;
     group.clearLayers();
 
-    if (!visibleLayers.heat) return;
+    if (!visibleLayers.heat || !density) return;
 
-    heatAnomalies.forEach((heat) => {
-      if (typeof heat.latitude !== 'number' || typeof heat.longitude !== 'number' || isNaN(heat.latitude) || isNaN(heat.longitude)) return;
-      const isHigh = heat.confidence === 'high' || heat.brightnessTempK > 345;
-      
-      const customIcon = L.divIcon({
-        className: 'custom-heat-icon',
-        html: `
-          <div class="relative flex items-center justify-center w-6 h-6">
-            <span class="absolute w-6 h-6 rounded-full bg-amber-500/40 pulse-thermal"></span>
-            <div class="w-4 h-4 rounded-full bg-amber-600 border border-amber-300 text-white flex items-center justify-center shadow-md">
-              <span style="font-size: 9px; font-weight: bold;">🔥</span>
-            </div>
-          </div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+    if (!showHotspotPoints) {
+      density.cells.forEach((cell) => {
+        if (cell.level === 0 && !showLowPriority) return;
+        const fill = DENSITY_LEVEL_COLORS[cell.level];
+        const hasHigh = cell.byPriority.ALTA > 0;
+        const polygon = L.polygon(cell.polygon, {
+          color: hasHigh ? '#fecaca' : fill,
+          weight: hasHigh ? 2.5 : 1,
+          fillColor: fill,
+          fillOpacity: cell.level === 0 ? 0.25 : 0.55,
+        });
+        polygon.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedFeature({ type: 'hexDensity', data: cell, latlng: cell.center });
+          setSelectedCoordinates(cell.center);
+        });
+        polygon.bindTooltip(
+          `<b>${cell.relevant} focos prioritarios</b> de ${cell.total}<br/>${cell.relevantPer1000Km2} por 1.000 km² · ${cell.states.join(', ')}`,
+          { sticky: true, className: 'tactical-tooltip' }
+        );
+        group.addLayer(polygon);
+
+        const shown = cell.relevant > 0 ? cell.relevant : cell.total;
+        group.addLayer(L.marker(cell.center, {
+          interactive: false,
+          icon: L.divIcon({
+            className: 'hex-count-label',
+            html: `<div style="font: 700 11px/1 ui-monospace,monospace; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; text-align: center;">${shown}</div>`,
+            iconSize: [30, 14],
+            iconAnchor: [15, 7],
+          }),
+        }));
       });
+      return;
+    }
 
-      const marker = L.marker([heat.latitude, heat.longitude], { icon: customIcon });
-
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        setSelectedFeature({ type: 'heat', data: heat, latlng: [heat.latitude, heat.longitude] });
-        setSelectedCoordinates([heat.latitude, heat.longitude]);
+    density.cells.forEach((cell) => {
+      cell.hotspots.forEach((h) => {
+        if (h.priority === 'BAJA' && !showLowPriority) return;
+        const color = PRIORITY_COLORS[h.priority];
+        const marker = L.circleMarker([h.latitude, h.longitude], {
+          radius: h.priority === 'BAJA' ? 4 : 6,
+          color: h.persistent ? '#ffffff' : color,
+          weight: h.persistent ? 2 : 1,
+          fillColor: color,
+          fillOpacity: 0.85,
+        });
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedFeature({
+            type: 'heat',
+            data: {
+              id: h.id, satellite: h.satellite, latitude: h.latitude, longitude: h.longitude, brightnessTempK: null,
+              frpMw: h.frpMw, confidence: h.confidence, acqDate: h.acqDate, acqTime: h.acqTime, dayNight: '',
+              sector: `Foco ${h.satellite}`, subBasin: h.state, priority: h.priority, persistent: h.persistent,
+            },
+            latlng: [h.latitude, h.longitude],
+          });
+          setSelectedCoordinates([h.latitude, h.longitude]);
+        });
+        marker.bindTooltip(
+          `<b>Prioridad ${PRIORITY_LABELS[h.priority]}</b>${h.persistent ? ' · persistente' : ''}<br/>${h.satellite} · ${h.acqDate} ${h.acqTime}<br/>FRP: ${h.frpMw ?? 's/d'} MW · ${h.confidence}`,
+          { direction: 'top', className: 'tactical-tooltip' }
+        );
+        group.addLayer(marker);
       });
-
-      marker.bindTooltip(`<b>Foco Térmico ${heat.satellite}</b><br/>Temp: ${heat.brightnessTempK} K • FRP: ${heat.frpMw} MW`, {
-        direction: 'top',
-        className: 'tactical-tooltip',
-      });
-
-      group.addLayer(marker);
     });
-  }, [heatAnomalies, visibleLayers.heat]);
+  }, [density, visibleLayers.heat, showHotspotPoints, showLowPriority]);
 
   // Render Hydrological Stations
   useEffect(() => {
@@ -1143,7 +1218,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         setSelectedCoordinates([station.coordinates[1], station.coordinates[0]]);
       });
 
-      marker.bindTooltip(`<b>${station.name}</b><br/>Nivel: ${station.currentLevelM}m (Alerta: ${station.alertLevelM}m)<br/>Turbidez: ${station.turbidityNtu} NTU`, {
+      marker.bindTooltip(`<b>${station.name}</b><br/>Nivel: ${station.currentLevelM ?? 's/d'} msnm (${station.readingDate ?? 'sin fecha'})${station.isStale ? ' • boletín desactualizado' : ''}<br/>Cota de desborde: ${station.overflowLevelM ?? 'no publicada'}`, {
         direction: 'top',
         className: 'tactical-tooltip',
       });
@@ -1296,7 +1371,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
   }, [communityReports, visibleLayers.communityReports]);
 
-  // Render Sentinel-2 Desertification & Forest Loss Detections
+  // Escenas Sentinel-2 L2A reales con poca nubosidad (catálogo STAC ingerido en Supabase)
+  const [s2Scenes, setS2Scenes] = useState<S2ProductTile[]>([]);
+  useEffect(() => {
+    LivePipelineService.getS2ProductTiles(S2_USEFUL_CLOUD_PCT)
+      .then(setS2Scenes)
+      .catch((err) => console.warn('No se pudieron cargar las escenas Sentinel-2:', err));
+  }, []);
+
   useEffect(() => {
     const group = layerGroupsRef.current.sentinelS2;
     if (!group) return;
@@ -1304,123 +1386,58 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     if (!visibleLayers.sentinelS2) return;
 
-    // Rich mock Sentinel-2 detections in the Venezuelan Amazon
-    const s2Detections = [
-      {
-        id: 's2-det-yapacana',
-        title: 'Variación de Desertificación Boscosa - Yapacana (S2)',
-        satellite: 'Sentinel-2C (MSI)',
-        date: '2026-08-30',
-        sensingTime: '2026-08-30T14:15:00Z',
-        cloudCover: 8.4,
-        areaHa: 112.5,
-        center: [3.78, -66.85] as [number, number],
-        perimeter: [
-          [3.79, -66.86],
-          [3.80, -66.84],
-          [3.77, -66.83],
-          [3.76, -66.85]
-        ] as [number, number][],
-        analysis: 'Remoción severa del dosel forestal y sustitución por arenas expuestas y pozas de sedimentación. Alta firma de reflectancia en el infrarrojo de onda corta (SWIR), confirmando actividad de minería ilegal de aluvión sobre caños riparios en el sector norte de Yapacana.'
-      },
-      {
-        id: 's2-det-caura',
-        title: 'Variación de Desertificación Boscosa - Eje Alto Caura (S2)',
-        satellite: 'Sentinel-2B',
-        date: '2026-08-25',
-        sensingTime: '2026-08-25T14:22:00Z',
-        cloudCover: 12.1,
-        areaHa: 78.2,
-        center: [6.15, -64.48] as [number, number],
-        perimeter: [
-          [6.16, -64.49],
-          [6.17, -64.46],
-          [6.13, -64.46],
-          [6.14, -64.49]
-        ] as [number, number][],
-        analysis: 'Patrón de fragmentación forestal lineal (vías de penetración) para transporte de combustible e insumos mineros. Pérdida crítica de biomasa en selva húmeda tropical perennifolia asociada a campamentos provisionales de minería de oro.'
-      },
-      {
-        id: 's2-det-claritas',
-        title: 'Variación de Desertificación Boscosa - Las Claritas / Km 88 (S2)',
-        satellite: 'Sentinel-2A',
-        date: '2026-08-20',
-        sensingTime: '2026-08-20T14:05:00Z',
-        cloudCover: 4.8,
-        areaHa: 145.0,
-        center: [6.92, -62.15] as [number, number],
-        perimeter: [
-          [6.93, -62.16],
-          [6.94, -62.14],
-          [6.90, -62.13],
-          [6.91, -62.16]
-        ] as [number, number][],
-        analysis: 'Expansión descontrolada de frentes de minería a cielo abierto. Degradación total de la capa orgánica del suelo, colmatación de afluentes locales por lodos altamente turbios y acumulación de piscinas de relaves de mercurio detectadas ópticamente.'
-      }
-    ];
+    s2Scenes.forEach((scene) => {
+      if (scene.centerLat == null || scene.centerLon == null) return;
+      const center: [number, number] = [scene.centerLat, scene.centerLon];
+      const data = { ...scene, center, title: `${scene.tileId} · ${scene.satelliteCode}` };
 
-    s2Detections.forEach((det) => {
-      if (!Array.isArray(det.center) || typeof det.center[0] !== 'number' || typeof det.center[1] !== 'number' || isNaN(det.center[0]) || isNaN(det.center[1])) return;
-      // 1. Draw perimeter polygon
-      const polygon = L.polygon(det.perimeter, {
-        color: '#10b981', // emerald-500
-        weight: 2.5,
-        dashArray: '4, 4',
-        fillColor: '#047857', // emerald-700
-        fillOpacity: 0.22,
-      });
-
-      polygon.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        setSelectedFeature({ type: 'sentinelS2', data: det, latlng: [e.latlng.lat, e.latlng.lng] });
-        setSelectedCoordinates([e.latlng.lat, e.latlng.lng]);
-      });
-
-      polygon.bindTooltip(`<b>${det.title}</b><br/>🌲 ${det.areaHa} ha afectadas`, {
-        sticky: true,
-        className: 'tactical-tooltip',
-      });
-
-      group.addLayer(polygon);
-
-      // 2. Draw custom cartographic icon representing Sentinel-2 detection
       const customIcon = L.divIcon({
         className: 'custom-sentinels2-icon',
         html: `
-          <div class="relative flex items-center justify-center w-7 h-7">
-            <span class="absolute w-7 h-7 rounded-full bg-emerald-500/30 pulse-critical"></span>
-            <div class="w-5.5 h-5.5 rounded-full bg-slate-900 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center shadow-xl">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-                <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-                <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-                <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                <circle cx="12" cy="12" r="3"/>
-                <path d="m18 18-3-3"/>
+          <div class="relative flex items-center justify-center w-6 h-6">
+            <div class="w-5 h-5 rounded-full bg-slate-900 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center shadow-xl">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
               </svg>
             </div>
           </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       });
 
-      const marker = L.marker(det.center, { icon: customIcon });
-
+      const marker = L.marker(center, { icon: customIcon });
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
-        setSelectedFeature({ type: 'sentinelS2', data: det, latlng: [det.center[0], det.center[1]] });
-        setSelectedCoordinates([det.center[0], det.center[1]]);
+        setSelectedFeature({ type: 'sentinelS2', data, latlng: center });
+        setSelectedCoordinates(center);
       });
-
-      marker.bindTooltip(`<b>Detección Sentinel-2</b><br/>${det.title}<br/>Gravedad: CRÍTICA`, {
+      marker.bindTooltip(`<b>Sentinel-2 ${scene.tileId}</b><br/>${scene.sensingTime.slice(0, 10)} • nubes ${scene.cloudPixelPct ?? 's/d'}%`, {
         direction: 'top',
         className: 'tactical-tooltip',
       });
-
       group.addLayer(marker);
     });
-  }, [visibleLayers.sentinelS2]);
+  }, [visibleLayers.sentinelS2, s2Scenes]);
+
+  // Capa WMS pública de NASA GIBS: focos térmicos VIIRS 375 m (composición más reciente).
+  // Se usa el servicio EPSG:3857 de GIBS porque el mapa Leaflet trabaja en Web Mercator.
+  useEffect(() => {
+    const group = layerGroupsRef.current.firmsWms;
+    if (!group) return;
+    group.clearLayers();
+    if (!visibleLayers.firmsWms) return;
+    group.addLayer(
+      L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', {
+        layers: 'VIIRS_NOAA20_Thermal_Anomalies_375m_All',
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        attribution: 'NASA GIBS / FIRMS',
+        opacity: 0.9,
+      })
+    );
+  }, [visibleLayers.firmsWms]);
 
   // Fly to Macrocuenca view
   const handleResetView = () => {
@@ -1489,11 +1506,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         activeBaseLayer={activeBaseLayer}
         onChangeBaseLayer={setActiveBaseLayer}
         miningCount={miningClusters.length}
-        heatCount={heatAnomalies.length}
+        heatCount={density?.totals.hotspots ?? heatAnomalies.length}
         hydroCount={hydrologicalStations.length}
         protectedCount={protectedAreas.length}
         incidentsCount={incidents.length}
         communityReportsCount={communityReports.length}
+        sentinelS2Count={s2Scenes.length}
         scientificCount={scientificArticles.reduce((acc, curr) => acc + (curr.investigationSites?.length || 0), 0)}
         onFocusVenezuela={handleFocusVenezuela}
         onExportGeoJSON={handleExportGeoJSON}
@@ -1534,6 +1552,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <div className="flex items-center gap-2">
                 {selectedFeature.type === 'mining' && <Pickaxe className="w-4 h-4 text-red-400" />}
                 {selectedFeature.type === 'heat' && <Flame className="w-4 h-4 text-amber-400" />}
+                {selectedFeature.type === 'hexDensity' && <Flame className="w-4 h-4 text-orange-400" />}
                 {selectedFeature.type === 'hydro' && <Droplets className="w-4 h-4 text-sky-400" />}
                 {selectedFeature.type === 'protected' && <Shield className="w-4 h-4 text-emerald-400" />}
                 {selectedFeature.type === 'incident' && <AlertTriangle className="w-4 h-4 text-purple-400" />}
@@ -1541,7 +1560,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 {selectedFeature.type === 'scientific' && <BookOpen className="w-4 h-4 text-teal-400" />}
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-100">
                   {selectedFeature.type === 'mining' && 'Cluster de Minería Ilegal'}
-                  {selectedFeature.type === 'heat' && 'Anomalía Térmica Satelital'}
+                  {selectedFeature.type === 'heat' && 'Foco de Calor NASA FIRMS'}
+                  {selectedFeature.type === 'hexDensity' && 'Densidad de Focos · Celda de 25 km'}
                   {selectedFeature.type === 'hydro' && 'Estación Hidrométrica'}
                   {selectedFeature.type === 'protected' && 'Área Protegida / ABRAE'}
                   {selectedFeature.type === 'incident' && 'Reporte de Incidente'}
@@ -1584,26 +1604,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[11px]">{selectedFeature.data.basin}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Impacto Est.</span>
-                    <p className="text-sm font-bold text-red-400 font-mono">{selectedFeature.data.estimatedHectares} ha</p>
+                {selectedFeature.data.affectedAreaHa === undefined ? (
+                  <p className="text-[11px] text-slate-300 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                    Zona de vigilancia de referencia (sector minero conocido). No tiene mediciones propias: consulte los focos FIRMS cercanos o las perturbaciones SAR medidas (Nivel 2).
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Área afectada (SAR)</span>
+                      <p className="text-sm font-bold text-red-400 font-mono">{selectedFeature.data.affectedAreaHa} ha</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Retrodispersión</span>
+                      <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.backscatterDiffDb ?? 's/d'} dB</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Dragas Activas</span>
-                    <p className="text-sm font-bold text-amber-400 font-mono">~{selectedFeature.data.dredgeCountEstimate} balsas</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Deforestación</span>
-                    <p className="text-xs font-medium text-slate-300">{selectedFeature.data.deforestationRate}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Severidad</span>
-                    <span className="px-1.5 py-0.5 rounded bg-red-950 text-red-300 font-mono text-[10px] border border-red-800">
-                      {selectedFeature.data.severity}
-                    </span>
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-1.5 text-[11px]">
                   <p className="text-slate-300">
@@ -1619,22 +1635,119 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </>
             )}
 
+            {/* Hexagon Density Details */}
+            {selectedFeature.type === 'hexDensity' && (() => {
+              const cell = selectedFeature.data as FirmsDensityCell;
+              const maxDay = Math.max(1, ...cell.perDay.map((d) => d.total));
+              return (
+                <>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{cell.states.join(' / ')}</h3>
+                    <p className="text-slate-400 text-[11px]">
+                      Celda {cell.id} · {cell.areaKm2.toLocaleString('es-VE')} km² · últimos {density?.days === 1 ? '24 h' : `${density?.days} días`}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800 text-center">
+                    {(['ALTA', 'MEDIA', 'BAJA'] as HotspotPriority[]).map((p) => (
+                      <div key={p}>
+                        <span className="text-[10px] text-slate-400 uppercase">{PRIORITY_LABELS[p]}</span>
+                        <p className="text-base font-bold font-mono" style={{ color: PRIORITY_COLORS[p] }}>{cell.byPriority[p]}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Prioritarios / 1.000 km²</span>
+                      <p className="text-sm font-bold text-orange-400 font-mono">{cell.relevantPer1000Km2}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">FRP máximo</span>
+                      <p className="text-sm font-bold text-amber-400 font-mono">{cell.maxFrpMw === null ? 's/d' : `${cell.maxFrpMw.toFixed(1)} MW`}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Total de focos</span>
+                      <p className="text-xs font-mono text-slate-200">{cell.total} ({cell.highConfidence} confianza alta)</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase">Puntos persistentes</span>
+                      <p className="text-xs font-mono text-slate-200">{cell.persistentPoints.length}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase">Focos por día (naranja = prioritarios)</span>
+                    <div className="flex items-end gap-1 h-16 mt-2">
+                      {cell.perDay.map((d) => (
+                        <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full" title={`${d.date}: ${d.total} focos, ${d.relevant} prioritarios`}>
+                          <div className="w-full bg-slate-600 rounded-t relative" style={{ height: `${(d.total / maxDay) * 100}%` }}>
+                            <div className="absolute bottom-0 left-0 right-0 bg-orange-500 rounded-t" style={{ height: `${d.total ? (d.relevant / d.total) * 100 : 0}%` }} />
+                          </div>
+                          <span className="text-[8px] text-slate-500 font-mono mt-1">{d.date.slice(8)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {cell.persistentPoints.length > 0 && (
+                    <div className="text-[11px] text-slate-300 space-y-0.5">
+                      <span className="text-[10px] text-slate-400 uppercase block">Fuego repetido en el mismo punto (~1 km)</span>
+                      {cell.persistentPoints.slice(0, 4).map((p) => (
+                        <p key={`${p.latitude}|${p.longitude}`} className="font-mono">{p.latitude.toFixed(2)}°, {p.longitude.toFixed(2)}° · {p.days} días</p>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 text-[11px] text-slate-300">
+                    {cell.nearestReference && (
+                      <p>
+                        <span className="text-slate-500">{cell.nearestReference.kind === 'AREA_PROTEGIDA' ? 'Área protegida' : 'Zona minera'}:</span>{' '}
+                        {cell.nearestReference.name} {cell.nearestReference.inside ? '(dentro, polígono aproximado)' : `(a ${cell.nearestReference.distanceKm} km)`}
+                      </p>
+                    )}
+                    {cell.nearestStation && (
+                      <p>
+                        <span className="text-slate-500">Estación INAMEH:</span> {cell.nearestStation.name} (a {cell.nearestStation.distanceKm} km) ·{' '}
+                        {cell.nearestStation.levelMsnm ?? 's/d'} msnm {cell.nearestStation.isStale ? '(desactualizado)' : ''}
+                      </p>
+                    )}
+                    <p>
+                      <span className="text-slate-500">Sentinel-2 útil:</span>{' '}
+                      {cell.latestUsefulS2 ? (
+                        <a href={cell.latestUsefulS2.stacItemUrl || '#'} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">
+                          {cell.latestUsefulS2.tileId} · {cell.latestUsefulS2.sensingTime.slice(0, 10)} · {cell.latestUsefulS2.cloudPixelPct}% nubes
+                        </a>
+                      ) : 'sin escena con menos de 20% de nubes en el catálogo reciente'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => mapInstanceRef.current?.setView(cell.center, HEX_TO_POINTS_ZOOM + 1, { animate: true })}
+                    className="w-full py-1.5 text-xs font-semibold rounded-lg bg-orange-600/80 hover:bg-orange-500 text-white"
+                  >
+                    Ver focos de esta celda
+                  </button>
+                </>
+              );
+            })()}
+
             {/* Heat Anomaly Details */}
             {selectedFeature.type === 'heat' && (
               <>
                 <div>
                   <h3 className="text-sm font-bold text-white">{selectedFeature.data.id} - {selectedFeature.data.sector}</h3>
-                  <p className="text-slate-400 text-[11px]">{selectedFeature.data.subBasin}</p>
+                  <p className="text-slate-400 text-[11px]">Estado: {selectedFeature.data.subBasin}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Temp. Brillo</span>
-                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.brightnessTempK} K</p>
+                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.brightnessTempK ?? 's/d'} K</p>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Potencia FRP</span>
-                    <p className="text-sm font-bold text-orange-400 font-mono">{selectedFeature.data.frpMw} MW</p>
+                    <p className="text-sm font-bold text-orange-400 font-mono">{selectedFeature.data.frpMw ?? 's/d'} MW</p>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Satélite</span>
@@ -1649,8 +1762,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 <div className="text-[11px] text-slate-400 font-mono">
-                  Adquisición: {selectedFeature.data.acqDate} {selectedFeature.data.acqTime} ({selectedFeature.data.dayNight === 'D' ? 'Paso Diurno' : 'Paso Nocturno'})
+                  Adquisición: {selectedFeature.data.acqDate} {selectedFeature.data.acqTime}
                 </div>
+                {selectedFeature.data.priority && (
+                  <p className="text-[11px] text-slate-300">
+                    Prioridad <strong style={{ color: PRIORITY_COLORS[selectedFeature.data.priority as HotspotPriority] }}>{PRIORITY_LABELS[selectedFeature.data.priority as HotspotPriority]}</strong>
+                    {selectedFeature.data.persistent ? ' · fuego repetido en el mismo punto en 2 o más días' : ''}
+                  </p>
+                )}
               </>
             )}
 
@@ -1664,23 +1783,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
                 <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Nivel Actual</span>
-                    <p className="text-sm font-bold text-sky-400 font-mono">{selectedFeature.data.currentLevelM} m</p>
+                    <span className="text-[10px] text-slate-400 uppercase">Nivel (msnm)</span>
+                    <p className="text-sm font-bold text-sky-400 font-mono">{selectedFeature.data.currentLevelM ?? 's/d'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Cota de Alerta</span>
-                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.alertLevelM} m</p>
+                    <span className="text-[10px] text-slate-400 uppercase">Cota de desborde</span>
+                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.overflowLevelM ?? 'No publicada'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Turbidez (NTU)</span>
-                    <p className="text-xs font-bold text-slate-300 font-mono">{selectedFeature.data.turbidityNtu} NTU</p>
+                    <span className="text-[10px] text-slate-400 uppercase">Variación diaria</span>
+                    <p className="text-xs font-bold text-slate-300 font-mono">
+                      {selectedFeature.data.dailyChangeM == null ? 's/d' : `${selectedFeature.data.dailyChangeM > 0 ? '+' : ''}${selectedFeature.data.dailyChangeM} m`}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Mercurio Est.</span>
-                    <p className="text-xs font-bold text-rose-400 font-mono">{selectedFeature.data.mercuryEstimatedPpm} ppm</p>
+                    <span className="text-[10px] text-slate-400 uppercase">Boletín</span>
+                    <p className={`text-xs font-bold font-mono ${selectedFeature.data.isStale ? 'text-amber-400' : 'text-slate-300'}`}>
+                      {selectedFeature.data.readingDate ?? 'sin fecha'}{selectedFeature.data.isStale ? ' (desactualizado)' : ''}
+                    </p>
                   </div>
                 </div>
 
+                <p className="text-[10px] text-slate-500">
+                  Fuente: boletín INAMEH. Calidad del agua no medida (requiere muestreo de campo).
+                </p>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Estado de Estación:</span>
                   <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-sky-950 text-sky-300 border border-sky-800">
@@ -1708,8 +1834,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Índice Amenaza</span>
-                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.threatIndex} / 100</p>
+                    <span className="text-[10px] text-slate-400 uppercase">Geometría</span>
+                    <p className="text-xs text-slate-300">Polígono aproximado</p>
                   </div>
                 </div>
 
@@ -1745,43 +1871,37 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             {selectedFeature.type === 'sentinelS2' && (
               <>
                 <div>
-                  <h3 className="text-sm font-bold text-white leading-snug">{selectedFeature.data.title}</h3>
-                  <p className="text-emerald-400 font-medium text-[11px] mt-0.5">{selectedFeature.data.satellite}</p>
+                  <h3 className="text-sm font-bold text-white leading-snug">Escena Sentinel-2 L2A · {selectedFeature.data.tileId}</h3>
+                  <p className="text-emerald-400 font-medium text-[11px] mt-0.5">{selectedFeature.data.satelliteCode}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Área Degradada</span>
-                    <p className="text-sm font-bold text-emerald-400 font-mono">
-                      {selectedFeature.data.areaHa} ha
-                    </p>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono">Adquisición (UTC)</span>
+                    <p className="text-xs font-bold text-emerald-400 font-mono">{selectedFeature.data.sensingTime.slice(0, 16).replace('T', ' ')}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Cob. de Nubes</span>
-                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.cloudCover}%</p>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono">Nubosidad</span>
+                    <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.cloudPixelPct ?? 's/d'}%</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Patrón</span>
-                    <p className="text-xs font-semibold text-rose-400">MINERÍA ILEGAL</p>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono">Órbita relativa</span>
+                    <p className="text-xs font-mono text-slate-300">{selectedFeature.data.relativeOrbit ?? 's/d'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Gravedad</span>
-                    <div>
-                      <span className="px-1.5 py-0.5 rounded bg-red-950 text-red-300 font-mono text-[10px] border border-red-800">
-                        CRÍTICA
-                      </span>
-                    </div>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono">Cuadrante MGRS</span>
+                    <p className="text-xs font-mono text-slate-300">{selectedFeature.data.tileId}</p>
                   </div>
                 </div>
 
-                <p className="text-slate-300 text-[11px] leading-relaxed bg-[#070b10] p-2.5 rounded-lg border border-slate-800/80">
-                  <span className="text-emerald-400 font-bold font-mono text-[10px] uppercase">Análisis de Variación S2:</span><br />
-                  {selectedFeature.data.analysis}
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Imagen disponible para inspección. La detección de pérdida de bosque o turbidez requiere procesar sus bandas (Nivel 2).
                 </p>
-
-                <div className="text-[11px] text-slate-400 font-mono">
-                  Adquisición: {selectedFeature.data.date} (Sensing: UTC {selectedFeature.data.sensingTime.slice(11, 19)})
-                </div>
+                {selectedFeature.data.stacItemUrl && (
+                  <a href={selectedFeature.data.stacItemUrl} target="_blank" rel="noreferrer" className="text-[11px] text-sky-400 hover:text-sky-300 underline">
+                    Ver metadatos en el catálogo STAC de Copernicus
+                  </a>
+                )}
               </>
             )}
 
@@ -1975,13 +2095,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     const satCoords = `${coords.lat >= 0 ? coords.lat.toFixed(5) + '° N' : Math.abs(coords.lat).toFixed(5) + '° S'}, ${coords.lng >= 0 ? coords.lng.toFixed(5) + '° E' : Math.abs(coords.lng).toFixed(5) + '° W'} (Datum WGS-84 / SIRGAS-REGVEN)`;
                     generatingEvent = {
                       type: 'MINING_CLUSTER',
-                      typeLabel: 'Cluster de Minería de Aluvión',
+                      typeLabel: f.data.affectedAreaHa === undefined ? 'Zona de vigilancia minera (referencia)' : 'Perturbación SAR medida',
                       title: f.data.name,
                       coordinates: coords,
                       satelliteCoordinates: satCoords,
-                      satelliteSensor: 'Copernicus Sentinel-1 SAR & Sentinel-2 MSI L2A',
-                      severity: f.data.severity || 'CRITICAL',
-                      description: `Frente minero aluvial "${f.data.name}" en cuenca ${f.data.basin}. Afectación: ${f.data.estimatedHectares} Ha, ${f.data.activeBarges || 0} balsas dragas operativas.`,
+                      satelliteSensor: f.data.affectedAreaHa === undefined ? 'Referencia cartográfica (sin medición propia)' : 'Copernicus Sentinel-1 SAR',
+                      severity: f.data.severity,
+                      description: f.data.affectedAreaHa === undefined
+                        ? `Zona de vigilancia "${f.data.name}" (cuenca ${f.data.basin}). Sector minero conocido; no contiene mediciones propias.`
+                        : `Perturbación SAR medida en "${f.data.name}": ${f.data.affectedAreaHa} ha, retrodispersión ${f.data.backscatterDiffDb ?? 's/d'} dB.`,
                       details: f.data,
                     };
                   } else if (f.type === 'scientific') {
@@ -2000,36 +2122,52 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       description: `Estudio "${f.data.articleTitle || f.data.name}" (${f.data.authors || 'Investigador'}, ${f.data.year || 2026}). Hallazgos: ${f.data.findings || 'Evaluación ecotoxicológica e hidroquímica'}.`,
                       details: f.data,
                     };
+                  } else if (f.type === 'hexDensity') {
+                    coords = { lat: f.data.center[0], lng: f.data.center[1] };
+                    zoneName = `Celda de 25 km en ${f.data.states.join(' / ')}`;
+                    overlap = f.data.nearestReference?.inside ? f.data.nearestReference.name : '';
+                    const satCoords = `${coords.lat.toFixed(5)}°, ${coords.lng.toFixed(5)}° (WGS-84)`;
+                    generatingEvent = {
+                      type: 'THERMAL_ANOMALY',
+                      typeLabel: 'Densidad de focos NASA FIRMS (hexágono de 25 km)',
+                      title: zoneName,
+                      coordinates: coords,
+                      satelliteCoordinates: satCoords,
+                      satelliteSensor: 'NASA FIRMS (VIIRS / MODIS)',
+                      severity: f.data.byPriority.ALTA > 0 ? 'HIGH' : 'MEDIUM',
+                      description: `${f.data.total} focos (${f.data.byPriority.ALTA} prioridad alta, ${f.data.byPriority.MEDIA} media) en ${f.data.areaKm2} km²; ${f.data.persistentPoints.length} puntos persistentes; FRP máximo ${f.data.maxFrpMw ?? 's/d'} MW.`,
+                      details: { id: f.data.id, byPriority: f.data.byPriority, perDay: f.data.perDay },
+                    };
                   } else if (f.type === 'heat') {
                     coords = { lat: f.data.latitude, lng: f.data.longitude };
-                    zoneName = `Sector ${f.data.sector}`;
-                    overlap = f.data.basin;
+                    zoneName = f.data.sector;
+                    overlap = f.data.subBasin;
                     const satCoords = `${coords.lat >= 0 ? coords.lat.toFixed(5) + '° N' : Math.abs(coords.lat).toFixed(5) + '° S'}, ${coords.lng >= 0 ? coords.lng.toFixed(5) + '° E' : Math.abs(coords.lng).toFixed(5) + '° W'} (Datum WGS-84 / SIRGAS-REGVEN)`;
                     generatingEvent = {
                       type: 'THERMAL_ANOMALY',
                       typeLabel: 'Foco Térmico Satelital (NASA FIRMS)',
-                      title: `Anomalía Térmica en ${f.data.sector}`,
+                      title: f.data.sector,
                       coordinates: coords,
                       satelliteCoordinates: satCoords,
-                      satelliteSensor: 'NASA LANCE / VIIRS NOAA-20 & Suomi-NPP (375m I-Band)',
-                      severity: f.data.confidence > 80 ? 'CRITICAL' : 'HIGH',
-                      description: `Foco de calor de alta intensidad. Temp. Brillo: ${f.data.brightnessKelvin} K, FRP: ${f.data.frpMegaWatts} MW, Confiabilidad: ${f.data.confidence}%.`,
+                      satelliteSensor: `NASA FIRMS (${f.data.satellite})`,
+                      severity: f.data.confidence === 'high' ? 'HIGH' : 'MEDIUM',
+                      description: `Foco de calor detectado el ${f.data.acqDate} ${f.data.acqTime} en el estado ${f.data.subBasin}. Temp. de brillo: ${f.data.brightnessTempK ?? 's/d'} K, FRP: ${f.data.frpMw ?? 's/d'} MW, confianza: ${f.data.confidence}.`,
                       details: f.data,
                     };
                   } else if (f.type === 'hydro') {
                     coords = { lat: f.data.coordinates[1], lng: f.data.coordinates[0] };
                     zoneName = f.data.name;
-                    overlap = f.data.basin;
+                    overlap = f.data.river;
                     const satCoords = `${coords.lat >= 0 ? coords.lat.toFixed(5) + '° N' : Math.abs(coords.lat).toFixed(5) + '° S'}, ${coords.lng >= 0 ? coords.lng.toFixed(5) + '° E' : Math.abs(coords.lng).toFixed(5) + '° W'} (Datum WGS-84 / SIRGAS-REGVEN)`;
                     generatingEvent = {
                       type: 'HYDRO_ALERT',
-                      typeLabel: 'Estación Telemétrica Hidrológica Fluvial',
+                      typeLabel: 'Estación hidrométrica INAMEH',
                       title: f.data.name,
                       coordinates: coords,
                       satelliteCoordinates: satCoords,
-                      satelliteSensor: 'Red Telemétrica In Situ & Sondas Multiparamétricas Fluviales',
-                      severity: f.data.status === 'CRITICO' ? 'CRITICAL' : 'HIGH',
-                      description: `Estación telemétrica en río ${f.data.river}. Nivel: ${f.data.currentLevelM}m, Turbidez: ${f.data.turbidityNtu} NTU, Mercurio estimado: ${f.data.mercuryEstimatedPpm} ppm.`,
+                      satelliteSensor: 'Boletín diario INAMEH (regla limnimétrica)',
+                      severity: f.data.status,
+                      description: `Estación ${f.data.id} en el ${f.data.river}. Nivel: ${f.data.currentLevelM ?? 's/d'} msnm el ${f.data.readingDate ?? 's/f'}${f.data.isStale ? ' (boletín desactualizado)' : ''}. Cota de desborde: ${f.data.overflowLevelM ?? 'no publicada'}.`,
                       details: f.data,
                     };
                   } else if (f.type === 'protected') {
@@ -2046,7 +2184,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       satelliteCoordinates: satCoords,
                       satelliteSensor: 'Cartografía Oficial Instituto Geográfico Simón Bolívar / INPARQUES',
                       severity: 'REGIMEN_ESTRICTO',
-                      description: `${f.data.name} (${f.data.designation || 'Área Bajo Régimen de Administración Especial'}). Superficie: ${f.data.surfaceHa?.toLocaleString() || f.data.hectares?.toLocaleString() || 'N/A'} Ha. Riesgo: ${f.data.threatIndex || 0}%.`,
+                      description: `${f.data.name} (${f.data.designation || 'Área Bajo Régimen de Administración Especial'}). Superficie: ${f.data.surfaceHa?.toLocaleString() || 'N/A'} ha (polígono aproximado).`,
                       details: f.data,
                     };
                   } else if (f.type === 'incident') {
@@ -2068,17 +2206,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   } else if (f.type === 'sentinelS2') {
                     coords = { lat: f.data.center[0], lng: f.data.center[1] };
                     zoneName = f.data.title;
-                    overlap = 'Área Forestal / Cobertura Boscosa de la Cuenca';
+                    overlap = '';
                     const satCoords = `${coords.lat >= 0 ? coords.lat.toFixed(5) + '° N' : Math.abs(coords.lat).toFixed(5) + '° S'}, ${coords.lng >= 0 ? coords.lng.toFixed(5) + '° E' : Math.abs(coords.lng).toFixed(5) + '° W'} (Datum WGS-84 / SIRGAS-REGVEN)`;
                     generatingEvent = {
                       type: 'SENTINEL2_DETECTION',
-                      typeLabel: 'Detección Multiespectral de Deforestación Sentinel-2',
+                      typeLabel: 'Escena Sentinel-2 L2A disponible',
                       title: f.data.title,
                       coordinates: coords,
                       satelliteCoordinates: satCoords,
-                      satelliteSensor: 'Copernicus Sentinel-2 MSI (Bandas NIR/SWIR B8/B11/B12 L2A)',
-                      severity: 'CRITICAL',
-                      description: `Pérdida de cobertura de bosque primario y piscinas de dragado aluvial en ${f.data.title}. Superficie afectada: ${f.data.areaHa} Ha.`,
+                      satelliteSensor: `Copernicus Sentinel-2 MSI (${f.data.satelliteCode})`,
+                      severity: 'INFO',
+                      description: `Escena ${f.data.productId} del ${f.data.sensingTime.slice(0, 10)} con ${f.data.cloudPixelPct ?? 's/d'}% de nubes sobre el cuadrante ${f.data.tileId}.`,
                       details: f.data,
                     };
                   } else if (f.type === 'communityReport') {
@@ -2124,9 +2262,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     thermalAnomalies: heatAnomalies.filter((h) => Math.abs(h.latitude - coords.lat) < 1.5 && Math.abs(h.longitude - coords.lng) < 1.5),
                     miningAlerts: miningClusters.filter((m) => Math.abs(m.latitude - coords.lat) < 1.5 && Math.abs(m.longitude - coords.lng) < 1.5),
                     waterQuality: f.type === 'hydro' ? {
-                      turbidity: f.data.turbidityNtu,
-                      mercuryPpm: f.data.mercuryEstimatedPpm,
-                      level: f.data.currentLevelM,
+                      levelMsnm: f.data.currentLevelM,
+                      overflowLevelMsnm: f.data.overflowLevelM,
+                      readingDate: f.data.readingDate,
                       status: f.data.status,
                     } : f.type === 'scientific' ? {
                       turbidity: f.data.turbidityNtu || 0,
@@ -2207,12 +2345,69 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         }}
       />
 
+      {/* Focos FIRMS: periodo, prioridad baja y leyenda */}
+      {visibleLayers.heat && (
+        <div className="absolute bottom-12 left-2 sm:left-4 z-10 w-[260px] bg-[#080d14]/95 backdrop-blur-md border border-slate-800 rounded-lg p-2.5 text-[11px] text-slate-300 shadow-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-white flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-orange-400" /> Focos NASA FIRMS</span>
+            <div className="flex gap-1">
+              {DENSITY_PERIODS.map((p) => (
+                <button
+                  key={p.days}
+                  onClick={() => setDensityDays(p.days)}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${densityDays === p.days ? 'bg-orange-600 border-orange-500 text-white' : 'border-slate-700 text-slate-400 hover:text-white'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {densityError && <p className="text-amber-300">No se pudo cargar la densidad: {densityError}</p>}
+          {density && (
+            <p className="font-mono text-[10px] text-slate-400">
+              {density.totals.hotspots} focos · <span style={{ color: PRIORITY_COLORS.ALTA }}>{density.totals.byPriority.ALTA} alta</span> ·{' '}
+              <span style={{ color: PRIORITY_COLORS.MEDIA }}>{density.totals.byPriority.MEDIA} media</span> · {density.totals.byPriority.BAJA} baja
+            </p>
+          )}
+          {!showHotspotPoints ? (
+            <div>
+              <p className="text-[10px] text-slate-400 mb-1">Focos prioritarios por 1.000 km² (hexágonos de 25 km)</p>
+              <div className="flex items-center gap-1">
+                {DENSITY_LEVEL_COLORS.slice(1).map((c, i) => (
+                  <div key={c} className="flex-1 text-center">
+                    <div className="h-2.5 rounded-sm" style={{ backgroundColor: c }} />
+                    <span className="text-[9px] font-mono text-slate-500">
+                      {i === 0 ? `<${density?.levelThresholdsPer1000Km2[0] ?? 1}` : i === 3 ? `≥${density?.levelThresholdsPer1000Km2[2] ?? 6}` : `${density?.levelThresholdsPer1000Km2[i - 1]}-${density?.levelThresholdsPer1000Km2[i]}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">Borde claro: contiene focos de prioridad alta. Acerque el mapa para ver cada foco.</p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 text-[10px]">
+              {(['ALTA', 'MEDIA', 'BAJA'] as HotspotPriority[]).map((p) => (
+                <span key={p} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: PRIORITY_COLORS[p] }} />{PRIORITY_LABELS[p]}</span>
+              ))}
+              <span className="text-slate-500">borde blanco: persistente</span>
+            </div>
+          )}
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={showLowPriority} onChange={(e) => setShowLowPriority(e.target.checked)} />
+            <span>Mostrar prioridad baja</span>
+          </label>
+          <p className="text-[9px] text-slate-500 leading-snug">
+            Alta: fuego repetido en el mismo punto, o foco relevante en área protegida o a ≤25 km de zona minera. Media: confianza alta o FRP ≥ 10 MW.
+          </p>
+        </div>
+      )}
+
       {/* Bottom Coordinate & Metric Ticker */}
       <div className="absolute bottom-2 left-2 right-12 sm:bottom-3 sm:left-4 sm:right-16 z-10 pointer-events-none">
         <div className="inline-flex items-center gap-2 sm:gap-4 bg-[#080d14]/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono text-slate-300 shadow-xl pointer-events-auto max-w-full overflow-x-auto whitespace-nowrap scrollbar-none">
           <div className="flex items-center gap-1.5 text-sky-400 font-semibold shrink-0">
             <Compass className="w-3.5 h-3.5" />
-            <span>AMAZONÍA VENEZOLANA: [0.5°N - 10.5°N | 68.5°W - 58.5°W]</span>
+            <span>AMAZONAS · BOLÍVAR · DELTA AMACURO · ESEQUIBO: [0.6°N - 10.1°N | 68.0°W - 57.8°W]</span>
           </div>
           <span className="text-slate-700 hidden sm:inline">|</span>
           <div className="text-slate-400 shrink-0">

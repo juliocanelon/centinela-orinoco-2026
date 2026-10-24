@@ -52,38 +52,24 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
     setTimeout(() => setCopiedCurlId(null), 2500);
   };
 
+  /** Comprobación real desde el servidor (evita CORS y no expone claves). */
   const handleTestPing = async (conn: SatelliteApiConnection) => {
     setTestingPingId(conn.id);
-    const start = performance.now();
     try {
-      if (conn.category === 'INTERNAL_PIPELINE' || conn.activeUrl.startsWith('/api')) {
-        const res = await fetch('/api/health');
-        const latency = Math.round(performance.now() - start);
-        if (res.ok) {
-          setPingResults(prev => ({
-            ...prev,
-            [conn.id]: { status: 'SUCCESS', latencyMs: latency, message: 'HTTP 200 OK • Servidor Centinela Orinoco Activo' }
-          }));
-        } else {
-          setPingResults(prev => ({
-            ...prev,
-            [conn.id]: { status: 'ERROR', latencyMs: latency, message: `HTTP ${res.status} • Error de respuesta` }
-          }));
-        }
-      } else {
-        // External endpoint proxy simulation ping
-        await new Promise(r => setTimeout(r, 450 + Math.random() * 300));
-        const latency = Math.round(performance.now() - start);
-        setPingResults(prev => ({
-          ...prev,
-          [conn.id]: { status: 'SUCCESS', latencyMs: latency, message: `Endpoint disponible • BBox Amazonía [-68.5°, 0.5° a -58.5°, 10.2°]` }
-        }));
-      }
-    } catch {
-      const latency = Math.round(performance.now() - start);
+      const res = await fetch(`/api/ingestion/connections/${conn.id}/check`);
+      const body = await res.json().catch(() => null);
       setPingResults(prev => ({
         ...prev,
-        [conn.id]: { status: 'SUCCESS', latencyMs: latency, message: 'Respuesta validada vía Gateway proxy' }
+        [conn.id]: {
+          status: res.ok && body?.ok ? 'SUCCESS' : 'ERROR',
+          latencyMs: body?.latencyMs ?? 0,
+          message: body?.message || `HTTP ${res.status}`,
+        }
+      }));
+    } catch (err: any) {
+      setPingResults(prev => ({
+        ...prev,
+        [conn.id]: { status: 'ERROR', latencyMs: 0, message: err?.message || 'Servidor no disponible' }
       }));
     } finally {
       setTestingPingId(null);
@@ -119,7 +105,7 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                APIs oficiales y URLs activas para NASA FIRMS, Copernicus SAR, INPE Queimadas y PostGIS Dispatcher
+                Directorio de URLs de consumo: NASA FIRMS, Copernicus Sentinel-1/2/3, INAMEH y referencias
               </p>
             </div>
           </div>
@@ -180,6 +166,39 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
               INPE Panamazonía
             </button>
             <button
+              onClick={() => setSelectedCategory('MULTISPECTRAL_OPTICAL')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedCategory === 'MULTISPECTRAL_OPTICAL'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-emerald-400" />
+              Óptico (Sentinel-2/3)
+            </button>
+            <button
+              onClick={() => setSelectedCategory('FOREST_ALERTS')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedCategory === 'FOREST_ALERTS'
+                  ? 'bg-lime-600 text-white shadow-md shadow-lime-900/30'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <TreePine className="w-3.5 h-3.5 text-lime-400" />
+              Alertas de bosque
+            </button>
+            <button
+              onClick={() => setSelectedCategory('RIVER_TELEMETRY')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedCategory === 'RIVER_TELEMETRY'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-900/30'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5 text-cyan-400" />
+              Telemetría fluvial (INAMEH)
+            </button>
+            <button
               onClick={() => setSelectedCategory('INTERNAL_PIPELINE')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 selectedCategory === 'INTERNAL_PIPELINE'
@@ -223,6 +242,13 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-white">{conn.name}</h3>
+                      <span className={`px-2 py-0.5 text-[10px] font-mono rounded border ${
+                        conn.availability === 'ACTIVE' ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                          : conn.availability === 'UNAVAILABLE' ? 'bg-red-950 text-red-300 border-red-800'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}>
+                        {conn.availability === 'ACTIVE' ? 'EN USO' : conn.availability === 'UNAVAILABLE' ? 'NO DISPONIBLE' : 'REFERENCIA'}
+                      </span>
                       <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700 rounded">
                         {conn.agency}
                       </span>
@@ -234,6 +260,7 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-1">{conn.description}</p>
+                    {conn.availabilityNote && <p className="text-[11px] text-amber-300/90 mt-1">{conn.availabilityNote}</p>}
                   </div>
 
                   <div className="flex items-center gap-2">

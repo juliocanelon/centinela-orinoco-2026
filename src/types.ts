@@ -4,7 +4,6 @@ export type ViewMode =
   | 'LIVE_PIPELINE'
   | 'SCIENTIFIC_CORPUS'
   | 'SAR_RADAR_ANOMALIES'
-  | 'SYNTHETIC_TELEMETRY'
   | 'TELEMETRY'
   | 'INCIDENTS'
   | 'SUPABASE_CONSOLE'
@@ -27,6 +26,7 @@ export interface VisibleLayersState {
   incidents: boolean;
   communityReports: boolean;
   sentinelS2: boolean;
+  firmsWms: boolean;
   scientific: boolean;
   amazonasBolivarDelta: boolean;
 }
@@ -80,44 +80,58 @@ export interface CommunityReport {
 
 export type IngestionSource = 'NASA_FIRMS' | 'COPERNICUS_SAR' | 'KOBO_TOOLBOX' | 'ODK_COLLECT';
 
+/** Foco de calor NASA FIRMS tal como lo entrega /api/ingestion/feed. */
 export interface NasaFirmsHotspot {
   id: string;
-  source: 'NASA_FIRMS';
-  satellite: 'VIIRS-NOAA20' | 'VIIRS-SNPP' | 'MODIS-AQUA' | 'MODIS-TERRA';
+  satellite: string;
   latitude: number;
   longitude: number;
-  brightnessTempK: number;
-  frpMw: number; // Fire Radiative Power in Megawatts
+  brightnessTempK: number | null;
+  frpMw: number | null;
   confidence: 'low' | 'nominal' | 'high';
   acqDate: string;
   acqTime: string;
   dayNight: 'D' | 'N';
-  subBasin: string;
+  state: string;
   sectorName: string;
-  postgisGeomText: string; // ST_AsText(geom) -> POINT(lng lat)
-  embeddingGenerated: boolean;
-  embeddingDim?: number;
-  rawJson?: any;
+  sourceProduct: string;
 }
 
-export interface CopernicusDisturbance {
-  id: string;
-  source: 'COPERNICUS_SAR';
-  mission: 'SENTINEL_1_SAR' | 'SENTINEL_2_MSI';
-  sectorName: string;
-  subBasin: string;
-  latitude: number;
-  longitude: number;
-  polygon: [number, number][]; // Coordinates [lat, lng]
-  backscatterDiffDb: number; // Sentinel-1 polarization drop
-  coherenceLossPercent: number;
-  opticalNdviDropPercent: number;
-  affectedAreaHa: number;
-  presumedActivity: 'MINERIA_ALUVION_BALSAS' | 'DEFORESTACION_REPENTINA' | 'PISCINA_RELAVES_LODO' | 'PISTA_CLANDESTINA_EXPANSION';
-  severity: AlertSeverity;
-  postgisGeomText: string; // ST_AsText(geom) -> POLYGON(...)
-  embeddingGenerated: boolean;
-  embeddingDim?: number;
+/** Escena Sentinel-1 GRD del catálogo STAC de Copernicus. */
+export interface Sentinel1Scene {
+  sceneId: string;
+  platform: string;
+  acquiredAt: string;
+  instrumentMode: string | null;
+  polarizations: string[] | null;
+  orbitState: string | null;
+  relativeOrbit: number | null;
+  centerLat: number | null;
+  centerLon: number | null;
+  stacItemUrl: string | null;
+}
+
+/** Producto Sentinel-3 (OLCI WFR / SLSTR WST) del catálogo OData de Copernicus. */
+export interface Sentinel3Product {
+  productId: string;
+  productName: string;
+  platform: string;
+  instrument: 'OLCI' | 'SLSTR';
+  productType: string;
+  sensingStart: string;
+  centerLat: number | null;
+  centerLon: number | null;
+  odataUrl: string;
+}
+
+export interface IngestionFeed {
+  loadedAt: string | null;
+  hotspots: NasaFirmsHotspot[];
+  sentinel1Scenes: Sentinel1Scene[];
+  sentinel2Products: S2ProductTile[];
+  sentinel3Products: Sentinel3Product[];
+  hydroStations: HydrologicalStation[];
+  sarDisturbances: Record<string, any>[];
 }
 
 export interface KoboFieldPatrolReport {
@@ -141,8 +155,6 @@ export interface KoboFieldPatrolReport {
   narrative: string;
   evidencePhotoCount: number;
   postgisGeomText: string;
-  embeddingGenerated: boolean;
-  embeddingDim?: number;
 }
 
 export interface LiveIngestionItem {
@@ -162,23 +174,26 @@ export interface LiveIngestionItem {
   attributes: Record<string, any>;
 }
 
+/** Documento recuperado por coincidencia de texto (la tabla no tiene embeddings). */
 export interface VectorRagSearchResult {
   id: string;
-  source: IngestionSource | 'SCIENTIFIC_CORPUS';
+  source: string;
   title: string;
   location: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   distanceKmFromQueryTarget?: number;
-  cosineSimilarity: number; // 0.0 - 1.0
+  relevanceScore: number; // fracción de términos de la consulta presentes (0-1)
   contentSnippet: string;
-  severity: AlertSeverity;
-  postgisGeometry: string;
+  createdAt: string;
 }
 
 export interface RagIntelligenceSynthesis {
   query: string;
   timestamp: string;
+  searchMethod?: string;
+  terms?: string[];
+  engine?: string;
   matchesFoundCount: number;
   topMatches: VectorRagSearchResult[];
   synthesisMarkdown: string;
@@ -191,35 +206,19 @@ export interface RagIntelligenceSynthesis {
   };
 }
 
-export interface ConnectorHealthStatus {
-  nasaFirms: {
-    status: 'CONNECTED' | 'POLLING_OK' | 'RATE_LIMITED' | 'CONFIGURED';
-    lastSync: string;
-    totalRecords: number;
-    intervalHours: number;
-    activeSatellites: string[];
-    endpointUrl: string;
-  };
-  copernicusSar: {
-    status: 'CONNECTED' | 'STAC_ACTIVE' | 'CDSE_READY';
-    lastSync: string;
-    totalDisturbances: number;
-    missions: string[];
-    endpointUrl: string;
-  };
-  koboWebhook: {
-    status: 'LISTENING' | 'ACTIVE';
-    lastSubmission: string;
-    totalSubmissions: number;
+/** Estado de la ingesta (GET /api/ingestion/status). */
+export interface IngestionOverview {
+  generatedAt: string;
+  supabaseConnected: boolean;
+  supabaseHost: string;
+  tasks: SatelliteScheduledTask[];
+  ragDocumentsCount: number;
+  kobo: {
     webhookPath: string;
+    totalSubmissions: number;
+    lastSubmission: string | null;
   };
-  supabasePostgis: {
-    status: 'CONNECTED' | 'LOCAL_FALLBACK';
-    postgisVersion: string;
-    pgvectorVersion: string;
-    vectorDimension: number;
-    hnswIndexed: boolean;
-  };
+  cacheLoadedAt: string | null;
 }
 
 export interface ScientificArticle {
@@ -269,18 +268,6 @@ export interface SarRadarAnomaly {
   notes: string;
 }
 
-export interface SyntheticTelemetryConfig {
-  basinId: string;
-  basinName: string;
-  nodeCount: number;
-  centerLat: number;
-  centerLng: number;
-  dispersionRadiusKm: number;
-  seasonalRegime: 'ESTIAJE' | 'CRECIDA_INVIERNO' | 'TRANSICION';
-  includeHeavyMetalSpike: boolean;
-  miningTurbidityShock: boolean;
-}
-
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
 
 export interface GeoJSONPoint {
@@ -312,19 +299,20 @@ export interface GeoJSONFeatureCollection<F = GeoJSONFeature> {
 
 export interface HeatAnomaly {
   id: string;
-  satellite: 'VIIRS-NOAA20' | 'VIIRS-SNPP' | 'MODIS-AQUA' | 'MODIS-TERRA';
+  satellite: string; // VIIRS-NOAA20 | VIIRS-SNPP | MODIS-AQUA | MODIS-TERRA
   latitude: number;
   longitude: number;
-  brightnessTempK: number;
-  frpMw: number; // Fire Radiative Power (MW)
+  brightnessTempK: number | null;
+  frpMw: number | null; // Fire Radiative Power (MW)
   confidence: 'nominal' | 'high' | 'low';
   acqDate: string;
   acqTime: string;
   dayNight: 'D' | 'N';
   sector: string;
-  subBasin: string;
+  subBasin: string; // estado donde cae el foco
 }
 
+/** Zona de vigilancia (referencia) o perturbación SAR medida (Nivel 2). */
 export interface MiningCluster {
   id: string;
   name: string;
@@ -332,32 +320,33 @@ export interface MiningCluster {
   latitude: number;
   longitude: number;
   polygon?: [number, number][];
-  estimatedHectares: number;
   activityType: 'aluvion_balsa' | 'cielo_abierto' | 'monitoreo_radar_sar';
   severity: AlertSeverity;
-  dredgeCountEstimate: number;
-  deforestationRate: string;
-  firstDetected: string;
-  lastVerified: string;
+  /** Solo para perturbaciones medidas por SAR (Nivel 2). */
+  affectedAreaHa?: number;
+  backscatterDiffDb?: number;
+  detectedAt?: string;
   abraeOverlap?: string;
   indigenousCommunityOverlap?: string;
 }
 
+/** Estación hidrométrica de INAMEH con su último boletín publicado. */
 export interface HydrologicalStation {
-  id: string;
+  id: string; // código INAMEH (0850, 0855, 0870, 0875)
   name: string;
   river: string;
-  coordinates: [number, number];
-  currentLevelM: number;
-  normalLevelM: number;
-  alertLevelM: number;
-  criticalLevelM: number;
-  flowRateM3s: number;
-  turbidityNtu: number;
-  ph: number;
-  dissolvedOxygenMgL: number;
-  mercuryEstimatedPpm: number;
-  status: 'OPTIMAL' | 'ELEVATED' | 'ALERT_CRECIDA' | 'ESTIAJE_CRITICO';
+  state: string;
+  coordinates: [number, number]; // [lng, lat]
+  currentLevelM: number | null; // msnm
+  dailyChangeM: number | null;
+  trend: 'SUBIENDO' | 'BAJANDO' | 'ESTABLE' | null;
+  overflowLevelM: number | null; // cota de desborde publicada por INAMEH
+  historicalMaxM: number | null;
+  historicalMinM: number | null;
+  status: 'OPTIMAL' | 'ELEVATED' | 'ALERT_CRECIDA' | 'SIN_REFERENCIA';
+  readingDate: string | null;
+  isStale: boolean;
+  sourceUrl: string;
   lastTelemetry: string;
 }
 
@@ -367,8 +356,7 @@ export interface ProtectedArea {
   category: 'PARQUE_NACIONAL' | 'RESERVA_BIOSFERA' | 'MONUMENTO_NATURAL' | 'TERRITORIO_INDIGENA' | 'RESERVA_FORESTAL';
   surfaceHa: number;
   ethnicGroup?: string;
-  coordinates: [number, number][];
-  threatIndex: number; // 0-100
+  coordinates: [number, number][]; // polígono aproximado de referencia
   color: string;
 }
 
@@ -399,49 +387,22 @@ export interface SupabaseRpcStatus {
   responsePreview?: any;
 }
 
-// === Sentinel-2 Satellite Ingestion types ===
+// === Sentinel-2: producto L2A del catálogo STAC ===
 export interface S2ProductTile {
-  id: string;
   productId: string;
-  tileId: string; // Grid tile coordinate (e.g. T19PHC, T20PHD, T20PJD)
-  satelliteCode: 'S2A' | 'S2B' | 'S2C' | 'S2D';
+  tileId: string; // cuadrante MGRS (p. ej. T19PHC)
+  satelliteCode: string; // S2A | S2B | S2C
   sensingTime: string;
-  cloudPixelPct: number;
-  footprintGeometry: string; // Polygon WKT
-  wktText: string;
-  downloadStatus: 'PENDING' | 'DOWNLOADING' | 'COMPLETED' | 'FAILED';
-  ngeoUri: string;
-  createdAt: string;
-  state: 'Amazonas' | 'Bolivar' | 'Delta Amacuro';
-  anomalyDetected: boolean;
-  anomalyType?: 'MINERIA_ILEGAL' | 'DEFORESTACION' | 'ESTABLE' | 'SEDIMENTACION';
-  affectedAreaHa?: number;
-  description?: string;
-}
-
-export interface S2TileBand {
-  id: string;
-  productTileId: string;
-  bandName: 'SCL' | 'TCI' | 'B02' | 'B03' | 'B04' | 'B08';
-  resolutionM: 10 | 20 | 60;
-  filePath: string; // Simulating MinIO / S3 paths (e.g. s3://sentinel-products/.../SCL_20m.jp2)
-  fileSizeBytes: number;
-  createdAt: string;
-}
-
-export interface OrbitSchedule {
-  id: string;
-  satellite: 'S2A' | 'S2B' | 'S2C' | 'S2D';
-  nextPassTime: string;
-  targetRegion: string; // Amazonas, Bolivar, Delta Amacuro
-  expectedDurationMin: number;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'IDLE';
-  kafkaTopic: string;
+  cloudPixelPct: number | null;
+  relativeOrbit: number | null;
+  centerLat: number | null;
+  centerLon: number | null;
+  stacItemUrl: string | null;
 }
 
 // === Automated Satellite Scheduler & Supabase Ingestion Types ===
 export interface SatelliteScheduledTask {
-  key: string; // 'NASA_FIRMS' | 'SENTINEL_1_SAR' | 'SENTINEL_2_MSI' | 'HYDRO_TELEMETRY'
+  key: 'NASA_FIRMS' | 'SENTINEL_1_SAR' | 'SENTINEL_2_MSI' | 'SENTINEL_3_OLCI' | 'HYDRO_TELEMETRY';
   name: string;
   satelliteMission: string;
   agency: string;
@@ -454,7 +415,9 @@ export interface SatelliteScheduledTask {
   status: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'ERROR';
   totalIngested: number;
   supabaseTable: string;
-  vectorReady: boolean;
+  endpointUrl: string;
+  lastInserted: number | null;
+  lastSkipped: number | null;
   lastMessage?: string;
 }
 
@@ -465,14 +428,14 @@ export interface SchedulerLogEntry {
   satelliteMission: string;
   status: 'SUCCESS' | 'ERROR' | 'RUNNING' | 'WARNING';
   recordsCount: number;
+  skippedCount: number;
   supabaseSynced: boolean;
   message: string;
-  vectorChunkId?: string;
 }
 
 export interface SchedulerStatusResponse {
   isRunning: boolean;
-  mode: 'PRODUCTION_CADENCE' | 'ACCELERATED_DEMO';
+  mode: 'PRODUCTION_CADENCE';
   supabaseConnected: boolean;
   supabaseHost?: string;
   activeTasks: SatelliteScheduledTask[];
@@ -567,3 +530,58 @@ export interface ZoneAnalyticsResult {
   timestamp: string;
 }
 
+
+// === Densidad de focos NASA FIRMS en hexágonos (GET /api/firms/density) ===
+export type HotspotPriority = 'ALTA' | 'MEDIA' | 'BAJA';
+
+export interface FirmsDensityHotspot {
+  id: string;
+  latitude: number;
+  longitude: number;
+  acqDate: string;
+  acqTime: string;
+  satellite: string;
+  frpMw: number | null;
+  confidence: string;
+  state: string;
+  priority: HotspotPriority;
+  persistent: boolean;
+}
+
+export interface FirmsDensityCell {
+  id: string;
+  center: [number, number]; // [lat, lon]
+  polygon: [number, number][]; // [lat, lon]
+  areaKm2: number;
+  total: number;
+  relevant: number; // prioridad alta + media
+  highConfidence: number;
+  byPriority: Record<HotspotPriority, number>;
+  level: 0 | 1 | 2 | 3 | 4;
+  relevantPer1000Km2: number;
+  totalPer1000Km2: number;
+  maxFrpMw: number | null;
+  perDay: { date: string; total: number; relevant: number }[];
+  persistentPoints: { latitude: number; longitude: number; days: number }[];
+  states: string[];
+  nearestReference: { name: string; kind: 'ZONA_MINERA' | 'AREA_PROTEGIDA'; distanceKm: number; inside: boolean } | null;
+  nearestStation: { code: string; name: string; distanceKm: number; levelMsnm: number | null; readingDate: string | null; status: string | null; isStale: boolean } | null;
+  latestUsefulS2: { productId: string; tileId: string; sensingTime: string; cloudPixelPct: number | null; stacItemUrl: string | null } | null;
+  hotspots: FirmsDensityHotspot[];
+}
+
+export interface FirmsDensityResponse {
+  days: number;
+  hexSideKm: number;
+  hexAreaKm2: number;
+  generatedAt: string;
+  dataLoadedAt: string | null;
+  totals: {
+    hotspots: number;
+    cells: number;
+    byPriority: Record<HotspotPriority, number>;
+    byState: Record<string, number>;
+  };
+  levelThresholdsPer1000Km2: number[];
+  cells: FirmsDensityCell[];
+}

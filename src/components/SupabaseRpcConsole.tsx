@@ -20,97 +20,54 @@ import {
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase, supabaseUrl } from '../lib/supabaseClient';
 import { LivePipelineService } from '../services/liveDataPipelineService';
-import { 
-  MOCK_ORINOCO_BASIN_GEOJSON, 
-  INITIAL_HEAT_ANOMALIES, 
-  INITIAL_MINING_CLUSTERS, 
-  INITIAL_HYDROLOGICAL_STATIONS, 
-  INITIAL_PROTECTED_AREAS 
-} from '../data/mockGeoJSON';
 
 interface RpcDefinition {
   name: string;
   description: string;
   returnType: string;
   defaultParams: Record<string, any>;
-  sampleResponse: any;
 }
 
 const RPC_DEFINITIONS: RpcDefinition[] = [
   {
     name: 'get_heat_anomalies_geojson',
-    description: 'Consulta focos de calor satelitales (VIIRS/MODIS) compilados en formato GeoJSON FeatureCollection',
-    returnType: 'JSON (GeoJSON FeatureCollection)',
+    description: 'Focos de calor NASA FIRMS (VIIRS / MODIS) de los últimos 7 días, desde public.nasa_firms_hotspots',
+    returnType: 'JSON (GeoJSON FeatureCollection de puntos)',
     defaultParams: {
       p_min_confidence: 'nominal',
       p_limit: 50,
     },
-    sampleResponse: {
-      type: 'FeatureCollection',
-      features: INITIAL_HEAT_ANOMALIES.map((h) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [h.longitude, h.latitude] },
-        properties: h,
-      })),
-    },
   },
   {
     name: 'get_mining_clusters_geojson',
-    description: 'Retorna clusters de minería ilegal y deforestación por radar SAR Sentinel-1 con hectáreas y dragas',
-    returnType: 'JSON (GeoJSON FeatureCollection)',
+    description: 'Perturbaciones medidas por radar Sentinel-1 (public.copernicus_sar_disturbances). Vacío hasta el Nivel 2',
+    returnType: 'JSON (GeoJSON FeatureCollection de puntos)',
     defaultParams: {
-      p_basin_id: 'ALTO_ORINOCO',
+      p_basin_id: null,
       p_min_severity: 'LOW',
-    },
-    sampleResponse: {
-      type: 'FeatureCollection',
-      features: INITIAL_MINING_CLUSTERS.map((m) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [m.longitude, m.latitude] },
-        properties: m,
-      })),
     },
   },
   {
     name: 'get_hydrological_telemetry',
-    description: 'Extrae series de tiempo y lecturas de nivel hidrométrico, turbidez y mercurio (Hg)',
-    returnType: 'JSON[] (Estaciones y Niveles)',
+    description: 'Estaciones INAMEH del Orinoco con el nivel (msnm), variación y cota de desborde de su último boletín',
+    returnType: 'JSON[] (estaciones)',
     defaultParams: {
       p_station_id: null,
       p_hours: 24,
     },
-    sampleResponse: INITIAL_HYDROLOGICAL_STATIONS,
   },
   {
     name: 'get_protected_areas_geojson',
-    description: 'Vectores poligonales de Parques Nacionales (ABRAE) y Territorios Indígenas con índice de amenaza',
-    returnType: 'JSON (GeoJSON MultiPolygon/Polygon)',
+    description: 'Polígonos de áreas protegidas (aún sin cargar en la base: devuelve una colección vacía)',
+    returnType: 'JSON (GeoJSON FeatureCollection)',
     defaultParams: {},
-    sampleResponse: {
-      type: 'FeatureCollection',
-      features: INITIAL_PROTECTED_AREAS.map((p) => ({
-        type: 'Feature',
-        geometry: { type: 'Polygon', coordinates: [p.coordinates] },
-        properties: p,
-      })),
-    },
   },
   {
     name: 'calculate_basin_risk_index',
-    description: 'Calcula el Índice Táctico de Riesgo de Cuenca ponderando deforestación, minería y estrés hídrico',
-    returnType: 'JSON { riskScore: number, breakdown: object }',
+    description: 'Conteos reales de focos FIRMS (7 días) y perturbaciones SAR por estado. El índice compuesto requiere el Nivel 2',
+    returnType: 'JSON { riskScore: null, note, breakdown: { firms_hotspots_7d, firms_high_confidence_7d, sar_disturbances } }',
     defaultParams: {
-      p_basin_id: 'Río Caura',
-    },
-    sampleResponse: {
-      riskScore: 84.2,
-      riskCategory: 'CRITICAL',
-      breakdown: {
-        deforestation_rate: 88,
-        mining_dredge_density: 85,
-        mercury_contamination_index: 82,
-        indigenous_vulnerability: 80,
-      },
+      p_basin_id: 'Bolívar',
     },
   },
   {
@@ -125,12 +82,6 @@ const RPC_DEFINITIONS: RpcDefinition[] = [
       p_lng: -65.221,
       p_description: 'Reporte satelital SAR con balsa de aluvión activa.',
       p_reported_by: 'Centinela SAR Satelital',
-    },
-    sampleResponse: {
-      success: true,
-      incident_id: 'INC-2026-9042',
-      status: 'ACTIVO',
-      registered_at: new Date().toISOString(),
     },
   },
 ];
@@ -242,8 +193,7 @@ export const SupabaseRpcConsole: React.FC = () => {
               autenticacion: "VÁLIDA (API Keys aceptadas por el API Gateway)",
               rpc_status: "FUNCIÓN PENDIENTE EN POSTGRESQL (PGRST202)",
               mensaje: `La conexión con Supabase es completamente válida. Sin embargo, la función stored procedure '${selectedRpc.name}' aún no ha sido creada en la base de datos PostgreSQL.`,
-              solucion: "Copie el script SQL de inicialización (botón 'Ver Script SQL') y ejecútelo en el SQL Editor de Supabase.",
-              datos_geoespaciales_verificados: selectedRpc.sampleResponse
+              solucion: "Aplique las migraciones de la carpeta supabase/migrations (botón 'Ver Script SQL') en el SQL Editor de Supabase."
             });
             setExecutionStatus('warning');
             return;
@@ -266,8 +216,7 @@ export const SupabaseRpcConsole: React.FC = () => {
               host: liveStatus.host || "ftnmwfugfcoldllkompp.supabase.co",
               autenticacion: "VÁLIDA",
               rpc_status: "FUNCIÓN PENDIENTE EN POSTGRESQL",
-              mensaje: `La función '${selectedRpc.name}' no está compilada aún en PostgreSQL.`,
-              datos_geoespaciales_verificados: selectedRpc.sampleResponse
+              mensaje: `La función '${selectedRpc.name}' no está compilada aún en PostgreSQL.`
             });
             setExecutionStatus('warning');
           } else {
@@ -275,16 +224,14 @@ export const SupabaseRpcConsole: React.FC = () => {
             setExecutionStatus('error');
           }
         } else {
-          setExecutionResult(data || selectedRpc.sampleResponse);
+          setExecutionResult(data);
           setExecutionStatus('success');
         }
       } else {
-        // Emulation mode using precompiled GeoJSON and verified PostgreSQL structures
-        await new Promise((r) => setTimeout(r, 180));
-        const elapsed = Math.round(performance.now() - start);
-        setExecutionTime(elapsed);
-        setExecutionResult(selectedRpc.sampleResponse);
-        setExecutionStatus('success');
+        // Sin Supabase no hay datos que mostrar (no se emulan respuestas).
+        setExecutionTime(Math.round(performance.now() - start));
+        setExecutionResult({ error: 'Supabase no está configurado en este navegador ni en el servidor.' });
+        setExecutionStatus('error');
       }
     } catch (err: any) {
       setExecutionTime(Math.round(performance.now() - start));

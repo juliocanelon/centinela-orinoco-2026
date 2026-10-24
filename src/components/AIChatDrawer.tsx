@@ -112,10 +112,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           🌊 Crecidas Orinoco
         </button>
         <button
-          onClick={() => handleQuickPrompt('¿Cuáles son los niveles de mercurio reportados en la cuenca del Caura?')}
+          onClick={() => handleQuickPrompt('¿Qué datos de calidad del agua y mercurio tiene la plataforma?')}
           className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap border border-slate-700"
         >
-          🧪 Mercurio Caura
+          🧪 Calidad del agua
         </button>
       </div>
 
