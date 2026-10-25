@@ -1498,7 +1498,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden bg-[#070b10]">
+    <div className="relative flex h-[calc(100dvh-72px)] w-full flex-col overflow-hidden bg-[#071117]">
       {/* Horizontal Geospatial Layers & Filter Toolbar (Eligible, with counts, beside actions) */}
       <GeospatialLayerToolbar
         visibleLayers={visibleLayers}

@@ -121,26 +121,26 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
   return (
     <div 
       id="geospatial-layer-toolbar"
-      className="bg-[#090e15] border-b border-slate-800/90 px-2 sm:px-3 py-1.5 flex items-center justify-between gap-2 select-none shadow-md relative z-40"
+      className="relative z-30 flex min-h-12 items-center justify-between gap-3 border-b border-slate-800/70 bg-[#09161e]/95 px-3 py-1.5 shadow-[0_5px_14px_rgba(0,0,0,.18)] select-none backdrop-blur-md sm:px-5"
     >
       {/* Left: Base Map Selector & Focus Venezuela (Horizontally Scrollable) */}
-      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto scrollbar-none touch-pan-x py-0.5 min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto py-0.5 touch-pan-x scrollbar-none">
           {/* Base Map Switcher */}
-          <div className="flex items-center gap-1.5 bg-[#060a0f] px-2 py-1 rounded-lg border border-slate-800 shrink-0">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400 uppercase tracking-wider font-mono mr-1">
+          <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[.08] bg-black/15 px-1.5 py-1">
+            <div className="mr-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-slate-500">
               <Layers className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Capas:</span>
             </div>
 
-            <div className="flex items-center gap-0.5 bg-slate-900/90 p-0.5 rounded border border-slate-800/80 text-[10px] font-mono">
+            <div className="flex items-center gap-0.5 rounded-md bg-slate-950/50 p-0.5 text-[10px] font-medium">
               <button
                 id="base-layer-satellite-btn"
                 onClick={() => onChangeBaseLayer('satellite')}
                 className={`px-2 py-0.5 rounded transition-all ${
                   activeBaseLayer === 'satellite'
-                    ? 'bg-sky-600 text-white font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-400/18 text-emerald-100 font-semibold shadow-sm'
+                    : 'text-slate-500 hover:text-slate-200'
                 }`}
                 title="Mapa Base Satelital de Alta Resolución"
               >
@@ -151,8 +151,8 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
                 onClick={() => onChangeBaseLayer('dark')}
                 className={`px-2 py-0.5 rounded transition-all ${
                   activeBaseLayer === 'dark'
-                    ? 'bg-sky-600 text-white font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-400/18 text-emerald-100 font-semibold shadow-sm'
+                    : 'text-slate-500 hover:text-slate-200'
                 }`}
                 title="Mapa Base Táctico Militar Oscuro"
               >
@@ -163,8 +163,8 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
                 onClick={() => onChangeBaseLayer('topo')}
                 className={`px-2 py-0.5 rounded transition-all ${
                   activeBaseLayer === 'topo'
-                    ? 'bg-sky-600 text-white font-semibold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-400/18 text-emerald-100 font-semibold shadow-sm'
+                    : 'text-slate-500 hover:text-slate-200'
                 }`}
                 title="Mapa Base Topográfico y Relieve"
               >
@@ -179,7 +179,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
               id="btn-focus-venezuela-toolbar"
               onClick={onFocusVenezuela}
               title="Enfocar República Bolivariana de Venezuela + Guayana Esequiba"
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-600/40 text-[11px] text-sky-200 font-medium transition-colors shrink-0 shadow-sm"
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-white/[.08] bg-white/[.045] px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/[.09]"
             >
               <span>🇻🇪</span>
               <span className="hidden md:inline">Venezuela</span>
@@ -188,23 +188,23 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
         </div>
 
         {/* Vertical Divider */}
-        <div className="h-5 w-[1px] bg-slate-800 shrink-0" />
+        <div className="h-5 w-px shrink-0 bg-white/[.09]" />
 
         {/* 🌟 FILTER BUTTON WITH UNCLIPPED FLOATING DROPDOWN MENU 🌟 */}
         <div className="shrink-0" ref={filterRef}>
           <button
             id="btn-geospatial-layer-filter"
             onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-md ${
+            className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all ${
               isFilterDropdownOpen || activeLayersCount > 0
-                ? 'bg-gradient-to-r from-sky-900 via-indigo-900 to-slate-900 border-sky-400/80 text-white shadow-sky-950/80 ring-1 ring-sky-400/40'
-                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                ? 'border-emerald-300/30 bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/15'
+                : 'border-white/[.08] bg-white/[.045] text-slate-300 hover:bg-white/[.08]'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-            <span className="hidden xs:inline">Filtro de Capas</span>
-            <span className="xs:hidden">Filtro</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-sky-600 text-white font-mono text-[10px] font-bold shadow-inner ml-0.5">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-300" />
+            <span className="hidden xs:inline">Capas</span>
+            <span className="xs:hidden">Capas</span>
+            <span className="ml-0.5 rounded-full bg-emerald-400/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-100">
               {activeLayersCount}/{layerOptions.length}
             </span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFilterDropdownOpen ? 'rotate-180 text-sky-300' : 'text-slate-400'}`} />
@@ -321,15 +321,15 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
       </div>
 
       {/* Right Side: Quick Tools (APIs Satelitales & Export GeoJSON) */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <div className="flex shrink-0 items-center gap-1.5">
         {onOpenSatelliteApis && (
           <button
             id="btn-toolbar-satellite-apis"
             onClick={onOpenSatelliteApis}
             title="Ver URLs Oficiales de Conexiones Satelitales (NASA FIRMS, Copernicus, INPE)"
-            className="flex items-center gap-1 px-2 py-1 bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 text-[11px] font-semibold rounded-lg border border-cyan-600/50 shadow-sm transition-all shrink-0 whitespace-nowrap"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-300/15 bg-cyan-400/10 px-2 py-1 text-[11px] font-semibold text-cyan-200 transition hover:bg-cyan-400/18 whitespace-nowrap"
           >
-            <Satellite className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <Satellite className="h-3.5 w-3.5 text-cyan-300" />
             <span className="hidden sm:inline">APIs Satelitales</span>
             <span className="hidden xs:inline sm:hidden">APIs</span>
           </button>
@@ -340,7 +340,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
             id="btn-export-geojson-toolbar"
             onClick={onExportGeoJSON}
             title="Exportar todas las capas tácticas a GeoJSON estándar"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition-colors shadow-sm shrink-0 whitespace-nowrap"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-white/[.08] bg-white/[.045] px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/[.09] whitespace-nowrap"
           >
             <Download className="w-3.5 h-3.5 text-sky-400" />
             <span className="hidden sm:inline">GeoJSON</span>
