@@ -96,7 +96,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Top Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <Droplets className="w-5 h-5 text-sky-400" />
@@ -119,7 +119,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
       </div>
 
       {stations.length === 0 && (
-        <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-6 text-sm text-slate-400">
+        <div className="bg-surface border border-slate-800 rounded-xl p-6 text-sm text-slate-400">
           No hay lecturas de INAMEH cargadas. La tarea "Niveles del Río Orinoco" del planificador las obtiene de los boletines publicados.
         </div>
       )}
@@ -127,7 +127,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Detailed Station Inspector */}
         {currentStation && (
-          <div className="lg:col-span-1 bg-[#0b121c] border border-slate-800 rounded-xl p-5 space-y-5 shadow-xl">
+          <div className="lg:col-span-1 bg-surface border border-slate-800 rounded-xl p-5 space-y-5 shadow-xl">
             <div className="flex items-start justify-between pb-3 border-b border-slate-800 gap-2">
               <div>
                 <span className="text-[10px] font-mono uppercase text-sky-400 tracking-wider">
@@ -149,7 +149,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
             )}
 
             {/* Level */}
-            <div className="bg-[#070b10] p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="bg-canvas p-4 rounded-xl border border-slate-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400 flex items-center gap-1.5">
                   <Waves className="w-4 h-4 text-sky-400" />
@@ -163,7 +163,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
               {pct !== null && (
                 <div className="relative w-full h-4 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className={`h-full transition-all duration-500 ${currentStation.status === 'OPTIMAL' || currentStation.status === 'SIN_REFERENCIA' ? 'bg-gradient-to-r from-sky-600 to-emerald-500' : 'bg-gradient-to-r from-amber-500 to-red-500'}`}
+                    className={`h-full transition-all duration-500 ${currentStation.status === 'OPTIMAL' || currentStation.status === 'SIN_REFERENCIA' ? 'bg-sky-600' : 'bg-amber-500'}`}
                     style={{ width: `${pct}%` }}
                   />
                   {overflowPct !== null && (
@@ -180,14 +180,14 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                   <TrendIcon change={currentStation.dailyChangeM} />
                   <span>Variación diaria</span>
                 </div>
                 <p className="text-base font-bold font-mono text-slate-100">{formatChange(currentStation.dailyChangeM)}</p>
               </div>
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                   <Waves className="w-3.5 h-3.5 text-amber-400" />
                   <span>Margen al desborde</span>
@@ -200,7 +200,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#070b10] border border-slate-800 text-[11px] text-slate-400">
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-canvas border border-slate-800 text-[11px] text-slate-400">
               <FlaskConical className="w-4 h-4 shrink-0 mt-0.5 text-slate-500" />
               <span>
                 Calidad del agua (turbidez, pH, conductividad, mercurio): no medida. INAMEH no la publica y no es observable desde satélite; requiere muestreo de campo.
@@ -236,8 +236,8 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
                   onClick={() => setActiveStationId(station.id)}
                   className={`cursor-pointer p-4 rounded-xl border transition-all ${
                     isSelected
-                      ? 'bg-[#0f1a29] border-sky-500/80 shadow-lg shadow-sky-950/40'
-                      : 'bg-[#0b121c] border-slate-800/80 hover:border-slate-700 hover:bg-[#0d1624]'
+                      ? 'bg-raised border-sky-500/80 shadow-lg shadow-sky-950/40'
+                      : 'bg-surface border-slate-800/80 hover:border-slate-700 hover:bg-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -270,7 +270,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
           </div>
 
           {currentStation && (
-            <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-4">
+            <div className="bg-surface border border-slate-800 rounded-xl p-4">
               <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">
                 Historial de lecturas · {currentStation.name}
               </h4>
@@ -301,7 +301,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
             </div>
           )}
 
-          <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-4 flex items-center gap-3 text-xs text-slate-300">
+          <div className="bg-surface border border-slate-800 rounded-xl p-4 flex items-center gap-3 text-xs text-slate-300">
             <div className="w-8 h-8 rounded-lg bg-sky-950 border border-sky-800 flex items-center justify-center text-sky-400">
               <Radio className="w-4 h-4" />
             </div>

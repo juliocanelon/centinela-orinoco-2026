@@ -174,9 +174,9 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
 - La búsqueda RAG es por coincidencia de texto: la tabla de documentos no tiene embeddings.`;
 
   return (
-    <div className="flex-1 bg-[#070d14] text-slate-200 overflow-y-auto p-6 flex flex-col gap-6">
+    <div className="flex-1 bg-canvas text-slate-200 overflow-y-auto p-6 flex flex-col gap-6">
       {/* Top Banner with Status, Modes and Controls */}
-      <div className="bg-gradient-to-r from-[#0b1424] via-[#0f1b2e] to-[#0d1626] p-6 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden">
+      <div className="bg-surface p-6 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-start justify-between flex-wrap gap-4 relative z-10">
@@ -224,7 +224,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
 
             <button
               onClick={() => setShowReportModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-violet-950/40 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg shadow-md shadow-violet-950/40 transition-all"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Ver Informe Técnico</span>
@@ -289,7 +289,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
             return (
               <div 
                 key={task.key}
-                className="bg-[#0b131e] rounded-xl border border-slate-800 p-4 flex flex-col justify-between hover:border-slate-700 transition-all shadow-md group"
+                className="bg-surface rounded-xl border border-slate-800 p-4 flex flex-col justify-between hover:border-slate-700 transition-all shadow-md group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -312,7 +312,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
                   </p>
 
                   {/* Countdown Timer */}
-                  <div className="mt-4 p-2.5 rounded-lg bg-[#070d14] border border-slate-800/80">
+                  <div className="mt-4 p-2.5 rounded-lg bg-canvas border border-slate-800/80">
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="text-slate-400 flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-500" />
@@ -326,7 +326,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
                     {/* Progress bar */}
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full transition-all duration-1000"
+                        className="bg-sky-500 h-full transition-all duration-1000"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
@@ -385,7 +385,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
       </div>
 
       {/* Interactive Step-by-Step Architecture Diagram */}
-      <div className="bg-[#0b131e] rounded-xl border border-slate-800 p-5 shadow-lg">
+      <div className="bg-surface rounded-xl border border-slate-800 p-5 shadow-lg">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -408,7 +408,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           {/* Step 1 */}
-          <div className="p-3.5 rounded-lg bg-[#070d14] border border-slate-800/80 flex flex-col justify-between">
+          <div className="p-3.5 rounded-lg bg-canvas border border-slate-800/80 flex flex-col justify-between">
             <div>
               <div className="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 1
@@ -422,7 +422,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
           </div>
 
           {/* Step 2 */}
-          <div className="p-3.5 rounded-lg bg-[#070d14] border border-slate-800/80 flex flex-col justify-between">
+          <div className="p-3.5 rounded-lg bg-canvas border border-slate-800/80 flex flex-col justify-between">
             <div>
               <div className="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 2
@@ -436,7 +436,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
           </div>
 
           {/* Step 3 */}
-          <div className="p-3.5 rounded-lg bg-[#070d14] border border-slate-800/80 flex flex-col justify-between">
+          <div className="p-3.5 rounded-lg bg-canvas border border-slate-800/80 flex flex-col justify-between">
             <div>
               <div className="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 3
@@ -450,7 +450,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
           </div>
 
           {/* Step 4 */}
-          <div className="p-3.5 rounded-lg bg-[#070d14] border border-slate-800/80 flex flex-col justify-between">
+          <div className="p-3.5 rounded-lg bg-canvas border border-slate-800/80 flex flex-col justify-between">
             <div>
               <div className="w-6 h-6 rounded-md bg-violet-500/20 text-violet-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 4
@@ -464,7 +464,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
           </div>
 
           {/* Step 5 */}
-          <div className="p-3.5 rounded-lg bg-[#070d14] border border-slate-800/80 flex flex-col justify-between">
+          <div className="p-3.5 rounded-lg bg-canvas border border-slate-800/80 flex flex-col justify-between">
             <div>
               <div className="w-6 h-6 rounded-md bg-cyan-500/20 text-cyan-400 font-mono font-bold text-xs flex items-center justify-center mb-2">
                 5
@@ -480,7 +480,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
       </div>
 
       {/* Live Scheduler Logs Console */}
-      <div className="bg-[#0b131e] rounded-xl border border-slate-800 p-5 shadow-lg">
+      <div className="bg-surface rounded-xl border border-slate-800 p-5 shadow-lg">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <Terminal className="w-4 h-4 text-emerald-400" />
@@ -491,7 +491,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
           </span>
         </div>
 
-        <div className="bg-[#05080e] rounded-lg border border-slate-800/80 p-3 max-h-64 overflow-y-auto font-mono text-xs space-y-1.5">
+        <div className="bg-canvas rounded-lg border border-slate-800/80 p-3 max-h-64 overflow-y-auto font-mono text-xs space-y-1.5">
           {schedulerStatus?.recentLogs && schedulerStatus.recentLogs.length > 0 ? (
             schedulerStatus.recentLogs.map((log) => (
               <div key={log.id} className="flex items-start gap-2 text-slate-300 border-b border-slate-900/60 pb-1">
@@ -523,8 +523,8 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
       {/* Technical Report Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b131e] rounded-2xl border border-slate-700 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-[#080d14]">
+          <div className="bg-surface rounded-2xl border border-slate-700 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-canvas">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-violet-400" />
                 <h3 className="text-base font-bold text-white">
@@ -553,7 +553,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
             </div>
 
             <div className="p-6 overflow-y-auto font-sans text-sm text-slate-200 leading-relaxed space-y-4">
-              <pre className="font-mono text-xs whitespace-pre-wrap bg-[#060a10] p-4 rounded-xl border border-slate-800 text-slate-300 select-text">
+              <pre className="font-mono text-xs whitespace-pre-wrap bg-canvas p-4 rounded-xl border border-slate-800 text-slate-300 select-text">
                 {technicalReportText}
               </pre>
             </div>
@@ -564,8 +564,8 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
       {/* SQL Supabase Modal */}
       {showSqlModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b131e] rounded-2xl border border-slate-700 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-[#080d14]">
+          <div className="bg-surface rounded-2xl border border-slate-700 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-canvas">
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-sky-400" />
                 <h3 className="text-base font-bold text-white">
@@ -594,7 +594,7 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
             </div>
 
             <div className="p-6 overflow-y-auto font-mono text-xs text-slate-200">
-              <pre className="whitespace-pre-wrap bg-[#060a10] p-4 rounded-xl border border-slate-800 text-emerald-300/90 select-text">
+              <pre className="whitespace-pre-wrap bg-canvas p-4 rounded-xl border border-slate-800 text-emerald-300/90 select-text">
                 {sqlScript}
               </pre>
             </div>

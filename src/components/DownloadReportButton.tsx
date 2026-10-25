@@ -76,7 +76,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
 
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
-      <div className="inline-flex rounded-lg shadow-sm border border-emerald-500/40 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 transition-all">
+      <div className="inline-flex rounded-lg shadow-sm border border-emerald-500/40 bg-emerald-700 hover:bg-emerald-600 transition-all">
         {/* Main Action: Downloads Formatted Word (.doc) by default */}
         <button
           type="button"
@@ -109,7 +109,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
 
       {/* Options Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-[#09111c] border border-emerald-500/30 shadow-2xl shadow-black/90 py-2 z-[99999] text-xs divide-y divide-slate-800 backdrop-blur-xl">
+        <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-surface border border-emerald-500/30 shadow-2xl shadow-black/90 py-2 z-[99999] text-xs divide-y divide-slate-800 backdrop-blur-xl">
           <div className="px-3 py-1.5 text-[10px] uppercase font-mono text-emerald-400 font-bold flex items-center justify-between">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-400" />

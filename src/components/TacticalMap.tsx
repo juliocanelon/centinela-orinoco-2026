@@ -1498,7 +1498,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden bg-[#070b10]">
+    <div className="relative w-full h-full flex flex-col overflow-hidden bg-canvas">
       {/* Horizontal Geospatial Layers & Filter Toolbar (Eligible, with counts, beside actions) */}
       <GeospatialLayerToolbar
         visibleLayers={visibleLayers}
@@ -1545,7 +1545,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     maxHeight: 'calc(100% - 24px)',
                   }
             }
-            className="absolute flex flex-col bg-[#0c1420]/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl shadow-black/90 text-slate-200 z-30 transition-all duration-100 ease-out overflow-hidden"
+            className="absolute flex flex-col bg-surface/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl shadow-black/90 text-slate-200 z-30 transition-all duration-100 ease-out overflow-hidden"
           >
             {/* Sticky Header: Never scrolls off */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/90 bg-slate-950/70 shrink-0">
@@ -1585,7 +1585,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 const coords = getFeatureLatLng(selectedFeature);
                 if (!coords) return null;
                 return (
-                  <div className="flex items-center justify-between bg-[#070b10] px-2.5 py-1.5 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400">
+                  <div className="flex items-center justify-between bg-canvas px-2.5 py-1.5 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400">
                     <span className="flex items-center gap-1 text-sky-400 font-semibold">
                       <Crosshair className="w-3 h-3 text-sky-400" />
                       Ubicación Geográfica
@@ -1605,11 +1605,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 {selectedFeature.data.affectedAreaHa === undefined ? (
-                  <p className="text-[11px] text-slate-300 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <p className="text-[11px] text-slate-300 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     Zona de vigilancia de referencia (sector minero conocido). No tiene mediciones propias: consulte los focos FIRMS cercanos o las perturbaciones SAR medidas (Nivel 2).
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase">Área afectada (SAR)</span>
                       <p className="text-sm font-bold text-red-400 font-mono">{selectedFeature.data.affectedAreaHa} ha</p>
@@ -1648,7 +1648,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800 text-center">
+                  <div className="grid grid-cols-3 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800 text-center">
                     {(['ALTA', 'MEDIA', 'BAJA'] as HotspotPriority[]).map((p) => (
                       <div key={p}>
                         <span className="text-[10px] text-slate-400 uppercase">{PRIORITY_LABELS[p]}</span>
@@ -1657,7 +1657,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase">Prioritarios / 1.000 km²</span>
                       <p className="text-sm font-bold text-orange-400 font-mono">{cell.relevantPer1000Km2}</p>
@@ -1676,7 +1676,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <div className="bg-canvas p-2.5 rounded-lg border border-slate-800">
                     <span className="text-[10px] text-slate-400 uppercase">Focos por día (naranja = prioritarios)</span>
                     <div className="flex items-end gap-1 h-16 mt-2">
                       {cell.perDay.map((d) => (
@@ -1740,7 +1740,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[11px]">Estado: {selectedFeature.data.subBasin}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Temp. Brillo</span>
                     <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.brightnessTempK ?? 's/d'} K</p>
@@ -1781,7 +1781,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[11px]">{selectedFeature.data.river}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Nivel (msnm)</span>
                     <p className="text-sm font-bold text-sky-400 font-mono">{selectedFeature.data.currentLevelM ?? 's/d'}</p>
@@ -1826,7 +1826,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase">Superficie</span>
                     <p className="text-sm font-bold text-emerald-400 font-mono">
@@ -1855,7 +1855,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <h3 className="text-sm font-bold text-white mt-1">{selectedFeature.data.title}</h3>
                 </div>
 
-                <p className="text-slate-300 text-[11px] leading-relaxed bg-[#070b10] p-2 rounded border border-slate-800">
+                <p className="text-slate-300 text-[11px] leading-relaxed bg-canvas p-2 rounded border border-slate-800">
                   {selectedFeature.data.description}
                 </p>
 
@@ -1875,7 +1875,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-emerald-400 font-medium text-[11px] mt-0.5">{selectedFeature.data.satelliteCode}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase font-mono">Adquisición (UTC)</span>
                     <p className="text-xs font-bold text-emerald-400 font-mono">{selectedFeature.data.sensingTime.slice(0, 16).replace('T', ' ')}</p>
@@ -1927,14 +1927,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[10px] italic mt-0.5">{selectedFeature.data.authors} ({selectedFeature.data.year})</p>
                 </div>
 
-                <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                <div className="bg-canvas p-2.5 rounded-lg border border-slate-800 space-y-1.5">
                   <span className="text-[10px] text-teal-400 font-bold uppercase font-mono">Hallazgos Clave del Estudio:</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed italic">
                     "{selectedFeature.data.findings}"
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2 rounded-lg border border-slate-800/80 font-mono text-[10px]">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2 rounded-lg border border-slate-800/80 font-mono text-[10px]">
                   <div className="col-span-2">
                     <span className="text-slate-500 uppercase">Estudio:</span>
                     <p className="text-slate-200 font-bold truncate" title={selectedFeature.data.articleTitle}>{selectedFeature.data.articleTitle}</p>
@@ -1993,7 +1993,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   )}
                 </div>
 
-                <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                <div className="bg-canvas p-2.5 rounded-lg border border-slate-800 space-y-1.5">
                   <span className="text-[10px] text-violet-400 font-bold uppercase font-mono">Relato de la Comunidad:</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
                     {selectedFeature.data.description}
@@ -2026,7 +2026,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                           title={med.type === 'video' ? `Reproducir video: ${med.name}` : `Expandir foto: ${med.name}`}
                         >
                           {med.type === 'video' ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 to-slate-900 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors relative">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors relative">
                               <div className="w-9 h-9 rounded-full bg-sky-950/90 border border-sky-400/80 flex items-center justify-center text-sky-300 shadow-lg group-hover:scale-110 transition-transform mb-1">
                                 <Play className="w-4 h-4 ml-0.5" />
                               </div>
@@ -2064,7 +2064,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   </div>
                 )}
 
-                <div className="p-2 bg-[#070b10] rounded-lg border border-slate-800/80 text-[10px] text-slate-400 font-mono">
+                <div className="p-2 bg-canvas rounded-lg border border-slate-800/80 text-[10px] text-slate-400 font-mono">
                   {selectedFeature.data.isAnonymous ? '🔒 Denuncia Anónima Protegida' : `Vocero: ${selectedFeature.data.reporterName || 'Comunidad'} ${selectedFeature.data.reporterContact ? `(${selectedFeature.data.reporterContact})` : ''}`}
                 </div>
               </>
@@ -2282,7 +2282,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   setSelectedFeature(null);
                   onTriggerAiAnalysis(contextPayload);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-sky-600 via-indigo-600 to-emerald-600 hover:from-sky-500 hover:to-emerald-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-sky-950/50 transition-all border border-sky-400/30 cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-sky-950/50 transition-all border border-sky-400/30 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-sky-200 animate-pulse" />
                 <span className="font-semibold tracking-wide">Analítica de la Zona</span>
@@ -2347,7 +2347,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Focos FIRMS: periodo, prioridad baja y leyenda */}
       {visibleLayers.heat && (
-        <div className="absolute bottom-12 left-2 sm:left-4 z-10 w-[260px] bg-[#080d14]/95 backdrop-blur-md border border-slate-800 rounded-lg p-2.5 text-[11px] text-slate-300 shadow-xl space-y-2">
+        <div className="absolute bottom-12 left-2 sm:left-4 z-10 w-[260px] bg-canvas/95 backdrop-blur-md border border-slate-800 rounded-lg p-2.5 text-[11px] text-slate-300 shadow-xl space-y-2">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-white flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-orange-400" /> Focos NASA FIRMS</span>
             <div className="flex gap-1">
@@ -2404,7 +2404,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Bottom Coordinate & Metric Ticker */}
       <div className="absolute bottom-2 left-2 right-12 sm:bottom-3 sm:left-4 sm:right-16 z-10 pointer-events-none">
-        <div className="inline-flex items-center gap-2 sm:gap-4 bg-[#080d14]/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono text-slate-300 shadow-xl pointer-events-auto max-w-full overflow-x-auto whitespace-nowrap scrollbar-none">
+        <div className="inline-flex items-center gap-2 sm:gap-4 bg-canvas/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono text-slate-300 shadow-xl pointer-events-auto max-w-full overflow-x-auto whitespace-nowrap scrollbar-none">
           <div className="flex items-center gap-1.5 text-sky-400 font-semibold shrink-0">
             <Compass className="w-3.5 h-3.5" />
             <span>AMAZONAS · BOLÍVAR · DELTA AMACURO · ESEQUIBO: [0.6°N - 10.1°N | 68.0°W - 57.8°W]</span>

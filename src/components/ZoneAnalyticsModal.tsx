@@ -101,7 +101,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-sky-500/20 border border-sky-500/30 rounded-xl text-sky-400 shadow-inner">
+            <div className="p-2 bg-indigo-500/20 border border-sky-500/30 rounded-xl text-sky-400 shadow-inner">
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <div>
@@ -234,7 +234,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
             </div>
 
             {/* Navigation Tabs - Sleek, fully legible and responsive */}
-            <div className="border-b border-slate-800 bg-[#070d18] px-4 sm:px-6 py-2.5">
+            <div className="border-b border-slate-800 bg-surface px-4 sm:px-6 py-2.5">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-0.5">
                 <button
                   onClick={() => setActiveTab('OVERVIEW')}
@@ -309,7 +309,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
               {activeTab === 'OVERVIEW' && (
                 <div className="space-y-6">
                   {/* Event Generator & Satellite GPS Card */}
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-sky-950/60 via-slate-950 to-indigo-950/60 border border-sky-500/30 space-y-3">
+                  <div className="p-4 rounded-xl bg-sky-950/60 border border-sky-500/30 space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
                       <span className="text-xs font-bold text-sky-400 flex items-center gap-1.5 uppercase tracking-wide">
                         <Satellite className="w-4 h-4 text-sky-400" />

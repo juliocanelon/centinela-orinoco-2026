@@ -71,9 +71,9 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-[#0b121c]/98 backdrop-blur-md border-l border-slate-700 shadow-2xl flex flex-col text-slate-200">
+    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-surface/98 backdrop-blur-md border-l border-slate-700 shadow-2xl flex flex-col text-slate-200">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-[#060a0f]">
+      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-canvas">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-sky-950 border border-sky-800 flex items-center justify-center text-sky-400">
             <Bot className="w-4 h-4" />
@@ -98,7 +98,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
       </div>
 
       {/* Suggested Quick Prompts */}
-      <div className="p-3 bg-[#080e16] border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+      <div className="p-3 bg-surface border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto text-[11px]">
         <button
           onClick={() => handleQuickPrompt('¿Cuál es la situación actual de minería ilegal en el Parque Nacional Yapacana?')}
           className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap border border-slate-700"
@@ -135,7 +135,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               className={`max-w-[85%] rounded-xl p-3 text-xs leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-sky-600 text-white rounded-br-none shadow'
-                  : 'bg-[#070b10] border border-slate-800 text-slate-200 rounded-bl-none shadow'
+                  : 'bg-canvas border border-slate-800 text-slate-200 rounded-bl-none shadow'
               }`}
             >
               <MarkdownRenderer content={msg.content} />
@@ -151,13 +151,13 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-slate-800 bg-[#060a0f] flex items-center gap-2.5">
+      <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-slate-800 bg-canvas flex items-center gap-2.5">
         <input
           type="text"
           placeholder="Escriba su consulta táctica..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-[#0b121c] border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm md:text-base text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-500 transition-colors"
+          className="flex-1 bg-surface border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm md:text-base text-slate-100 placeholder:text-slate-500 outline-none focus:border-sky-500 transition-colors"
         />
         <button
           type="submit"

@@ -1,41 +1,136 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/*
+ * Sistema de diseño "Centro de monitoreo".
+ * Las rampas slate y sky de Tailwind se redefinen para que toda la app herede
+ * los neutros fríos y el acento "caudal" sin tocar cada componente.
+ */
+@theme {
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Superficies por profundidad: lienzo < superficie < elevada */
+  --color-canvas: #080d14;
+  --color-surface: #0e1520;
+  --color-raised: #141d2a;
+  --color-line: #1f2a3a;
+
+  --color-slate-50: #f3f6fa;
+  --color-slate-100: #e7edf4;
+  --color-slate-200: #cdd6e2;
+  --color-slate-300: #a9b6c7;
+  --color-slate-400: #8391a5;
+  --color-slate-500: #627086;
+  --color-slate-600: #48546a;
+  --color-slate-700: #2c3647;
+  --color-slate-800: #1f2a3a;
+  --color-slate-900: #141d2a;
+  --color-slate-950: #0b1018;
+
+  /* Acento "caudal": interacción, foco y selección */
+  --color-sky-50: #ebf8ff;
+  --color-sky-100: #d3f0fe;
+  --color-sky-200: #a8e2fc;
+  --color-sky-300: #72cff8;
+  --color-sky-400: #42baf0;
+  --color-sky-500: #1fa2e0;
+  --color-sky-600: #1284c2;
+  --color-sky-700: #10699c;
+  --color-sky-800: #12557d;
+  --color-sky-900: #134767;
+  --color-sky-950: #0b2c44;
+}
+
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: #0b1118;
-    color: #e2e8f0;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: var(--color-canvas);
+    color: var(--color-slate-200);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Cifras alineadas en lecturas, tablas y coordenadas */
+  .font-mono,
+  code,
+  kbd,
+  samp {
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "zero" 1;
+  }
+
+  /* Etiquetas en mayúsculas: tracking más contenido para que no griten */
+  .uppercase {
+    letter-spacing: 0.04em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-sky-400);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-/* Custom Tactical Leaflet Overrides */
+/* Leaflet integrado al sistema */
 .leaflet-container {
-  background: #080d14 !important;
-  font-family: inherit;
+  background: var(--color-canvas) !important;
+  font-family: var(--font-sans);
 }
 
 .leaflet-popup-content-wrapper {
-  background: #0f172a !important;
-  color: #f1f5f9 !important;
-  border: 1px solid #334155 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent) !important;
+  backdrop-filter: blur(12px);
+  color: var(--color-slate-100) !important;
+  border: 1px solid var(--color-slate-700) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.7) !important;
 }
 
 .leaflet-popup-tip {
-  background: #0f172a !important;
+  background: var(--color-surface) !important;
+}
+
+.leaflet-bar {
+  border: 1px solid var(--color-slate-700) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.6) !important;
 }
 
 .leaflet-control-zoom a {
-  background: #1e293b !important;
-  color: #94a3b8 !important;
-  border-color: #334155 !important;
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent) !important;
+  backdrop-filter: blur(8px);
+  color: var(--color-slate-300) !important;
+  border-color: var(--color-slate-800) !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: #334155 !important;
-  color: #f8fafc !important;
+  background: var(--color-raised) !important;
+  color: var(--color-sky-300) !important;
+}
+
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--color-canvas) 75%, transparent) !important;
+  color: var(--color-slate-500) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-slate-400) !important;
 }
 
 /* Tactical Pulse Keyframes */
@@ -97,31 +192,44 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b1118;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: var(--color-slate-800);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--color-slate-700);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-800) transparent;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Tactical Tooltip */
 .tactical-tooltip {
-  background-color: #0b1420 !important;
-  color: #f1f5f9 !important;
-  border: 1px solid #38bdf8 !important;
-  border-radius: 6px !important;
+  background-color: color-mix(in srgb, var(--color-surface) 94%, transparent) !important;
+  color: var(--color-slate-100) !important;
+  border: 1px solid var(--color-sky-700) !important;
+  border-radius: 8px !important;
   padding: 6px 10px !important;
   font-size: 11px !important;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7) !important;
 }
 
 .tactical-tooltip::before {
-  border-top-color: #38bdf8 !important;
+  border-top-color: var(--color-sky-700) !important;
 }
 
 /* Silhouette Glow & 3D Relief Border */

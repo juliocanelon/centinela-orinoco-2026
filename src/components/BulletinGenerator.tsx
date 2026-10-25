@@ -94,7 +94,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-indigo-400" />
@@ -144,7 +144,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
           <button
             onClick={handleGenerateBulletin}
             disabled={isGenerating}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-950/40 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-950/40 transition-all cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             <span>{isGenerating ? 'Compilando con Gemini AI...' : 'Compilar Boletín Oficial'}</span>
@@ -153,7 +153,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
       </div>
 
       {/* Inputs + Summary Metrics Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#0b121c] p-4 sm:p-5 rounded-xl border border-slate-800 text-xs sm:text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface p-4 sm:p-5 rounded-xl border border-slate-800 text-xs sm:text-sm">
         <div className="md:col-span-2 space-y-1.5">
           <label className="text-[11px] sm:text-xs text-slate-300 uppercase font-mono tracking-wider block font-semibold">
             Título del Despacho
@@ -162,7 +162,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
             type="text"
             value={bulletinTitle}
             onChange={(e) => setBulletinTitle(e.target.value)}
-            className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 font-medium"
+            className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 font-medium"
           />
         </div>
 
@@ -174,16 +174,16 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
             type="text"
             value={bulletinPeriod}
             onChange={(e) => setBulletinPeriod(e.target.value)}
-            className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 font-medium"
+            className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 font-medium"
           />
         </div>
       </div>
 
       {/* Bulletin Document Preview */}
-      <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4 min-h-[500px]">
+      <div className="bg-surface border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4 min-h-[500px]">
         <div className="flex items-center justify-between pb-4 border-b border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#070b10] border border-slate-700 flex items-center justify-center text-sky-400 font-bold font-mono text-sm">
+            <div className="w-10 h-10 rounded-lg bg-canvas border border-slate-700 flex items-center justify-center text-sky-400 font-bold font-mono text-sm">
               CEN
             </div>
             <div>
@@ -202,7 +202,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
         </div>
 
         {/* Content Box */}
-        <div className="bg-[#060a0f] border border-slate-800/90 rounded-xl p-5 text-slate-200 text-xs leading-relaxed overflow-y-auto max-h-[600px]">
+        <div className="bg-canvas border border-slate-800/90 rounded-xl p-5 text-slate-200 text-xs leading-relaxed overflow-y-auto max-h-[600px]">
           {isGenerating ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-3">
               <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin" />

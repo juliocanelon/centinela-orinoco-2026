@@ -35,7 +35,7 @@ const SarLevel2Pending: React.FC = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-4 text-slate-200">
-      <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-5 space-y-2">
+      <div className="bg-surface border border-slate-800 rounded-xl p-5 space-y-2">
         <div className="flex items-center gap-2">
           <Radar className="w-5 h-5 text-sky-400" />
           <h2 className="text-lg font-bold text-white">Radar SAR Sentinel-1</h2>
@@ -46,7 +46,7 @@ const SarLevel2Pending: React.FC = () => {
         </p>
       </div>
       {error && <p className="text-xs text-amber-300">No se pudo cargar el catálogo: {error}</p>}
-      <div className="bg-[#0b121c] border border-slate-800 rounded-xl overflow-x-auto">
+      <div className="bg-surface border border-slate-800 rounded-xl overflow-x-auto">
         <table className="w-full text-xs font-mono">
           <thead>
             <tr className="text-slate-500 text-left border-b border-slate-800">
@@ -148,7 +148,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <Radar className="w-5 h-5 text-amber-400" />
@@ -163,7 +163,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
 
         {/* Filters */}
         <div className="flex items-center gap-2.5 flex-wrap text-xs">
-          <div className="flex items-center gap-1.5 bg-[#060a0f] px-3 py-1.5 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-lg border border-slate-800">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <span className="text-slate-400">Cuenca:</span>
             <select
@@ -179,7 +179,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-[#060a0f] px-3 py-1.5 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-lg border border-slate-800">
             <span className="text-slate-400">Actividad:</span>
             <select
               value={selectedActivity}
@@ -200,7 +200,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Deep Satellite Radar Inspector (7 cols) */}
         {currentAnomaly && (
-          <div className="lg:col-span-7 bg-[#0b121c] border border-slate-800 rounded-xl p-5 shadow-xl space-y-5">
+          <div className="lg:col-span-7 bg-surface border border-slate-800 rounded-xl p-5 shadow-xl space-y-5">
             <div className="flex items-start justify-between pb-3 border-b border-slate-800">
               <div>
                 <div className="flex items-center gap-2">
@@ -231,7 +231,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
 
             {/* Radar Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block">Pérdida Coherencia</span>
                 <span className="text-base font-bold text-amber-400">
                   {currentAnomaly.coherenceLossPercent}%
@@ -239,7 +239,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
                 <span className="text-[9px] text-slate-500 block">Interferometría InSAR</span>
               </div>
 
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block">Retrodispersión (dB)</span>
                 <span className={`text-base font-bold ${currentAnomaly.sarBackscatterChangeDb > 0 ? 'text-rose-400' : 'text-sky-400'}`}>
                   {currentAnomaly.sarBackscatterChangeDb > 0 ? `+${currentAnomaly.sarBackscatterChangeDb}` : currentAnomaly.sarBackscatterChangeDb} dB
@@ -247,7 +247,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
                 <span className="text-[9px] text-slate-500 block">Firma VV/VH</span>
               </div>
 
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block">Caída NDVI Óptico</span>
                 <span className="text-base font-bold text-red-400">
                   -{currentAnomaly.opticalNdviDropPercent}%
@@ -255,7 +255,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
                 <span className="text-[9px] text-slate-500 block">Sentinel-2 MSI</span>
               </div>
 
-              <div className="bg-[#070b10] p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase block">Probabilidad Draga</span>
                 <span className="text-base font-bold text-emerald-400">
                   {currentAnomaly.dredgePresenceProbability}%
@@ -265,7 +265,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
             </div>
 
             {/* Radar Diagnosis & Technical Notes */}
-            <div className="bg-[#070b10] p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+            <div className="bg-canvas p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
                 Firma Radar y Diagnóstico de Cobertura
               </span>
@@ -283,7 +283,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
               <button
                 onClick={handleEvaluateWithAi}
                 disabled={isAiEvaluating}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-amber-950/40 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-amber-950/40 transition-all cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{isAiEvaluating ? 'Auditando Eco Radar...' : 'Auditoría Satelital IA'}</span>
@@ -312,7 +312,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
 
             {/* AI Audit Report Box */}
             {aiAuditReport && (
-              <div className="bg-[#060a0f] border border-amber-500/40 rounded-xl p-4 space-y-2 text-xs text-slate-300 leading-relaxed font-sans shadow-lg">
+              <div className="bg-canvas border border-amber-500/40 rounded-xl p-4 space-y-2 text-xs text-slate-300 leading-relaxed font-sans shadow-lg">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <span className="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
@@ -349,8 +349,8 @@ Genera un dictamen técnico de auditoría satelital que determine:
                   onClick={() => setActiveAnomalyId(item.id)}
                   className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                     isSelected
-                      ? 'bg-[#0f1c2d] border-amber-500/80 shadow-md shadow-amber-950/40 ring-1 ring-amber-500/30'
-                      : 'bg-[#0b121c] border-slate-800/80 hover:border-slate-700 hover:bg-[#0d1624]'
+                      ? 'bg-raised border-amber-500/80 shadow-md shadow-amber-950/40 ring-1 ring-amber-500/30'
+                      : 'bg-surface border-slate-800/80 hover:border-slate-700 hover:bg-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
