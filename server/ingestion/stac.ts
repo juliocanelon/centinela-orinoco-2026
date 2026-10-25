@@ -1,9 +1,10 @@
 import {
+  MONITORED_STATES,
   MONITORING_BBOX,
   fillUrlTemplate,
   getApiConnectionForTask,
 } from "../../src/data/satelliteApiDirectory";
-import { bboxCenter, fetchWithTimeout, geoJsonToEwkt, round } from "./common";
+import { bboxCenter, fetchWithTimeout, findStateName, geoJsonToEwkt, round } from "./common";
 
 /** Ventana de búsqueda hacia atrás. Mayor que la cadencia de la tarea para no perder escenas publicadas con retraso. */
 export const STAC_LOOKBACK_DAYS = 4;
@@ -105,15 +106,32 @@ function sentinel2Code(platform: string | undefined): string {
   return match ? `S2${match[1].toUpperCase()}` : "S2";
 }
 
+const MONITORED_STATE_SET = new Set<string>(MONITORED_STATES);
+
+export function isInMonitoredState(lat: number | null, lon: number | null): boolean {
+  if (lat == null || lon == null) return false;
+  const stateName = findStateName(Number(lat), Number(lon));
+  return stateName !== null && MONITORED_STATE_SET.has(stateName);
+}
+
+/**
+ * El recuadro de búsqueda incluye franjas de estados y países vecinos: solo se guardan las
+ * escenas cuyo centro cae en MONITORED_STATES; el resto se cuenta como descartado.
+ */
 export async function fetchSentinel2Products(now = new Date()) {
   const url = stacSearchUrl("SENTINEL_2_MSI", "sentinel-2-l2a", now);
   const { items, truncated } = await fetchAllStacItems(url);
   const rows: Sentinel2ProductRow[] = [];
+  let discardedOutside = 0;
   for (const item of items) {
     const p = item.properties || {};
     const footprint = geoJsonToEwkt(item.geometry);
     if (!footprint) continue; // geom_footprint es obligatoria en la tabla
     const center = bboxCenter(item.bbox);
+    if (!isInMonitoredState(center.lat, center.lon)) {
+      discardedOutside++;
+      continue;
+    }
     const grid = String(p["grid:code"] || "").replace(/^MGRS-/, "");
     const cloud = Number(p["eo:cloud_cover"]);
     rows.push({
@@ -131,5 +149,5 @@ export async function fetchSentinel2Products(now = new Date()) {
       stac_item_url: selfLink(item),
     });
   }
-  return { rows, url, truncated };
+  return { rows, url, truncated, discardedOutside };
 }

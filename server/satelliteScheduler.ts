@@ -12,7 +12,7 @@ import {
   FirmsHotspotRow,
   isRelevantHotspot,
 } from "./ingestion/firms";
-import { fetchSentinel1Scenes, fetchSentinel2Products } from "./ingestion/stac";
+import { fetchSentinel1Scenes, fetchSentinel2Products, isInMonitoredState } from "./ingestion/stac";
 import { fetchSentinel3Products } from "./ingestion/sentinel3";
 import { bulletinToRows, fetchInamehBulletins, HydroReadingRow, hydroRagDocument } from "./ingestion/inameh";
 
@@ -325,7 +325,8 @@ export class SatelliteAutomatedScheduler {
     this.cache = {
       hotspots,
       sentinel1Scenes: s1,
-      sentinel2Products: s2,
+      // Las escenas guardadas antes del filtro por estado pueden quedar fuera de los estados monitoreados.
+      sentinel2Products: s2.filter(p => isInMonitoredState(p.center_lat, p.center_lon)),
       sentinel3Products: s3,
       hydroStations: stations,
       sarDisturbances: sar,
@@ -477,12 +478,13 @@ export class SatelliteAutomatedScheduler {
           note: truncated ? "Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución." : undefined };
       }
       case "SENTINEL_2_MSI": {
-        const { rows, url, truncated } = await fetchSentinel2Products();
+        const { rows, url, truncated, discardedOutside } = await fetchSentinel2Products();
         const result = await insertOnlyNew(store, "s2_product_tile", rows, {
           conflictColumns: ["product_id"], keyOf: r => r.product_id, prefilterColumn: "product_id",
         });
+        const outsideNote = `${discardedOutside} escenas con centro fuera de Amazonas, Bolívar, Delta Amacuro y Guayana Esequiba descartadas.`;
         return { ...result, ragInserted: 0, errors: [], endpointUrl: url,
-          note: truncated ? "Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución." : undefined };
+          note: truncated ? `Se alcanzó el máximo de páginas; las restantes entran en la próxima ejecución. ${outsideNote}` : outsideNote };
       }
       case "SENTINEL_3_OLCI": {
         const { rows, urls, truncated } = await fetchSentinel3Products();
