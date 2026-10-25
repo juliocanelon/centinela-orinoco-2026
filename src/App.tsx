@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
+import { Sidebar, Topbar } from './components/AppShell';
 import { TacticalMap } from './components/TacticalMap';
 import { TelemetryView } from './components/TelemetryView';
 import { IncidentManager } from './components/IncidentManager';
@@ -12,7 +12,6 @@ import { SarAnomalyViewer } from './components/SarAnomalyViewer';
 import { LiveIngestionPipelineView } from './components/LiveIngestionPipelineView';
 import { SatelliteApiConnectionsModal } from './components/SatelliteApiConnectionsModal';
 import { AboutProjectModal } from './components/AboutProjectModal';
-import { ACADEMIC_INFO } from './data/academicInfo';
 import { CommunityReportModal } from './components/CommunityReportModal';
 import { CommunityReportsView } from './components/CommunityReportsView';
 import { 
@@ -73,6 +72,7 @@ export default function App() {
   // Modals & Drawers
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isCommunityReportModalOpen, setIsCommunityReportModalOpen] = useState(false);
   const [isSatelliteModalOpen, setIsSatelliteModalOpen] = useState(false);
@@ -195,6 +195,7 @@ export default function App() {
       setIncidentPrefilledCoords(coords);
     }
     setIsIncidentModalOpen(true);
+    setCurrentView('INCIDENTS');
   };
 
   const handleDispatchSarAlert = (anomaly: SarRadarAnomaly) => {
@@ -273,31 +274,40 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b10] text-slate-200 flex flex-col font-sans selection:bg-sky-600 selection:text-white">
-      {/* Top Navigation */}
-      <Navbar
+    <div className="h-dvh flex bg-canvas text-slate-200 overflow-hidden font-sans selection:bg-sky-500/40 selection:text-white">
+      <Sidebar
         currentView={currentView}
         onSelectView={setCurrentView}
-        onOpenNewIncidentModal={() => {
-          setIncidentPrefilledCoords(null);
-          setIsIncidentModalOpen(true);
-        }}
-        onOpenCommunityReportModal={() => setIsCommunityReportModalOpen(true)}
-        onOpenAiDrawer={() => setIsAiDrawerOpen(true)}
         onOpenAbout={() => setIsAboutModalOpen(true)}
         activeIncidentsCount={incidents.filter((i) => i.status === 'ACTIVO' || i.status === 'OPERATIVO_EN_CURSO').length}
         communityReportsCount={communityReports.length}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
+      />
+
+      <div className="flex-1 min-w-0 flex flex-col relative z-0">
+      <Topbar
+        currentView={currentView}
+        onOpenMobileNav={() => setIsMobileNavOpen(true)}
+        onOpenNewIncidentModal={() => {
+          setIncidentPrefilledCoords(null);
+          setIsIncidentModalOpen(true);
+          // El formulario vive dentro de la vista de incidentes
+          setCurrentView('INCIDENTS');
+        }}
+        onOpenCommunityReportModal={() => setIsCommunityReportModalOpen(true)}
+        onOpenAiDrawer={() => setIsAiDrawerOpen(true)}
         thermalAnomaliesCount={heatAnomalies.length}
       />
 
       {dataLoadErrors.length > 0 && (
-        <div className="px-4 py-2 bg-amber-950/80 border-b border-amber-800 text-amber-200 text-xs">
-          No se pudieron cargar algunos datos desde Supabase: {dataLoadErrors.join(' · ')}
+        <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/25 text-amber-200 text-xs">
+          No se pudieron cargar algunos datos desde Supabase: {dataLoadErrors.join('; ')}
         </div>
       )}
 
       {/* Main View Router */}
-      <main className="flex-1 relative overflow-x-hidden">
+      <main className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden">
         {currentView === 'MAP_SITUATION' && (
           <TacticalMap
             heatAnomalies={heatAnomalies}
@@ -477,20 +487,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Academic credits footer */}
-      <footer className="px-4 py-3 border-t border-slate-900 bg-[#060a0f] text-center text-[11px] text-slate-500">
-        <span>
-          Proyecto académico · {ACADEMIC_INFO.course} · {ACADEMIC_INFO.program} · {ACADEMIC_INFO.universityShortName} · {ACADEMIC_INFO.term}
-        </span>
-        <span className="mx-2 text-slate-700">|</span>
-        <button
-          type="button"
-          onClick={() => setIsAboutModalOpen(true)}
-          className="text-sky-400 hover:text-sky-300 underline underline-offset-2"
-        >
-          Acerca del proyecto
-        </button>
-      </footer>
+      </div>
 
       {/* Side AI Companion Drawer */}
       <AIChatDrawer

@@ -32,6 +32,7 @@ import {
 } from '../types';
 import { LivePipelineService } from '../services/liveDataPipelineService';
 import { SATELLITE_API_CONNECTIONS, SatelliteApiConnection, MONITORING_BBOX } from '../data/satelliteApiDirectory';
+import { formatLabel } from '../lib/labels';
 
 interface LiveIngestionPipelineViewProps {
   onNavigateToMapWithCoords?: (lat: number, lng: number, zoom?: number) => void;
@@ -232,23 +233,23 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
   );
 
   return (
-    <div className="flex-1 bg-[#070d14] text-slate-200 overflow-y-auto flex flex-col">
+    <div className="flex-1 bg-canvas text-slate-200 overflow-y-auto flex flex-col">
       {/* Header Banner */}
-      <div className="bg-[#0b131e] border-b border-slate-800/80 px-6 py-4">
+      <div className="bg-surface border-b border-slate-800/80 px-6 py-4">
         <div className="flex items-center justify-between flex-wrap gap-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-emerald-500 p-[1px] shadow-lg shadow-sky-950/50">
-              <div className="w-full h-full bg-[#0b131e] rounded-[11px] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-sky-600 p-[1px] shadow-lg shadow-sky-950/50">
+              <div className="w-full h-full bg-surface rounded-[11px] flex items-center justify-center">
                 <Workflow className="w-5 h-5 text-sky-400" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-white tracking-wide font-sans">
+                <h1 className="font-display text-xl font-semibold text-white">
                   Ingesta de Datos Satelitales e Hidrológicos
                 </h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  DATOS REALES
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  Datos reales
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -282,7 +283,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
             onClick={() => setActiveTab('AUTOMATION_SCHEDULER')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
               activeTab === 'AUTOMATION_SCHEDULER'
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-950/50 ring-1 ring-violet-400'
+                ? 'bg-violet-600 text-white shadow-md shadow-violet-950/50 ring-1 ring-violet-400'
                 : 'text-violet-300 hover:text-white hover:bg-violet-950/40 border border-violet-900/50'
             }`}
           >
@@ -320,7 +321,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {tasks.map((task) => (
-                <div key={task.key} className="bg-[#0b131e] border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
+                <div key={task.key} className="bg-surface border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="p-1.5 rounded-lg bg-slate-900 border border-slate-800">{TASK_ICONS[task.key]}</span>
@@ -331,17 +332,17 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                         : task.status === 'SUCCESS' ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
                         : 'bg-slate-900 text-slate-300 border-slate-700'
                     }`}>
-                      {task.status}
+                      {formatLabel(task.status)}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400">{task.satelliteMission} · {task.nominalCadenceText}</p>
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div className="bg-[#070d14] p-2 rounded border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">EN LA TABLA</span>
+                    <div className="bg-canvas p-2 rounded border border-slate-800">
+                      <span className="text-[10px] text-slate-500 block">En la tabla</span>
                       <span className="text-emerald-400 font-bold">{task.totalIngested}</span>
                     </div>
-                    <div className="bg-[#070d14] p-2 rounded border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">ÚLTIMA EJECUCIÓN</span>
+                    <div className="bg-canvas p-2 rounded border border-slate-800">
+                      <span className="text-[10px] text-slate-500 block">Última ejecución</span>
                       <span className="text-slate-200">{task.lastInserted === null ? '—' : `+${task.lastInserted} / ${task.lastSkipped} omit.`}</span>
                     </div>
                   </div>
@@ -349,7 +350,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 </div>
               ))}
 
-              <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
+              <div className="bg-surface border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 rounded-lg bg-slate-900 border border-slate-800"><Smartphone className="w-4 h-4 text-emerald-400" /></span>
                   <h3 className="text-sm font-bold text-white">Webhook KoboToolbox / ODK</h3>
@@ -358,7 +359,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 <p className="text-xs font-mono text-slate-300">{overview?.kobo.totalSubmissions ?? 0} minutas · {overview?.kobo.webhookPath}</p>
               </div>
 
-              <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
+              <div className="bg-surface border border-slate-800 rounded-xl p-4 space-y-2 shadow-md">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 rounded-lg bg-slate-900 border border-slate-800"><Database className="w-4 h-4 text-violet-400" /></span>
                   <h3 className="text-sm font-bold text-white">Supabase (PostgreSQL + PostGIS)</h3>
@@ -372,7 +373,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
         {/* TAB 1.5: SATELLITE API CONNECTIONS DIRECTORY */}
         {activeTab === 'SATELLITE_APIS' && (
-          <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-5 shadow-xl">
+          <div className="bg-surface border border-slate-800 rounded-xl p-5 shadow-xl">
             <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-cyan-950/80 border border-cyan-700/60 text-cyan-400">
@@ -393,7 +394,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 const isCopied = copiedUrlId === conn.id;
                 const availability = AVAILABILITY_STYLES[conn.availability];
                 return (
-                  <div key={conn.id} className="p-4 rounded-xl bg-[#070e17] border border-slate-800 hover:border-slate-700 transition-all shadow-md">
+                  <div key={conn.id} className="p-4 rounded-xl bg-surface border border-slate-800 hover:border-slate-700 transition-all shadow-md">
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -420,10 +421,10 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
                     <div className="space-y-1.5 mt-3">
                       <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                        <span>URL DE CONSUMO:</span>
+                        <span>URL de consumo:</span>
                         <span className="text-cyan-400">Formato: {conn.payloadFormat}</span>
                       </div>
-                      <div className="flex items-center gap-2 p-2.5 bg-[#05090f] border border-slate-800 rounded-lg font-mono text-xs text-cyan-300 overflow-x-auto">
+                      <div className="flex items-center gap-2 p-2.5 bg-canvas border border-slate-800 rounded-lg font-mono text-xs text-cyan-300 overflow-x-auto">
                         <span className="select-all flex-1 whitespace-nowrap">{conn.activeUrl}</span>
                         <button
                           onClick={() => {
@@ -440,7 +441,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-800/70 text-xs">
-                      <span className="text-[10px] text-slate-400 font-mono block mb-1">COMANDO CURL:</span>
+                      <span className="text-[10px] text-slate-400 font-mono block mb-1">Comando cURL:</span>
                       <div className="font-mono text-[10px] text-slate-400 break-all select-all">{conn.sampleCurlCommand}</div>
                     </div>
                   </div>
@@ -453,7 +454,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
         {/* TAB 2: RAG SEARCH */}
         {activeTab === 'RAG_STUDIO' && (
           <div className="space-y-6">
-            <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="bg-surface border border-slate-800 rounded-xl p-5 space-y-4">
               <div>
                 <h3 className="font-bold text-white text-base flex items-center gap-2"><Search className="w-4 h-4 text-sky-400" />Búsqueda en documentos almacenados</h3>
                 <p className="text-xs text-slate-400 mt-1">
@@ -464,7 +465,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 value={ragQuery}
                 onChange={(e) => setRagQuery(e.target.value)}
                 rows={2}
-                className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-3 text-sm text-white"
+                className="w-full bg-canvas border border-slate-700 rounded-lg p-3 text-sm text-white"
               />
               <div className="flex flex-wrap gap-2">
                 {PRESET_QUERIES.map((q) => (
@@ -476,15 +477,15 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs items-end">
                 <label className="block">
                   <span className="text-slate-400 font-mono block mb-1">LATITUD (opcional)</span>
-                  <input value={ragCenterLat} onChange={(e) => setRagCenterLat(e.target.value)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input value={ragCenterLat} onChange={(e) => setRagCenterLat(e.target.value)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
                 <label className="block">
                   <span className="text-slate-400 font-mono block mb-1">LONGITUD (opcional)</span>
-                  <input value={ragCenterLng} onChange={(e) => setRagCenterLng(e.target.value)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input value={ragCenterLng} onChange={(e) => setRagCenterLng(e.target.value)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
                 <label className="block">
                   <span className="text-slate-400 font-mono block mb-1">RADIO km (0 = sin límite)</span>
-                  <input type="number" min={0} value={ragRadiusKm} onChange={(e) => setRagRadiusKm(Number(e.target.value) || 0)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input type="number" min={0} value={ragRadiusKm} onChange={(e) => setRagRadiusKm(Number(e.target.value) || 0)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
                 <button
                   onClick={handleExecuteRag}
@@ -505,7 +506,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {ragResult.topMatches.map((match) => (
-                    <div key={match.id} className="bg-[#0b131e] border border-slate-800 rounded-xl p-3 space-y-1.5">
+                    <div key={match.id} className="bg-surface border border-slate-800 rounded-xl p-3 space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300 border border-slate-700">{match.source}</span>
                         <span className="text-[10px] font-mono text-sky-400">
@@ -522,7 +523,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                     </div>
                   ))}
                 </div>
-                <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-5 space-y-3">
+                <div className="bg-surface border border-slate-800 rounded-xl p-5 space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
                     <div><span className="text-slate-500 block">Deforestación</span><span className="text-amber-300">{ragResult.threatMatrix.deforestationRisk}</span></div>
                     <div><span className="text-slate-500 block">Mercurio</span><span className="text-slate-300">{ragResult.threatMatrix.mercuryExposureRisk}</span></div>
@@ -560,7 +561,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
               <span className="text-slate-500 font-mono ml-auto">Datos al {formatDateTime(feed?.loadedAt)}</span>
             </div>
 
-            <div className="bg-[#0b131e] border border-slate-800 rounded-xl overflow-x-auto">
+            <div className="bg-surface border border-slate-800 rounded-xl overflow-x-auto">
               <table className="w-full text-xs">
                 <tbody className="font-mono">
                   {feedFilter === 'NASA_FIRMS' && (feed?.hotspots || []).map((h) => (
@@ -608,14 +609,14 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                       <td className="p-2">{s.name}</td>
                       <td className="p-2">{s.currentLevelM ?? 's/d'} msnm</td>
                       <td className="p-2">{s.readingDate ?? 's/f'}{s.isStale ? ' (desactualizado)' : ''}</td>
-                      <td className="p-2">{s.status}</td>
+                      <td className="p-2">{formatLabel(s.status)}</td>
                     </tr>
                   ))}
                   {feedFilter === 'KOBO' && koboReports.map((r) => (
                     <tr key={r.id} className="border-b border-slate-800/60">
                       <td className="p-2 text-emerald-300">{r.submissionTime}</td>
                       <td className="p-2">{r.officerName}</td>
-                      <td className="p-2">{r.category}</td>
+                      <td className="p-2">{formatLabel(r.category)}</td>
                       <td className="p-2">{r.latitude}, {r.longitude}</td>
                       <td className="p-2">{r.mercuryDetectedPpm === undefined ? 'Hg no medido' : `Hg ${r.mercuryDetectedPpm} ppm (campo)`}</td>
                     </tr>
@@ -631,7 +632,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
         {/* TAB 4: SQL */}
         {activeTab === 'POSTGIS_SQL' && (
-          <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-5 space-y-3">
+          <div className="bg-surface border border-slate-800 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="font-bold text-white text-base">Migraciones SQL aplicadas</h3>
@@ -648,14 +649,14 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 </button>
               </div>
             </div>
-            <pre className="whitespace-pre-wrap bg-[#060a10] p-4 rounded-xl border border-slate-800 text-emerald-300/90 font-mono text-xs max-h-[70vh] overflow-y-auto">{sqlScript}</pre>
+            <pre className="whitespace-pre-wrap bg-canvas p-4 rounded-xl border border-slate-800 text-emerald-300/90 font-mono text-xs max-h-[70vh] overflow-y-auto">{sqlScript}</pre>
           </div>
         )}
 
         {/* TAB 5: SENTINEL-2 CATALOG */}
         {activeTab === 'SENTINEL_S2' && (
           <div className="space-y-4">
-            <div className="bg-[#0b131e] border border-slate-800 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="bg-surface border border-slate-800 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="font-bold text-white text-base">Catálogo Sentinel-2 L2A (últimos 4 días de ingesta)</h3>
                 <p className="text-xs text-slate-400">Escenas reales del catálogo STAC de Copernicus. El análisis de bandas (NDVI, turbidez) es parte del Nivel 2.</p>
@@ -666,7 +667,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                 <span className="font-mono w-10">{s2MaxCloud}%</span>
               </label>
             </div>
-            <div className="bg-[#0b131e] border border-slate-800 rounded-xl overflow-x-auto">
+            <div className="bg-surface border border-slate-800 rounded-xl overflow-x-auto">
               <table className="w-full text-xs font-mono">
                 <thead>
                   <tr className="text-slate-500 text-left border-b border-slate-800">
@@ -702,8 +703,8 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
       {/* MODAL: minuta de campo Kobo / ODK */}
       {koboModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b131e] border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[2000] flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800">
@@ -720,33 +721,33 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
             <form onSubmit={handleDispatchKoboWebhook} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">OFICIAL:</span>
-                  <input type="text" value={webhookOfficer} onChange={(e) => setWebhookOfficer(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white" />
+                  <span className="block text-slate-400 font-mono mb-1">Oficial:</span>
+                  <input type="text" value={webhookOfficer} onChange={(e) => setWebhookOfficer(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">UNIDAD:</span>
-                  <input type="text" value={webhookUnit} onChange={(e) => setWebhookUnit(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white" />
+                  <span className="block text-slate-400 font-mono mb-1">Unidad:</span>
+                  <input type="text" value={webhookUnit} onChange={(e) => setWebhookUnit(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <label className="block sm:col-span-2">
-                  <span className="block text-slate-400 font-mono mb-1">RÍO / SECTOR:</span>
-                  <input type="text" value={webhookRiver} onChange={(e) => setWebhookRiver(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white" />
+                  <span className="block text-slate-400 font-mono mb-1">Río / sector:</span>
+                  <input type="text" value={webhookRiver} onChange={(e) => setWebhookRiver(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">LATITUD:</span>
-                  <input type="text" value={webhookLat} onChange={(e) => setWebhookLat(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <span className="block text-slate-400 font-mono mb-1">Latitud:</span>
+                  <input type="text" value={webhookLat} onChange={(e) => setWebhookLat(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">LONGITUD:</span>
-                  <input type="text" value={webhookLng} onChange={(e) => setWebhookLng(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <span className="block text-slate-400 font-mono mb-1">Longitud:</span>
+                  <input type="text" value={webhookLng} onChange={(e) => setWebhookLng(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
               </div>
 
               <label className="block">
-                <span className="block text-slate-400 font-mono mb-1">CATEGORÍA:</span>
-                <select value={webhookCategory} onChange={(e) => setWebhookCategory(e.target.value as KoboFieldPatrolReport['category'])} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white">
+                <span className="block text-slate-400 font-mono mb-1">Categoría:</span>
+                <select value={webhookCategory} onChange={(e) => setWebhookCategory(e.target.value as KoboFieldPatrolReport['category'])} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white">
                   <option value="MINERIA_ILEGAL">Minería ilegal</option>
                   <option value="DEFORESTACION">Deforestación</option>
                   <option value="CONTAMINACION_MERCURIO">Contaminación por mercurio</option>
@@ -758,15 +759,15 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
               <div>
                 <span className="block text-slate-400 font-mono mb-1">MEDICIONES DE CAMPO (opcionales, solo si se midieron):</span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input type="number" step="0.001" placeholder="Mercurio (ppm)" value={webhookMercury} onChange={(e) => setWebhookMercury(e.target.value)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
-                  <input type="number" step="0.1" placeholder="Turbidez (NTU)" value={webhookTurbidity} onChange={(e) => setWebhookTurbidity(e.target.value)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
-                  <input type="number" placeholder="Dragas retenidas" value={webhookDredges} onChange={(e) => setWebhookDredges(e.target.value)} className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input type="number" step="0.001" placeholder="Mercurio (ppm)" value={webhookMercury} onChange={(e) => setWebhookMercury(e.target.value)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input type="number" step="0.1" placeholder="Turbidez (NTU)" value={webhookTurbidity} onChange={(e) => setWebhookTurbidity(e.target.value)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
+                  <input type="number" placeholder="Dragas retenidas" value={webhookDredges} onChange={(e) => setWebhookDredges(e.target.value)} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </div>
               </div>
 
               <label className="block">
-                <span className="block text-slate-400 font-mono mb-1">NARRATIVA:</span>
-                <textarea rows={3} value={webhookNarrative} onChange={(e) => setWebhookNarrative(e.target.value)} required className="w-full bg-[#070d14] border border-slate-700 rounded-lg p-2 text-white text-xs" />
+                <span className="block text-slate-400 font-mono mb-1">Narrativa:</span>
+                <textarea rows={3} value={webhookNarrative} onChange={(e) => setWebhookNarrative(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white text-xs" />
               </label>
 
               {koboError && <p className="text-amber-300">{koboError}</p>}

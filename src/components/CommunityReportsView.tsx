@@ -108,19 +108,19 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
   };
 
   return (
-    <div id="community-reports-view" className="flex flex-col h-[calc(100vh-65px)] bg-[#070b10] text-slate-200 overflow-y-auto">
+    <div id="community-reports-view" className="flex flex-col h-full bg-canvas text-slate-200 overflow-y-auto">
       {/* Top Banner / Hero */}
-      <div className="bg-gradient-to-r from-[#0a111a] via-[#0f172a] to-[#0a111a] border-b border-slate-800/80 px-4 sm:px-6 py-5">
+      <div className="bg-canvas border-b border-slate-800/80 px-4 sm:px-6 py-5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 font-mono text-xs font-semibold uppercase">
+              <span className="px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 text-xs font-semibold">
                 Veeduría Ambiental Comunitaria
               </span>
               <span className="text-slate-500 text-xs">·</span>
               <span className="text-slate-400 text-xs">Pueblos Indígenas & Ribereños del Orinoco</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">
+            <h1 className="font-display text-2xl sm:text-[28px] font-semibold text-white">
               Centro de Denuncias y Veeduría Territorial
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
@@ -132,7 +132,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
           <button
             id="btn-new-community-report-view"
             onClick={onOpenNewReportModal}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-lg shadow-sky-950/60 border border-sky-400/40 transition-all shrink-0"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-lg shadow-sky-950/60 border border-sky-400/40 transition-all shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Registrar Nueva Denuncia</span>
@@ -141,7 +141,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
       </div>
 
       {/* KPI Metrics Row */}
-      <div className="px-4 sm:px-6 py-3 bg-[#080d14] border-b border-slate-800/60">
+      <div className="px-4 sm:px-6 py-3 bg-canvas border-b border-slate-800/60">
         <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
             <div>
@@ -197,7 +197,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por código, título, río, comunidad o descripción..."
-              className="w-full pl-9 pr-3 py-1.5 bg-[#080d14] border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="w-full pl-9 pr-3 py-1.5 bg-canvas border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
             />
           </div>
 
@@ -206,7 +206,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
+              className="px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
             >
               <option value="ALL">Todos los Estados</option>
               <option value="PENDIENTE_VALIDACION">Pendiente Validación</option>
@@ -218,7 +218,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
+              className="px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
             >
               <option value="ALL">Todas las Categorías</option>
               <option value="MINERIA_ILEGAL">Minería Ilegal</option>
@@ -232,7 +232,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
             <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
+              className="px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-sky-500"
             >
               <option value="ALL">Toda Severidad</option>
               <option value="CRITICAL">Crítica</option>
@@ -267,7 +267,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
               return (
                 <div
                   key={report.id}
-                  className="bg-[#0b121c] border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all space-y-3"
+                  className="bg-surface border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all space-y-3"
                 >
                   {/* Top Bar: Code, Status & Date */}
                   <div>
@@ -363,7 +363,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
                                   <div className="w-6 h-6 rounded-full bg-sky-950/90 border border-sky-400 flex items-center justify-center text-sky-300 shadow group-hover:scale-110 transition-transform mb-0.5">
                                     <Play className="w-3 h-3 ml-0.5" />
                                   </div>
-                                  <span className="text-[8px] font-mono uppercase font-bold text-sky-300">Video</span>
+                                  <span className="text-[8px] font-bold text-sky-300">Video</span>
                                 </div>
                               ) : (
                                 <img

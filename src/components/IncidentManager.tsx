@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { IncidentReport, AlertSeverity } from '../types';
 import { SupabaseRpcService } from '../lib/supabaseClient';
+import { formatLabel } from '../lib/labels';
 
 interface IncidentManagerProps {
   incidents: IncidentReport[];
@@ -136,13 +137,13 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header & Actions */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Centro de Gestión de Incidentes y Alertas Territoriales
             </h2>
           </div>
@@ -171,9 +172,9 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-[#0b121c] p-3.5 rounded-xl border border-slate-800 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-surface p-3.5 rounded-xl border border-slate-800 text-xs">
         {/* Search */}
-        <div className="flex items-center gap-2 bg-[#060a0f] px-3 py-2 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-2 bg-canvas px-3 py-2 rounded-lg border border-slate-800">
           <Search className="w-4 h-4 text-slate-400" />
           <input
             type="text"
@@ -185,7 +186,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
         </div>
 
         {/* Severity filter */}
-        <div className="flex items-center gap-2 bg-[#060a0f] px-3 py-2 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-2 bg-canvas px-3 py-2 rounded-lg border border-slate-800">
           <Filter className="w-4 h-4 text-slate-400" />
           <span className="text-slate-400">Severidad:</span>
           <select
@@ -202,7 +203,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
         </div>
 
         {/* Category filter */}
-        <div className="flex items-center gap-2 bg-[#060a0f] px-3 py-2 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-2 bg-canvas px-3 py-2 rounded-lg border border-slate-800">
           <span className="text-slate-400">Categoría:</span>
           <select
             value={categoryFilter}
@@ -222,7 +223,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
       {/* Incidents Table / Cards */}
       <div className="space-y-3">
         {filteredIncidents.length === 0 ? (
-          <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-10 text-center text-slate-400">
+          <div className="bg-surface border border-slate-800 rounded-xl p-10 text-center text-slate-400">
             <ShieldAlert className="w-10 h-10 mx-auto text-slate-600 mb-2" />
             <p className="text-sm font-medium">No se encontraron incidentes con los filtros seleccionados.</p>
           </div>
@@ -234,43 +235,43 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
             return (
               <div
                 key={inc.id}
-                className="bg-[#0b121c] border border-slate-800 hover:border-slate-700 rounded-xl p-4 transition-all shadow-md space-y-3"
+                className="bg-surface border border-slate-800 hover:border-slate-700 rounded-xl p-4 transition-all shadow-md space-y-3"
               >
                 <div className="flex items-start justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-900 text-sky-400 border border-slate-800">
+                    <span className="font-mono text-xs font-bold whitespace-nowrap px-2 py-0.5 rounded-md bg-slate-900 text-sky-400 border border-slate-800">
                       {inc.code}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                       isCritical ? 'bg-red-950 text-red-300 border border-red-800' :
                       isHigh ? 'bg-amber-950 text-amber-300 border border-amber-800' :
                       'bg-slate-900 text-slate-300 border border-slate-700'
                     }`}>
-                      {inc.severity}
+                      {formatLabel(inc.severity)}
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded bg-slate-800/80 text-slate-300">
-                      {inc.category.replace('_', ' ')}
+                      {formatLabel(inc.category)}
                     </span>
                   </div>
 
                   {/* Status Dropdown */}
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-400">Estado Operativo:</span>
+                    <span className="text-slate-400">Estado</span>
                     <select
                       value={inc.status}
                       onChange={(e) => onUpdateStatus(inc.id, e.target.value as any)}
-                      className={`px-2.5 py-1 rounded text-xs font-mono font-medium outline-none border cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium outline-none border cursor-pointer ${
                         inc.status === 'OPERATIVO_EN_CURSO' ? 'bg-sky-950 text-sky-300 border-sky-800' :
                         inc.status === 'RESUELTO' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
                         inc.status === 'EN_VERIFICACION' ? 'bg-amber-950 text-amber-300 border-amber-800' :
                         'bg-red-950 text-red-300 border-red-800'
                       }`}
                     >
-                      <option value="ACTIVO" className="bg-slate-900 text-red-300">ACTIVO</option>
-                      <option value="EN_VERIFICACION" className="bg-slate-900 text-amber-300">EN VERIFICACIÓN</option>
-                      <option value="OPERATIVO_EN_CURSO" className="bg-slate-900 text-sky-300">OPERATIVO EN CURSO</option>
-                      <option value="RESUELTO" className="bg-slate-900 text-emerald-300">RESUELTO</option>
-                      <option value="ARCHIVADO" className="bg-slate-900 text-slate-400">ARCHIVADO</option>
+                      <option value="ACTIVO" className="bg-slate-900 text-red-300">Activo</option>
+                      <option value="EN_VERIFICACION" className="bg-slate-900 text-amber-300">En verificación</option>
+                      <option value="OPERATIVO_EN_CURSO" className="bg-slate-900 text-sky-300">Operativo en curso</option>
+                      <option value="RESUELTO" className="bg-slate-900 text-emerald-300">Resuelto</option>
+                      <option value="ARCHIVADO" className="bg-slate-900 text-slate-400">Archivado</option>
                     </select>
                   </div>
                 </div>
@@ -301,8 +302,8 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
 
       {/* Modal: Registrar Nuevo Incidente */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0c1420] border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-slate-200">
+        <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl w-full max-w-lg p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-red-400" />
@@ -325,7 +326,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                   placeholder="ej. Detección de balsa minera en Caño Yagua..."
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 transition-colors"
+                  className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 transition-colors"
                 />
               </div>
 
@@ -335,7 +336,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   >
                     <option value="MINERIA_ILEGAL">Minería Ilegal</option>
                     <option value="CONTAMINACION_MERCURIO">Contaminación Mercurio</option>
@@ -351,7 +352,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                   <select
                     value={newSeverity}
                     onChange={(e) => setNewSeverity(e.target.value as any)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   >
                     <option value="CRITICAL">Crítica (Interdicción Inmediata)</option>
                     <option value="HIGH">Alta (Sobrevuelo / Verificación)</option>
@@ -369,7 +370,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                     required
                     value={newLat}
                     onChange={(e) => setNewLat(e.target.value)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white font-mono text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white font-mono text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -379,7 +380,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                     required
                     value={newLng}
                     onChange={(e) => setNewLng(e.target.value)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white font-mono text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white font-mono text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -391,7 +392,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                   placeholder="ej. Alto Ventuari - Sureste de Manapiare"
                   value={newLocationName}
                   onChange={(e) => setNewLocationName(e.target.value)}
-                  className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 transition-colors"
+                  className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 transition-colors"
                 />
               </div>
 
@@ -403,7 +404,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                   placeholder="Detalles sobre dragas, hectáreas, imágenes satelitales o testimonios comunitarios..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 resize-none transition-colors"
+                  className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500 resize-none transition-colors"
                 />
               </div>
 
@@ -414,7 +415,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                     type="text"
                     value={newReportedBy}
                     onChange={(e) => setNewReportedBy(e.target.value)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -423,7 +424,7 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
                     type="text"
                     value={newAssignedUnit}
                     onChange={(e) => setNewAssignedUnit(e.target.value)}
-                    className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
+                    className="w-full bg-canvas border border-slate-800 rounded-lg p-2.5 sm:p-3 text-white text-xs sm:text-sm md:text-base outline-none focus:border-sky-500"
                   />
                 </div>
               </div>

@@ -76,7 +76,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
 
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
-      <div className="inline-flex rounded-lg shadow-sm border border-emerald-500/40 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 transition-all">
+      <div className="inline-flex rounded-lg shadow-sm border border-emerald-500/40 bg-emerald-700 hover:bg-emerald-600 transition-all">
         {/* Main Action: Downloads Formatted Word (.doc) by default */}
         <button
           type="button"
@@ -109,13 +109,13 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
 
       {/* Options Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-[#09111c] border border-emerald-500/30 shadow-2xl shadow-black/90 py-2 z-[99999] text-xs divide-y divide-slate-800 backdrop-blur-xl">
-          <div className="px-3 py-1.5 text-[10px] uppercase font-mono text-emerald-400 font-bold flex items-center justify-between">
+        <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-surface border border-emerald-500/30 shadow-2xl shadow-black/90 py-2 z-[99999] text-xs divide-y divide-slate-800 backdrop-blur-xl">
+          <div className="px-3 py-1.5 text-[10px] text-emerald-400 font-bold flex items-center justify-between">
             <span className="flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-400" />
               Formatos Sin Sintaxis Markdown
             </span>
-            <span className="text-slate-400 font-sans normal-case text-[9px]">Limpio</span>
+            <span className="text-slate-400 font-sans normal-case text-[10px]">Limpio</span>
           </div>
 
           <div className="py-1">
@@ -128,7 +128,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
               <div>
                 <div className="font-bold text-white flex items-center gap-1.5">
                   <span>Documento Formateado (.doc)</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800">Word</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800">Word</span>
                 </div>
                 <div className="text-[10px] text-slate-400 leading-snug mt-0.5">
                   Apertura directa con tablas, membrete oficial y estilos en Microsoft Word/Office sin ningún símbolo (#, **, |).
@@ -145,7 +145,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
               <div>
                 <div className="font-bold text-white flex items-center gap-1.5">
                   <span>Informe Web Ejecutivo (.html)</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Navegador</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Navegador</span>
                 </div>
                 <div className="text-[10px] text-slate-400 leading-snug mt-0.5">
                   Documento autocontenido con diseño React-Markdown, tablas responsivas y membrete Centinela Orinoco.
@@ -162,7 +162,7 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
               <div>
                 <div className="font-bold text-white flex items-center gap-1.5">
                   <span>Texto Plano Limpio (.txt)</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">Sin formato</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">Sin formato</span>
                 </div>
                 <div className="text-[10px] text-slate-400 leading-snug mt-0.5">
                   Texto plano depurado de asteriscos, almohadillas, tablas markdown y códigos, con sangrías y viñetas limpias.

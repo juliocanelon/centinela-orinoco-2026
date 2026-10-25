@@ -192,7 +192,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
         id: `MED-SAMPLE-${Date.now()}-1`,
         type: 'image',
         name: 'muestra_draga_aluvion.jpg',
-        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="240" fill="%231e293b"/><rect y="240" width="800" height="210" fill="%23713f12"/><rect x="260" y="220" width="280" height="50" rx="6" fill="%23475569"/><rect x="300" y="180" width="200" height="45" fill="%2364748b"/><line x1="330" y1="180" x2="310" y2="120" stroke="%2394a3b8" stroke-width="6"/><circle x1="310" y1="120" r="10" fill="%23ef4444"/><text x="400" y="320" fill="%23ffffff" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">BALSA MINERA TIPO DRAGONA DETECTADA</text><text x="400" y="350" fill="%23fef08a" font-family="monospace" font-size="13" text-anchor="middle">EVIDENCIA COMUNITARIA - CAURA ALTO</text></svg>',
+        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="240" fill="%231e293b"/><rect y="240" width="800" height="210" fill="%23713f12"/><rect x="260" y="220" width="280" height="50" rx="6" fill="%23475569"/><rect x="300" y="180" width="200" height="45" fill="%2364748b"/><line x1="330" y1="180" x2="310" y2="120" stroke="%2394a3b8" stroke-width="6"/><circle x1="310" y1="120" r="10" fill="%23ef4444"/><text x="400" y="320" fill="%23ffffff" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">Balsa minera tipo dragona detectada</text><text x="400" y="350" fill="%23fef08a" font-family="monospace" font-size="13" text-anchor="middle">Evidencia comunitaria - Caura Alto</text></svg>',
         sizeMb: 1.5
       };
     } else if (sampleType === 'TURBIDITY') {
@@ -200,7 +200,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
         id: `MED-SAMPLE-${Date.now()}-2`,
         type: 'image',
         name: 'muestra_aguas_turbias.jpg',
-        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23ca8a04"/><text x="400" y="225" fill="%230f172a" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">DESCARGA DE SEDIMENTOS Y RELAVES</text></svg>',
+        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="450" fill="%23ca8a04"/><text x="400" y="225" fill="%230f172a" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">Descarga de sedimentos y relaves</text></svg>',
         sizeMb: 1.8
       };
     } else if (sampleType === 'DEFORESTATION') {
@@ -208,7 +208,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
         id: `MED-SAMPLE-${Date.now()}-3`,
         type: 'image',
         name: 'muestra_deforestacion_borde.jpg',
-        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="150" fill="%2314532d"/><rect y="150" width="800" height="300" fill="%2378350f"/><text x="400" y="240" fill="%23f87171" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">DEFORESTACIÓN NO AUTORIZADA</text></svg>',
+        url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><rect width="800" height="150" fill="%2314532d"/><rect y="150" width="800" height="300" fill="%2378350f"/><text x="400" y="240" fill="%23f87171" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">Deforestación no autorizada</text></svg>',
         sizeMb: 2.4
       };
     } else {
@@ -282,17 +282,17 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submittedCode) onClose();
       }}
     >
       <div 
         id="community-report-modal"
-        className="bg-[#0b121c] border border-sky-500/40 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] max-w-2xl w-full max-h-[92vh] flex flex-col text-slate-200 overflow-hidden"
+        className="bg-surface border border-sky-500/40 rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] max-w-2xl w-full max-h-[92vh] flex flex-col text-slate-200 overflow-hidden"
       >
         {/* Header */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-[#0d1829] via-[#09111c] to-[#0d1829] border-b border-slate-800 flex items-center justify-between">
+        <div className="px-5 py-3.5 bg-surface border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-sky-950 border border-sky-500/50 flex items-center justify-center text-sky-400">
               <ShieldAlert className="w-4 h-4" />
@@ -329,7 +329,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
             </div>
 
             <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 font-mono text-xs text-sky-300 w-full max-w-sm">
-              <span className="text-slate-400 block text-[10px] uppercase font-sans">Código de Seguimiento Oficial</span>
+              <span className="text-slate-400 block text-[10px] font-sans">Código de Seguimiento Oficial</span>
               <span className="text-base font-bold tracking-wider">{submittedCode}</span>
             </div>
 
@@ -385,7 +385,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     value={reporterName}
                     onChange={(e) => setReporterName(e.target.value)}
                     placeholder="Ej. Capitán J. Silva / Veedor Kuwai"
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -397,7 +397,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     value={reporterContact}
                     onChange={(e) => setReporterContact(e.target.value)}
                     placeholder="Ej. Frecuencia 7.115 MHz / WhatsApp"
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -412,7 +412,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as CommunityReportCategory)}
-                  className="w-full px-3 py-1.5 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-sky-500"
+                  className="w-full px-3 py-1.5 bg-canvas border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-sky-500"
                 >
                   <option value="MINERIA_ILEGAL">⛏️ Minería Ilegal (Balsas, Dragas, Monitores)</option>
                   <option value="CONTAMINACION_HIDRICA">🧪 Contaminación Hídrica (Mercurio, Cianuro, Relaves)</option>
@@ -475,7 +475,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ej. Dos dragas con motor extrayendo oro en el lecho del río"
-                className="w-full px-3 py-1.5 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                className="w-full px-3 py-1.5 bg-canvas border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
               />
             </div>
 
@@ -523,7 +523,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     required
                     value={lat}
                     onChange={(e) => setLat(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-sky-300 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-sky-300 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -534,7 +534,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     required
                     value={lng}
                     onChange={(e) => setLng(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-sky-300 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-sky-300 focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -548,7 +548,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     value={locationName}
                     onChange={(e) => setLocationName(e.target.value)}
                     placeholder="Ej. Alto Ventuari - Caño Oso"
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
@@ -558,7 +558,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     value={communityName}
                     onChange={(e) => setCommunityName(e.target.value)}
                     placeholder="Ej. Comunidad Ye'kwana / Pescadores Maripa"
-                    className="w-full px-2.5 py-1.5 bg-[#080d14] border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                    className="w-full px-2.5 py-1.5 bg-canvas border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -592,7 +592,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe qué maquinaria se observa, cuántas personas, si hay presencia de mercurio o combustible, daños en el agua o el bosque..."
-                className="w-full px-3 py-2 bg-[#080d14] border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 leading-relaxed"
+                className="w-full px-3 py-2 bg-canvas border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 leading-relaxed"
               />
             </div>
 
@@ -678,7 +678,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                     {mediaList.map((m) => (
                       <div 
                         key={m.id}
-                        className="group relative bg-[#070c14] border border-slate-800 hover:border-sky-500/80 rounded-lg overflow-hidden flex flex-col shadow-sm transition-all"
+                        className="group relative bg-canvas border border-slate-800 hover:border-sky-500/80 rounded-lg overflow-hidden flex flex-col shadow-sm transition-all"
                       >
                         <div 
                           onClick={() => setPreviewLightboxMedia(m)}
@@ -686,11 +686,11 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
                           title={m.type === 'video' ? `Reproducir video: ${m.name}` : `Expandir foto: ${m.name}`}
                         >
                           {m.type === 'video' ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 to-slate-900 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors">
                               <div className="w-8 h-8 rounded-full bg-sky-950/90 border border-sky-400 flex items-center justify-center text-sky-300 shadow group-hover:scale-110 transition-transform mb-1">
                                 <Play className="w-4 h-4 ml-0.5" />
                               </div>
-                              <span className="text-[9px] uppercase font-mono font-bold text-sky-300">Reproducir Video</span>
+                              <span className="text-[10px] font-bold text-sky-300">Reproducir Video</span>
                             </div>
                           ) : (
                             <>
@@ -753,7 +753,7 @@ export const CommunityReportModal: React.FC<CommunityReportModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting || !title.trim() || !description.trim()}
-                className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-lg shadow-md transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-md transition-all disabled:opacity-50"
               >
                 <FileCheck2 className="w-4 h-4" />
                 <span>{isSubmitting ? 'Registrando y Publicando...' : 'Publicar Denuncia en Mapa'}</span>

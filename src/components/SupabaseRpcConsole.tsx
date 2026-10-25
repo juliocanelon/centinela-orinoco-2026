@@ -258,13 +258,13 @@ export const SupabaseRpcConsole: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Status Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Inspector de Funciones Almacenadas (RPCs) PostgreSQL / Supabase
             </h2>
           </div>
@@ -274,11 +274,11 @@ export const SupabaseRpcConsole: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#060a0f] border border-slate-800 text-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-canvas border border-slate-800 text-xs">
             <span className={`w-2 h-2 rounded-full ${liveStatus.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
             <span className="text-slate-400">Estado:</span>
-            <strong className={liveStatus.connected ? 'text-emerald-400 font-mono' : 'text-amber-400 font-mono'}>
-              {liveStatus.connected ? 'POSTGRES LIVE AUTENTICADO' : 'MODO LOCAL CON CONTINGENCIA'}
+            <strong className={liveStatus.connected ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+              {liveStatus.connected ? 'Postgres en vivo, autenticado' : 'Modo local de contingencia'}
             </strong>
             {liveStatus.host && (
               <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
@@ -291,7 +291,7 @@ export const SupabaseRpcConsole: React.FC = () => {
             onClick={checkLiveConnection}
             disabled={liveStatus.checking}
             title="Verificar conexión en vivo con Supabase"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#060a0f] hover:bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-canvas hover:bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${liveStatus.checking ? 'animate-spin' : ''}`} />
             <span>{liveStatus.checking ? 'Verificando...' : 'Verificar Conexión'}</span>
@@ -311,7 +311,7 @@ export const SupabaseRpcConsole: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: RPC List */}
         <div className="lg:col-span-1 space-y-2">
-          <label className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block px-1">
+          <label className="text-[10px] text-slate-400 block px-1">
             RPCs Compiladas en PostgreSQL ({RPC_DEFINITIONS.length})
           </label>
 
@@ -323,8 +323,8 @@ export const SupabaseRpcConsole: React.FC = () => {
                 onClick={() => handleSelectRpc(rpc)}
                 className={`cursor-pointer p-3 rounded-xl border transition-all ${
                   isSelected
-                    ? 'bg-[#0f1c2e] border-sky-500/80 shadow-md shadow-sky-950/40'
-                    : 'bg-[#0b121c] border-slate-800/80 hover:border-slate-700 hover:bg-[#0d1624]'
+                    ? 'bg-raised border-sky-500/80 shadow-md shadow-sky-950/40'
+                    : 'bg-surface border-slate-800/80 hover:border-slate-700 hover:bg-surface'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -332,7 +332,7 @@ export const SupabaseRpcConsole: React.FC = () => {
                     <Terminal className="w-3.5 h-3.5 text-sky-400" />
                     <code className="text-xs font-bold text-white font-mono">{rpc.name}</code>
                   </div>
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300">
                     RPC
                   </span>
                 </div>
@@ -346,7 +346,7 @@ export const SupabaseRpcConsole: React.FC = () => {
         </div>
 
         {/* Right: Interactive Execution Panel */}
-        <div className="lg:col-span-2 bg-[#0b121c] border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
+        <div className="lg:col-span-2 bg-surface border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-2">
@@ -369,14 +369,14 @@ export const SupabaseRpcConsole: React.FC = () => {
 
           {/* Parameters Editor */}
           <div>
-            <label className="text-xs text-slate-300 uppercase font-mono tracking-wider block mb-1.5 font-semibold">
+            <label className="text-xs text-slate-300 block mb-1.5 font-semibold">
               Parámetros de Entrada (JSON Object)
             </label>
             <textarea
               rows={4}
               value={paramsInput}
               onChange={(e) => setParamsInput(e.target.value)}
-              className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-3 sm:p-3.5 text-xs sm:text-sm md:text-base font-mono text-sky-300 outline-none focus:border-sky-500 resize-y transition-colors"
+              className="w-full bg-canvas border border-slate-800 rounded-lg p-3 sm:p-3.5 text-xs sm:text-sm md:text-base font-mono text-sky-300 outline-none focus:border-sky-500 resize-y transition-colors"
             />
           </div>
 
@@ -384,7 +384,7 @@ export const SupabaseRpcConsole: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <label className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
+                <label className="text-[10px] text-slate-400">
                   Respuesta GeoJSON / SQL Output
                 </label>
                 {executionStatus === 'success' && (
@@ -396,7 +396,7 @@ export const SupabaseRpcConsole: React.FC = () => {
                 {executionStatus === 'warning' && (
                   <span className="flex items-center gap-1 text-[10px] font-mono text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">
                     <AlertTriangle className="w-3 h-3 text-amber-400" />
-                    AUTENTICADO / RPC PENDIENTE EN SUPABASE ({executionTime}ms)
+                    Autenticado; RPC pendiente en Supabase ({executionTime}ms)
                   </span>
                 )}
                 {executionStatus === 'error' && (
@@ -418,7 +418,7 @@ export const SupabaseRpcConsole: React.FC = () => {
               )}
             </div>
 
-            <div className="w-full h-80 bg-[#060a0f] border border-slate-800 rounded-lg p-3 font-mono text-xs overflow-auto text-slate-300">
+            <div className="w-full h-80 bg-canvas border border-slate-800 rounded-lg p-3 font-mono text-xs overflow-auto text-slate-300">
               {executionResult ? (
                 <pre className="text-[11px] leading-relaxed">
                   {JSON.stringify(executionResult, null, 2)}
@@ -435,8 +435,8 @@ export const SupabaseRpcConsole: React.FC = () => {
 
       {/* SQL Migration Modal */}
       {showSqlModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0b121c] border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileCode className="w-5 h-5 text-sky-400" />
@@ -461,7 +461,7 @@ export const SupabaseRpcConsole: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-[#080d14] border-b border-slate-800 text-xs text-slate-300 space-y-1">
+            <div className="p-4 bg-canvas border-b border-slate-800 text-xs text-slate-300 space-y-1">
               <p>
                 <strong>Instrucciones:</strong> Copie este script, ábralo en la consola de Supabase (<strong>SQL Editor &gt; New Query</strong>) y haga clic en <strong>RUN</strong>.
               </p>
@@ -470,7 +470,7 @@ export const SupabaseRpcConsole: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-4 overflow-auto flex-1 font-mono text-xs bg-[#04070b] text-sky-200">
+            <div className="p-4 overflow-auto flex-1 font-mono text-xs bg-canvas text-sky-200">
               <pre className="whitespace-pre">{sqlScript}</pre>
             </div>
           </div>

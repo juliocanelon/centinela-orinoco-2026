@@ -6,13 +6,30 @@
     <title>Centinela Orinoco</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
-    <meta name="theme-color" content="#070b10" />
+    <meta name="theme-color" content="#080d14" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=JetBrains+Mono:wght@400..600&display=swap" rel="stylesheet" />
     <meta name="description" content="Plataforma de monitoreo geoespacial, ambiental y seguridad territorial para la cuenca del Orinoco. Proyecto académico del Seminario I: Arquitectura de Datos Inteligentes, Maestría Tecnologías de la Información, UNEG." />
     <meta name="author" content="Julio Cesar Canelón Rangel, José Francisco Escalante Rosales, Miguel Damián Mota Garrido" />
     <meta property="og:title" content="Centinela Orinoco" />
     <meta property="og:description" content="Plataforma de monitoreo geoespacial, ambiental y seguridad territorial para la cuenca del Orinoco" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Aplica el tema guardado antes del primer pintado para evitar parpadeo.
+      (function () {
+        var mode = 'dark', accent = 'caudal';
+        try {
+          var saved = JSON.parse(localStorage.getItem('centinela_theme') || '{}');
+          if (saved.mode) mode = saved.mode;
+          if (saved.accent) accent = saved.accent;
+        } catch (e) {}
+        if (mode === 'system') mode = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.mode = mode;
+        document.documentElement.dataset.accent = accent;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

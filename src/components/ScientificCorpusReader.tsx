@@ -356,13 +356,13 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Top Banner */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-[#0b121c] p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-teal-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Lector de Corpus Científico y Georreferenciación Automática
             </h2>
           </div>
@@ -393,7 +393,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
               setSuccessLogs([]);
               setShowInputModal(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-indigo-950/40 border border-teal-500/30 transition-all cursor-pointer animate-pulse"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-indigo-950/40 border border-teal-500/30 transition-all cursor-pointer animate-pulse"
           >
             <Plus className="w-4 h-4" />
             <span>Ingresar Documento Científico</span>
@@ -406,7 +406,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
         {/* Left Column: Article List & Search (4 Cols) */}
         <div className="lg:col-span-5 space-y-3">
           {/* Search bar */}
-          <div className="bg-[#0b121c] p-3 sm:p-3.5 rounded-xl border border-slate-800 flex items-center gap-2.5">
+          <div className="bg-surface p-3 sm:p-3.5 rounded-xl border border-slate-800 flex items-center gap-2.5">
             <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 shrink-0" />
             <input
               type="text"
@@ -428,8 +428,8 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   onClick={() => setSelectedArticleId(article.id)}
                   className={`cursor-pointer p-4 rounded-xl border transition-all ${
                     isSelected
-                      ? 'bg-[#0f1a2d] border-teal-500/80 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30'
-                      : 'bg-[#0b121c] border-slate-800/80 hover:border-slate-700 hover:bg-[#0d1726]'
+                      ? 'bg-raised border-teal-500/80 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30'
+                      : 'bg-surface border-slate-800/80 hover:border-slate-700 hover:bg-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -448,25 +448,25 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
                   <div className="flex items-center justify-between mt-2 text-[11px] text-slate-400">
                     <p className="italic font-medium">{article.authors}</p>
-                    <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold font-mono border border-slate-700">
-                      {article.docType || 'text'}
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold border border-slate-700">
+                      {(article.docType || 'texto').replace('url_doi', 'URL/DOI').replace('pdf', 'PDF')}
                     </span>
                   </div>
 
                   <div className="mt-2.5 flex items-center justify-between gap-1.5 flex-wrap">
                     <div className="flex gap-1">
                       {article.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-300 font-mono">
+                        <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-300 font-mono">
                           #{t}
                         </span>
                       ))}
                     </div>
                     {article.peerReviewed ? (
-                      <span className="text-[9px] font-mono font-bold text-teal-400 bg-teal-950/40 px-2 py-0.5 rounded border border-teal-900/40">
+                      <span className="text-[10px] font-mono font-bold text-teal-400 bg-teal-950/40 px-2 py-0.5 rounded border border-teal-900/40">
                         Arbitrado por Pares
                       </span>
                     ) : (
-                      <span className="text-[9px] font-mono font-bold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/40">
+                      <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/40">
                         No Arbitrado
                       </span>
                     )}
@@ -481,7 +481,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
         {selectedArticle && (
           <div className="lg:col-span-7 space-y-4">
             {/* Article Abstract & Header Card */}
-            <div className="bg-[#0b121c] border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+            <div className="bg-surface border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
               <div className="border-b border-slate-800 pb-3">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-mono mb-1">
                   <span>{selectedArticle.source} ({selectedArticle.year})</span>
@@ -515,7 +515,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                 </p>
                 {selectedArticle.classificationReason && (
                   <div className="text-[11px] text-slate-400 mt-2.5 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/40">
-                    <span className="font-bold text-[10px] uppercase text-teal-400 mr-1.5 font-mono">Clasificación Automática:</span>
+                    <span className="font-bold text-[10px] text-teal-400 mr-1.5">Clasificación Automática:</span>
                     <span className="italic">{selectedArticle.classificationReason}</span>
                   </div>
                 )}
@@ -523,7 +523,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                  <h4 className="text-[11px] font-mono uppercase text-slate-400 tracking-wider">
+                  <h4 className="text-[11px] text-slate-400">
                     Resumen Ejecutivo y Metodología Científica
                   </h4>
                   <span className="text-[10px] font-mono text-teal-400 bg-teal-950/70 border border-teal-800/80 px-2 py-0.5 rounded flex items-center gap-1">
@@ -531,7 +531,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                     Validado: Acorde al Documento & No Redundante
                   </span>
                 </div>
-                <div className="text-xs text-slate-300 leading-relaxed bg-[#070b10] p-3.5 rounded-lg border border-slate-800/80">
+                <div className="text-xs text-slate-300 leading-relaxed bg-canvas p-3.5 rounded-lg border border-slate-800/80">
                   <MarkdownRenderer content={selectedArticle.abstract} />
                 </div>
               </div>
@@ -540,7 +540,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
             {/* Georeferenced Sites Cards */}
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-white flex items-center gap-2">
                   <Compass className="w-4 h-4 text-sky-400" />
                   Sitios de Muestreo y Puntos de Investigación Extraídos ({selectedArticle.investigationSites?.length || 0})
                 </h3>
@@ -553,7 +553,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                 {selectedArticle.investigationSites?.map((site, index) => (
                   <div
                     key={index}
-                    className="bg-[#0b121c] border border-slate-800 hover:border-teal-500/50 rounded-xl p-4 transition-all shadow-md space-y-3"
+                    className="bg-surface border border-slate-800 hover:border-teal-500/50 rounded-xl p-4 transition-all shadow-md space-y-3"
                   >
                     <div className="flex items-start justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
@@ -571,7 +571,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono bg-[#070b10] px-2 py-1 rounded text-sky-300 border border-slate-800">
+                        <span className="text-[10px] font-mono bg-canvas px-2 py-1 rounded text-sky-300 border border-slate-800">
                           {site.latitude.toFixed(3)}°N, {site.longitude.toFixed(3)}°W
                         </span>
                         {onSelectSiteOnMap && (
@@ -586,7 +586,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-300 bg-[#070b10] p-2.5 rounded-lg border border-slate-800/80 leading-relaxed">
+                    <p className="text-xs text-slate-300 bg-canvas p-2.5 rounded-lg border border-slate-800/80 leading-relaxed">
                       {site.findings}
                     </p>
 
@@ -624,8 +624,8 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
       {/* Modal: Input / Extract New Paper */}
       {showInputModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0c1420] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-4 text-slate-200 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[2000] bg-black/85 backdrop-blur-md flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700/80 rounded-2xl w-full max-w-3xl p-6 shadow-2xl space-y-4 text-slate-200 max-h-[90vh] overflow-y-auto">
             
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -663,7 +663,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   </div>
                 )}
 
-                <div className="bg-[#070b10] p-4 rounded-xl border border-slate-800/80 space-y-4">
+                <div className="bg-canvas p-4 rounded-xl border border-slate-800/80 space-y-4">
                   <div>
                     <label className="text-slate-300 block mb-2 font-bold tracking-wide text-[11px]">
                       1. Indicar Tipo de Entrada de Documento
@@ -675,11 +675,11 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                           setDocType('pdf');
                           setErrorMessage(null);
                         }}
-                        className={`py-3 px-3 text-center font-bold rounded-xl border transition-all text-xs uppercase cursor-pointer flex items-center justify-center gap-2 ${
-                          docType === 'pdf'
-                            ? 'bg-teal-950/80 text-teal-400 border-teal-500/80 shadow-lg shadow-teal-950/40'
-                            : 'bg-slate-900/40 text-slate-400 border-slate-800/60 hover:bg-slate-850'
-                        }`}
+                        className={`py-3 px-3 text-center font-bold rounded-xl border transition-all text-xs cursor-pointer flex items-center justify-center gap-2 ${
+ docType === 'pdf'
+ ? 'bg-teal-950/80 text-teal-400 border-teal-500/80 shadow-lg shadow-teal-950/40'
+ : 'bg-slate-900/40 text-slate-400 border-slate-800/60 hover:bg-slate-850'
+ }`}
                       >
                         <FileText className="w-4 h-4" />
                         <span>Archivo PDF</span>
@@ -690,11 +690,11 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                           setDocType('url_doi');
                           setErrorMessage(null);
                         }}
-                        className={`py-3 px-3 text-center font-bold rounded-xl border transition-all text-xs uppercase cursor-pointer flex items-center justify-center gap-2 ${
-                          docType === 'url_doi'
-                            ? 'bg-teal-950/80 text-teal-400 border-teal-500/80 shadow-lg shadow-teal-950/40'
-                            : 'bg-slate-900/40 text-slate-400 border-slate-800/60 hover:bg-slate-850'
-                        }`}
+                        className={`py-3 px-3 text-center font-bold rounded-xl border transition-all text-xs cursor-pointer flex items-center justify-center gap-2 ${
+ docType === 'url_doi'
+ ? 'bg-teal-950/80 text-teal-400 border-teal-500/80 shadow-lg shadow-teal-950/40'
+ : 'bg-slate-900/40 text-slate-400 border-slate-800/60 hover:bg-slate-850'
+ }`}
                       >
                         <Link className="w-4 h-4" />
                         <span>Enlace URL o DOI Académico</span>
@@ -764,7 +764,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                         placeholder="ej. https://doi.org/10.1016/j.envpol.2024.123 o ej. 10.1016/j.envpol.2024.123456"
                         value={urlOrDoiValue}
                         onChange={(e) => setUrlOrDoiValue(e.target.value)}
-                        className="w-full bg-[#060a0f] border border-slate-800 rounded-lg p-3 sm:p-3.5 text-white outline-none focus:border-teal-500 font-mono text-xs sm:text-sm md:text-base shadow-inner"
+                        className="w-full bg-canvas border border-slate-800 rounded-lg p-3 sm:p-3.5 text-white outline-none focus:border-teal-500 font-mono text-xs sm:text-sm md:text-base shadow-inner"
                       />
                       <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
                         El sistema resolverá el DOI vía metadatos Crossref y procesará la página del estudio para extraer automáticamente la clasificación, autores, título, abstracto y mediciones químicas reportadas.
@@ -773,7 +773,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   )}
                 </div>
 
-                <div className="bg-[#070b10] p-3.5 sm:p-4 rounded-xl border border-slate-800/80 text-xs sm:text-sm text-slate-300 flex items-center gap-3">
+                <div className="bg-canvas p-3.5 sm:p-4 rounded-xl border border-slate-800/80 text-xs sm:text-sm text-slate-300 flex items-center gap-3">
                   <Sparkles className="w-5 h-5 text-teal-400 shrink-0" />
                   <span>
                     <strong>Clasificación Automatizada:</strong> La validación del nivel de revisión por pares e indexación del corpus es calculada directamente por algoritmos cognitivos del Centinela. No requiere configuración manual.
@@ -791,7 +791,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   <button
                     type="submit"
                     disabled={isExtracting || isAutoCompleting || (docType === 'pdf' && !pdfFileName) || (docType === 'url_doi' && !urlOrDoiValue.trim())}
-                    className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 disabled:opacity-40 text-white rounded-lg font-semibold shadow-lg shadow-teal-950/40 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded-lg font-semibold shadow-lg shadow-teal-950/40 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Procesar e Ingestar con IA</span>
@@ -856,26 +856,26 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   
                   {/* Core details & Classification block */}
-                  <div className="md:col-span-2 space-y-3.5 bg-[#070b10] p-4 sm:p-5 rounded-xl border border-slate-800/85">
+                  <div className="md:col-span-2 space-y-3.5 bg-canvas p-4 sm:p-5 rounded-xl border border-slate-800/85">
                     <div>
-                      <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block mb-1">Título Determinado</span>
+                      <span className="text-slate-400 text-[10px] sm:text-xs block mb-1">Título Determinado</span>
                       <h4 className="text-sm sm:text-base md:text-lg font-bold text-white leading-snug">{processedArticle.title}</h4>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-slate-900">
                       <div>
-                        <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block mb-1">Autores / Institución</span>
+                        <span className="text-slate-400 text-[10px] sm:text-xs block mb-1">Autores / Institución</span>
                         <p className="text-xs sm:text-sm font-semibold text-slate-200">{processedArticle.authors}</p>
                       </div>
                       <div>
-                        <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block mb-1">Año / Origen</span>
+                        <span className="text-slate-400 text-[10px] sm:text-xs block mb-1">Año / Origen</span>
                         <p className="text-xs sm:text-sm font-semibold text-slate-200">{processedArticle.year} — {processedArticle.source}</p>
                       </div>
                     </div>
 
                     {/* AUTOMATED CLASSIFICATION DISPLAY */}
                     <div className="pt-3 border-t border-slate-900 space-y-2">
-                      <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block">
+                      <span className="text-slate-400 text-[10px] sm:text-xs block">
                         Clasificación de Publicación Determinada por el Sistema
                       </span>
                       <div className="flex items-center gap-2.5 flex-wrap">
@@ -902,7 +902,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
                     {/* Abstract / Summary */}
                     <div className="pt-3 border-t border-slate-900">
-                      <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block mb-1">Abstract / Resumen Extraído</span>
+                      <span className="text-slate-400 text-[10px] sm:text-xs block mb-1">Abstract / Resumen Extraído</span>
                       <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-h-32 overflow-y-auto pr-2">
                         {processedArticle.abstract}
                       </p>
@@ -910,9 +910,9 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   </div>
 
                   {/* Identified Georeferenced Sites Panel */}
-                  <div className="bg-[#070b10] p-4 sm:p-5 rounded-xl border border-slate-800/85 space-y-3.5 flex flex-col justify-between">
+                  <div className="bg-canvas p-4 sm:p-5 rounded-xl border border-slate-800/85 space-y-3.5 flex flex-col justify-between">
                     <div>
-                      <span className="text-slate-400 font-mono text-[10px] sm:text-xs uppercase tracking-wider block mb-2">
+                      <span className="text-slate-400 text-[10px] sm:text-xs block mb-2">
                         Ubicaciones Geográficas Identificadas ({processedArticle.investigationSites?.length || 0})
                       </span>
                       
@@ -950,7 +950,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                     </div>
 
                     <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-900/80 mt-2">
-                      <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-mono block">Cuenca e Impacto Forestal</span>
+                      <span className="text-slate-400 text-[10px] sm:text-xs block">Cuenca e Impacto Forestal</span>
                       <div className="flex justify-between items-center mt-1 text-xs sm:text-sm">
                         <span className="font-semibold text-slate-200">Río: {processedArticle.primaryBasin}</span>
                         {processedArticle.investigationSites?.[0]?.deforestationHa && (
@@ -964,7 +964,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                 {/* Embeddings / Supabase Synchronization Logs */}
                 {successLogs.length > 0 && (
                   <div className="bg-teal-950/15 border border-teal-900/40 rounded-xl p-3.5 space-y-2">
-                    <span className="text-xs font-mono uppercase tracking-wider text-teal-400 block font-bold">
+                    <span className="text-xs text-teal-400 block font-bold">
                       Detalles de Sincronización Vectorial RAG (Supabase & Voyage)
                     </span>
                     <div className="font-mono text-[11px] sm:text-xs text-teal-300/90 bg-slate-950/80 p-3 rounded-lg border border-teal-900/20 max-h-28 overflow-y-auto space-y-1">
@@ -1001,7 +1001,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                       setPdfFileName(null);
                       setCustomText('');
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-bold rounded-lg transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg transition-colors cursor-pointer"
                   >
                     Cerrar Panel
                   </button>
@@ -1014,8 +1014,8 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
       {/* Modal: Supabase Deduplication & Integrity Audit Report */}
       {showDedupModal && dedupNotification && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0c1420] border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 text-slate-200">
+        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 text-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-teal-400" />
@@ -1045,20 +1045,20 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
               {dedupNotification.details && (
                 <div className="space-y-2 text-xs">
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-mono block">Documentos Auditados</span>
+                    <div className="bg-canvas p-2.5 rounded-lg border border-slate-800">
+                      <span className="text-slate-400 text-[10px] block">Documentos Auditados</span>
                       <span className="text-sm font-bold text-teal-400 font-mono">
                         {dedupNotification.details.totalChecked ?? articles.length}
                       </span>
                     </div>
-                    <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-mono block">Duplicados Eliminados</span>
+                    <div className="bg-canvas p-2.5 rounded-lg border border-slate-800">
+                      <span className="text-slate-400 text-[10px] block">Duplicados Eliminados</span>
                       <span className="text-sm font-bold text-rose-400 font-mono">
                         {dedupNotification.details.recordsDeleted ?? 0}
                       </span>
                     </div>
-                    <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
-                      <span className="text-slate-400 text-[10px] uppercase font-mono block">Documentos Únicos</span>
+                    <div className="bg-canvas p-2.5 rounded-lg border border-slate-800">
+                      <span className="text-slate-400 text-[10px] block">Documentos Únicos</span>
                       <span className="text-sm font-bold text-emerald-400 font-mono">
                         {dedupNotification.details.retainedDocuments?.length ?? articles.length}
                       </span>
@@ -1067,12 +1067,12 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
 
                   {dedupNotification.details.retainedDocuments && dedupNotification.details.retainedDocuments.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] font-mono text-slate-400 font-bold uppercase block">
+                      <span className="text-[11px] text-slate-400 font-bold block">
                         Documentos Canónicos Preservados en Supabase:
                       </span>
                       <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 font-mono text-[11px]">
                         {dedupNotification.details.retainedDocuments.map((doc: any, i: number) => (
-                          <div key={i} className="bg-[#070b10] p-2 rounded border border-slate-800/80 flex items-center justify-between text-slate-300">
+                          <div key={i} className="bg-canvas p-2 rounded border border-slate-800/80 flex items-center justify-between text-slate-300">
                             <span className="truncate max-w-[420px] font-sans font-medium">{doc.title}</span>
                             <span className="text-teal-400 text-[10px] shrink-0 font-mono">ID: {doc.id}</span>
                           </div>

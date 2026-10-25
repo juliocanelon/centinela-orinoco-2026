@@ -121,14 +121,14 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
   return (
     <div 
       id="geospatial-layer-toolbar"
-      className="bg-[#090e15] border-b border-slate-800/90 px-2 sm:px-3 py-1.5 flex items-center justify-between gap-2 select-none shadow-md relative z-40"
+      className="bg-canvas border-b border-slate-800/90 px-2 sm:px-3 py-1.5 flex items-center justify-between gap-2 select-none shadow-md relative z-40"
     >
       {/* Left: Base Map Selector & Focus Venezuela (Horizontally Scrollable) */}
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto scrollbar-none touch-pan-x py-0.5 min-w-0 flex-1">
           {/* Base Map Switcher */}
-          <div className="flex items-center gap-1.5 bg-[#060a0f] px-2 py-1 rounded-lg border border-slate-800 shrink-0">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400 uppercase tracking-wider font-mono mr-1">
+          <div className="flex items-center gap-1.5 bg-canvas px-2 py-1 rounded-lg border border-slate-800 shrink-0">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400 mr-1">
               <Layers className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Capas:</span>
             </div>
@@ -197,7 +197,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
             onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-md ${
               isFilterDropdownOpen || activeLayersCount > 0
-                ? 'bg-gradient-to-r from-sky-900 via-indigo-900 to-slate-900 border-sky-400/80 text-white shadow-sky-950/80 ring-1 ring-sky-400/40'
+                ? 'bg-sky-900 border-sky-400/80 text-white shadow-sky-950/80 ring-1 ring-sky-400/40'
                 : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
             }`}
           >
@@ -214,7 +214,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
           {isFilterDropdownOpen && (
             <div 
               id="layer-filter-dropdown-menu"
-              className="absolute right-2 sm:right-3 top-full mt-2 z-50 w-[290px] xs:w-[345px] sm:w-[390px] max-w-[calc(100vw-24px)] bg-[#070c14]/95 border border-sky-500/50 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] p-3 text-slate-200 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
+              className="absolute right-2 sm:right-3 top-full mt-2 z-50 w-[290px] xs:w-[345px] sm:w-[390px] max-w-[calc(100vw-24px)] bg-canvas/95 border border-sky-500/50 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] p-3 text-slate-200 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150"
               onWheel={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               onTouchMove={(e) => e.stopPropagation()}
@@ -225,7 +225,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-sky-400" />
-                  <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                  <span className="text-xs font-bold text-white">
                     Capas y Vectores Geoespaciales (12)
                   </span>
                 </div>
@@ -298,7 +298,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
                             {opt.count}
                           </span>
                         ) : opt.countLabel ? (
-                          <span className={`px-1.5 py-0.5 rounded font-mono text-[9px] ${
+                          <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] ${
                             isActive ? 'bg-sky-950 text-sky-300 border border-sky-800' : 'bg-slate-800 text-slate-500'
                           }`}>
                             {opt.countLabel}

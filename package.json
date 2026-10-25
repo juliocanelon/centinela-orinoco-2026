@@ -11,6 +11,7 @@
     "mongo:init": "tsx server/scripts/initializeMongo.ts",
     "mongo:verify": "tsx server/scripts/verifyMongo.ts",
     "clean": "rm -rf dist server.js",
+    "theme": "node scripts/generate-theme-css.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit"
   },
   "dependencies": {

@@ -27,7 +27,8 @@ import {
   Satellite,
   BookOpen,
   Camera,
-  Film
+  Film,
+  ChevronDown,
 } from 'lucide-react';
 import { 
   HeatAnomaly, 
@@ -59,6 +60,7 @@ import {
 } from '../data/venezuelaTerritorialData';
 import { SupabaseRpcService } from '../lib/supabaseClient';
 import { LivePipelineService } from '../services/liveDataPipelineService';
+import { formatLabel } from '../lib/labels';
 
 /** Nubosidad máxima para mostrar una escena Sentinel-2 como útil en el mapa. */
 const S2_USEFUL_CLOUD_PCT = 20;
@@ -1098,6 +1100,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [density, setDensity] = useState<FirmsDensityResponse | null>(null);
   const [densityError, setDensityError] = useState<string | null>(null);
   const [showLowPriority, setShowLowPriority] = useState<boolean>(false);
+  // En móvil la leyenda de focos arranca plegada para no tapar el mapa
+  const [isFirmsPanelOpen, setIsFirmsPanelOpen] = useState<boolean>(() => window.innerWidth >= 640);
 
   useEffect(() => {
     setDensityError(null);
@@ -1319,7 +1323,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         setSelectedCoordinates([inc.latitude, inc.longitude]);
       });
 
-      marker.bindTooltip(`<b>${inc.code}: ${inc.title}</b><br/>Estado: ${inc.status}`, {
+      marker.bindTooltip(`<b>${inc.code}: ${inc.title}</b><br/>Estado: ${formatLabel(inc.status)}`, {
         direction: 'top',
         className: 'tactical-tooltip',
       });
@@ -1362,7 +1366,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         setSelectedCoordinates([rep.latitude, rep.longitude]);
       });
 
-      marker.bindTooltip(`<b>${rep.code}: ${rep.title}</b><br/>👤 ${rep.communityName || 'Veeduría Territorial'}<br/><span style="font-size: 10px; color: #a78bfa;">Estado: ${rep.status}</span>`, {
+      marker.bindTooltip(`<b>${rep.code}: ${rep.title}</b><br/>👤 ${rep.communityName || 'Veeduría Territorial'}<br/><span style="font-size: 10px; color: #a78bfa;">Estado: ${formatLabel(rep.status)}</span>`, {
         direction: 'top',
         className: 'tactical-tooltip',
       });
@@ -1498,7 +1502,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden bg-[#070b10]">
+    <div className="relative w-full h-full flex flex-col overflow-hidden bg-canvas">
       {/* Horizontal Geospatial Layers & Filter Toolbar (Eligible, with counts, beside actions) */}
       <GeospatialLayerToolbar
         visibleLayers={visibleLayers}
@@ -1545,7 +1549,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     maxHeight: 'calc(100% - 24px)',
                   }
             }
-            className="absolute flex flex-col bg-[#0c1420]/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl shadow-black/90 text-slate-200 z-30 transition-all duration-100 ease-out overflow-hidden"
+            className="absolute flex flex-col bg-surface/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl shadow-black/90 text-slate-200 z-30 transition-all duration-100 ease-out overflow-hidden"
           >
             {/* Sticky Header: Never scrolls off */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/90 bg-slate-950/70 shrink-0">
@@ -1558,7 +1562,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 {selectedFeature.type === 'incident' && <AlertTriangle className="w-4 h-4 text-purple-400" />}
                 {selectedFeature.type === 'sentinelS2' && <Satellite className="w-4 h-4 text-emerald-400" />}
                 {selectedFeature.type === 'scientific' && <BookOpen className="w-4 h-4 text-teal-400" />}
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                <span className="text-xs font-bold text-slate-100">
                   {selectedFeature.type === 'mining' && 'Cluster de Minería Ilegal'}
                   {selectedFeature.type === 'heat' && 'Foco de Calor NASA FIRMS'}
                   {selectedFeature.type === 'hexDensity' && 'Densidad de Focos · Celda de 25 km'}
@@ -1585,7 +1589,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 const coords = getFeatureLatLng(selectedFeature);
                 if (!coords) return null;
                 return (
-                  <div className="flex items-center justify-between bg-[#070b10] px-2.5 py-1.5 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400">
+                  <div className="flex items-center justify-between bg-canvas px-2.5 py-1.5 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400">
                     <span className="flex items-center gap-1 text-sky-400 font-semibold">
                       <Crosshair className="w-3 h-3 text-sky-400" />
                       Ubicación Geográfica
@@ -1605,17 +1609,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 {selectedFeature.data.affectedAreaHa === undefined ? (
-                  <p className="text-[11px] text-slate-300 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <p className="text-[11px] text-slate-300 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     Zona de vigilancia de referencia (sector minero conocido). No tiene mediciones propias: consulte los focos FIRMS cercanos o las perturbaciones SAR medidas (Nivel 2).
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Área afectada (SAR)</span>
+                      <span className="text-[10px] text-slate-400">Área afectada (SAR)</span>
                       <p className="text-sm font-bold text-red-400 font-mono">{selectedFeature.data.affectedAreaHa} ha</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Retrodispersión</span>
+                      <span className="text-[10px] text-slate-400">Retrodispersión</span>
                       <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.backscatterDiffDb ?? 's/d'} dB</p>
                     </div>
                   </div>
@@ -1648,36 +1652,36 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800 text-center">
+                  <div className="grid grid-cols-3 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800 text-center">
                     {(['ALTA', 'MEDIA', 'BAJA'] as HotspotPriority[]).map((p) => (
                       <div key={p}>
-                        <span className="text-[10px] text-slate-400 uppercase">{PRIORITY_LABELS[p]}</span>
+                        <span className="text-[10px] text-slate-400">{PRIORITY_LABELS[p]}</span>
                         <p className="text-base font-bold font-mono" style={{ color: PRIORITY_COLORS[p] }}>{cell.byPriority[p]}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                  <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Prioritarios / 1.000 km²</span>
+                      <span className="text-[10px] text-slate-400">Prioritarios / 1.000 km²</span>
                       <p className="text-sm font-bold text-orange-400 font-mono">{cell.relevantPer1000Km2}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">FRP máximo</span>
+                      <span className="text-[10px] text-slate-400">FRP máximo</span>
                       <p className="text-sm font-bold text-amber-400 font-mono">{cell.maxFrpMw === null ? 's/d' : `${cell.maxFrpMw.toFixed(1)} MW`}</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Total de focos</span>
+                      <span className="text-[10px] text-slate-400">Total de focos</span>
                       <p className="text-xs font-mono text-slate-200">{cell.total} ({cell.highConfidence} confianza alta)</p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase">Puntos persistentes</span>
+                      <span className="text-[10px] text-slate-400">Puntos persistentes</span>
                       <p className="text-xs font-mono text-slate-200">{cell.persistentPoints.length}</p>
                     </div>
                   </div>
 
-                  <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-400 uppercase">Focos por día (naranja = prioritarios)</span>
+                  <div className="bg-canvas p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-400">Focos por día (naranja = prioritarios)</span>
                     <div className="flex items-end gap-1 h-16 mt-2">
                       {cell.perDay.map((d) => (
                         <div key={d.date} className="flex-1 flex flex-col items-center justify-end h-full" title={`${d.date}: ${d.total} focos, ${d.relevant} prioritarios`}>
@@ -1692,7 +1696,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
                   {cell.persistentPoints.length > 0 && (
                     <div className="text-[11px] text-slate-300 space-y-0.5">
-                      <span className="text-[10px] text-slate-400 uppercase block">Fuego repetido en el mismo punto (~1 km)</span>
+                      <span className="text-[10px] text-slate-400 block">Fuego repetido en el mismo punto (~1 km)</span>
                       {cell.persistentPoints.slice(0, 4).map((p) => (
                         <p key={`${p.latitude}|${p.longitude}`} className="font-mono">{p.latitude.toFixed(2)}°, {p.longitude.toFixed(2)}° · {p.days} días</p>
                       ))}
@@ -1740,21 +1744,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[11px]">Estado: {selectedFeature.data.subBasin}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Temp. Brillo</span>
+                    <span className="text-[10px] text-slate-400">Temp. Brillo</span>
                     <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.brightnessTempK ?? 's/d'} K</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Potencia FRP</span>
+                    <span className="text-[10px] text-slate-400">Potencia FRP</span>
                     <p className="text-sm font-bold text-orange-400 font-mono">{selectedFeature.data.frpMw ?? 's/d'} MW</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Satélite</span>
+                    <span className="text-[10px] text-slate-400">Satélite</span>
                     <p className="text-xs font-mono text-slate-300">{selectedFeature.data.satellite}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Confianza</span>
+                    <span className="text-[10px] text-slate-400">Confianza</span>
                     <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono text-[10px] border border-emerald-800">
                       {selectedFeature.data.confidence}
                     </span>
@@ -1781,23 +1785,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[11px]">{selectedFeature.data.river}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Nivel (msnm)</span>
+                    <span className="text-[10px] text-slate-400">Nivel (msnm)</span>
                     <p className="text-sm font-bold text-sky-400 font-mono">{selectedFeature.data.currentLevelM ?? 's/d'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Cota de desborde</span>
+                    <span className="text-[10px] text-slate-400">Cota de desborde</span>
                     <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.overflowLevelM ?? 'No publicada'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Variación diaria</span>
+                    <span className="text-[10px] text-slate-400">Variación diaria</span>
                     <p className="text-xs font-bold text-slate-300 font-mono">
                       {selectedFeature.data.dailyChangeM == null ? 's/d' : `${selectedFeature.data.dailyChangeM > 0 ? '+' : ''}${selectedFeature.data.dailyChangeM} m`}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Boletín</span>
+                    <span className="text-[10px] text-slate-400">Boletín</span>
                     <p className={`text-xs font-bold font-mono ${selectedFeature.data.isStale ? 'text-amber-400' : 'text-slate-300'}`}>
                       {selectedFeature.data.readingDate ?? 'sin fecha'}{selectedFeature.data.isStale ? ' (desactualizado)' : ''}
                     </p>
@@ -1810,7 +1814,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Estado de Estación:</span>
                   <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-sky-950 text-sky-300 border border-sky-800">
-                    {selectedFeature.data.status}
+                    {formatLabel(selectedFeature.data.status)}
                   </span>
                 </div>
               </>
@@ -1822,19 +1826,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-white">{selectedFeature.data.name}</h3>
                   <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] font-mono border border-emerald-800">
-                    {selectedFeature.data.category}
+                    {formatLabel(selectedFeature.data.category)}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Superficie</span>
+                    <span className="text-[10px] text-slate-400">Superficie</span>
                     <p className="text-sm font-bold text-emerald-400 font-mono">
                       {selectedFeature.data.surfaceHa.toLocaleString()} ha
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase">Geometría</span>
+                    <span className="text-[10px] text-slate-400">Geometría</span>
                     <p className="text-xs text-slate-300">Polígono aproximado</p>
                   </div>
                 </div>
@@ -1855,7 +1859,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <h3 className="text-sm font-bold text-white mt-1">{selectedFeature.data.title}</h3>
                 </div>
 
-                <p className="text-slate-300 text-[11px] leading-relaxed bg-[#070b10] p-2 rounded border border-slate-800">
+                <p className="text-slate-300 text-[11px] leading-relaxed bg-canvas p-2 rounded border border-slate-800">
                   {selectedFeature.data.description}
                 </p>
 
@@ -1875,21 +1879,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-emerald-400 font-medium text-[11px] mt-0.5">{selectedFeature.data.satelliteCode}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2.5 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2.5 rounded-lg border border-slate-800">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Adquisición (UTC)</span>
+                    <span className="text-[10px] text-slate-400">Adquisición (UTC)</span>
                     <p className="text-xs font-bold text-emerald-400 font-mono">{selectedFeature.data.sensingTime.slice(0, 16).replace('T', ' ')}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Nubosidad</span>
+                    <span className="text-[10px] text-slate-400">Nubosidad</span>
                     <p className="text-sm font-bold text-amber-400 font-mono">{selectedFeature.data.cloudPixelPct ?? 's/d'}%</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Órbita relativa</span>
+                    <span className="text-[10px] text-slate-400">Órbita relativa</span>
                     <p className="text-xs font-mono text-slate-300">{selectedFeature.data.relativeOrbit ?? 's/d'}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase font-mono">Cuadrante MGRS</span>
+                    <span className="text-[10px] text-slate-400">Cuadrante MGRS</span>
                     <p className="text-xs font-mono text-slate-300">{selectedFeature.data.tileId}</p>
                   </div>
                 </div>
@@ -1910,15 +1914,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <>
                 <div>
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <span className="px-1.5 py-0.5 rounded bg-teal-950 text-teal-300 text-[9px] font-mono border border-teal-800 uppercase font-bold">
+                    <span className="px-1.5 py-0.5 rounded bg-teal-950 text-teal-300 text-[10px] border border-teal-800 font-bold">
                       📚 Corpus Científico
                     </span>
                     {selectedFeature.data.peerReviewed ? (
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[9px] font-mono border border-emerald-800 uppercase font-bold">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-800 font-bold">
                         Arbitrado / Indexado
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 text-[9px] font-mono border border-amber-800 uppercase font-bold">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 text-[10px] border border-amber-800 font-bold">
                         No Arbitrado / No Indexado
                       </span>
                     )}
@@ -1927,31 +1931,31 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <p className="text-slate-400 text-[10px] italic mt-0.5">{selectedFeature.data.authors} ({selectedFeature.data.year})</p>
                 </div>
 
-                <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-                  <span className="text-[10px] text-teal-400 font-bold uppercase font-mono">Hallazgos Clave del Estudio:</span>
+                <div className="bg-canvas p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                  <span className="text-[10px] text-teal-400 font-bold">Hallazgos Clave del Estudio:</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed italic">
                     "{selectedFeature.data.findings}"
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-[#070b10] p-2 rounded-lg border border-slate-800/80 font-mono text-[10px]">
+                <div className="grid grid-cols-2 gap-2 bg-canvas p-2 rounded-lg border border-slate-800/80 font-mono text-[10px]">
                   <div className="col-span-2">
-                    <span className="text-slate-500 uppercase">Estudio:</span>
+                    <span className="text-slate-500">Estudio:</span>
                     <p className="text-slate-200 font-bold truncate" title={selectedFeature.data.articleTitle}>{selectedFeature.data.articleTitle}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500 uppercase">Cuenca Principal:</span>
+                    <span className="text-slate-500">Cuenca Principal:</span>
                     <p className="text-slate-200 font-bold">{selectedFeature.data.primaryBasin || 'Amazonas / Bolívar'}</p>
                   </div>
                   {selectedFeature.data.heavyMetalsPpm !== undefined && (
                     <div>
-                      <span className="text-slate-500 uppercase">Mercurio (Hg):</span>
+                      <span className="text-slate-500">Mercurio (Hg):</span>
                       <p className="text-rose-400 font-bold">{selectedFeature.data.heavyMetalsPpm} ppm</p>
                     </div>
                   )}
                   {selectedFeature.data.turbidityNtu !== undefined && (
                     <div>
-                      <span className="text-slate-500 uppercase">Turbidez:</span>
+                      <span className="text-slate-500">Turbidez:</span>
                       <p className="text-amber-400 font-bold">{selectedFeature.data.turbidityNtu} NTU</p>
                     </div>
                   )}
@@ -1964,21 +1968,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <>
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-violet-950 text-violet-300 text-[10px] font-mono border border-violet-800 uppercase font-bold">
+                    <span className="px-2 py-0.5 rounded bg-violet-950 text-violet-300 text-[10px] border border-violet-800 font-bold">
                       👥 Veeduría Comunitaria
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 text-[9px] font-mono border border-slate-700">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 text-[10px] font-mono border border-slate-700">
                       {selectedFeature.data.code}
                     </span>
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${
+                    <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap border ${
                       selectedFeature.data.severity === 'CRITICAL' ? 'bg-red-950 text-red-300 border-red-800' :
                       selectedFeature.data.severity === 'HIGH' ? 'bg-orange-950 text-orange-300 border-orange-800' :
                       'bg-amber-950 text-amber-300 border-amber-800'
                     }`}>
-                      {selectedFeature.data.severity}
+                      {formatLabel(selectedFeature.data.severity)}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 text-[9px] font-mono border border-sky-800">
-                      {selectedFeature.data.status}
+                    <span className="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 text-[10px] font-mono border border-sky-800">
+                      {formatLabel(selectedFeature.data.status)}
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-white mt-1 leading-snug">{selectedFeature.data.title}</h3>
@@ -1993,8 +1997,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   )}
                 </div>
 
-                <div className="bg-[#070b10] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-                  <span className="text-[10px] text-violet-400 font-bold uppercase font-mono">Relato de la Comunidad:</span>
+                <div className="bg-canvas p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                  <span className="text-[10px] text-violet-400 font-bold">Relato de la Comunidad:</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
                     {selectedFeature.data.description}
                   </p>
@@ -2004,11 +2008,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 {selectedFeature.data.media && selectedFeature.data.media.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-emerald-400 font-bold uppercase font-mono flex items-center gap-1">
+                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
                         <Camera className="w-3.5 h-3.5" />
                         Evidencias Multimedia ({selectedFeature.data.media.length}):
                       </span>
-                      <span className="text-[9px] text-sky-400/90 font-mono">
+                      <span className="text-[10px] text-sky-400/90 font-mono">
                         Clic para expandir ↗
                       </span>
                     </div>
@@ -2026,11 +2030,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                           title={med.type === 'video' ? `Reproducir video: ${med.name}` : `Expandir foto: ${med.name}`}
                         >
                           {med.type === 'video' ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 to-slate-900 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors relative">
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-sky-400 group-hover:from-slate-900 group-hover:to-slate-800 transition-colors relative">
                               <div className="w-9 h-9 rounded-full bg-sky-950/90 border border-sky-400/80 flex items-center justify-center text-sky-300 shadow-lg group-hover:scale-110 transition-transform mb-1">
                                 <Play className="w-4 h-4 ml-0.5" />
                               </div>
-                              <span className="text-[9px] uppercase font-mono text-sky-300 font-bold tracking-wider">
+                              <span className="text-[10px] text-sky-300 font-bold">
                                 Reproducir
                               </span>
                               <div className="absolute top-1 right-1 px-1 py-0.5 rounded bg-black/70 text-[8px] font-mono text-sky-300 border border-sky-900">
@@ -2052,7 +2056,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                           )}
 
                           {/* Footer thumbnail bar */}
-                          <div className="p-1 bg-slate-950/95 border-t border-slate-800 text-[9px] font-mono text-slate-300 truncate w-full flex items-center justify-between">
+                          <div className="p-1 bg-slate-950/95 border-t border-slate-800 text-[10px] font-mono text-slate-300 truncate w-full flex items-center justify-between">
                             <span className="truncate">{med.name}</span>
                             <span className="text-sky-400 text-[8px] font-bold shrink-0 ml-1">
                               {med.type === 'video' ? 'VER ▶' : 'EXPANDIR'}
@@ -2064,7 +2068,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   </div>
                 )}
 
-                <div className="p-2 bg-[#070b10] rounded-lg border border-slate-800/80 text-[10px] text-slate-400 font-mono">
+                <div className="p-2 bg-canvas rounded-lg border border-slate-800/80 text-[10px] text-slate-400 font-mono">
                   {selectedFeature.data.isAnonymous ? '🔒 Denuncia Anónima Protegida' : `Vocero: ${selectedFeature.data.reporterName || 'Comunidad'} ${selectedFeature.data.reporterContact ? `(${selectedFeature.data.reporterContact})` : ''}`}
                 </div>
               </>
@@ -2282,7 +2286,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   setSelectedFeature(null);
                   onTriggerAiAnalysis(contextPayload);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-sky-600 via-indigo-600 to-emerald-600 hover:from-sky-500 hover:to-emerald-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-sky-950/50 transition-all border border-sky-400/30 cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-sky-950/50 transition-all border border-sky-400/30 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-sky-200 animate-pulse" />
                 <span className="font-semibold tracking-wide">Analítica de la Zona</span>
@@ -2347,21 +2351,32 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Focos FIRMS: periodo, prioridad baja y leyenda */}
       {visibleLayers.heat && (
-        <div className="absolute bottom-12 left-2 sm:left-4 z-10 w-[260px] bg-[#080d14]/95 backdrop-blur-md border border-slate-800 rounded-lg p-2.5 text-[11px] text-slate-300 shadow-xl space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-white flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-orange-400" /> Focos NASA FIRMS</span>
-            <div className="flex gap-1">
+        <div className="absolute bottom-12 left-2 sm:left-4 z-10 w-[288px] max-w-[calc(100%-4rem)] bg-canvas/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 text-[11px] text-slate-300 shadow-xl space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+            <button
+              type="button"
+              onClick={() => setIsFirmsPanelOpen((v) => !v)}
+              aria-expanded={isFirmsPanelOpen}
+              className="font-semibold text-white flex items-center gap-1 whitespace-nowrap hover:text-sky-300"
+              title={isFirmsPanelOpen ? 'Plegar leyenda' : 'Mostrar leyenda'}
+            >
+              <Flame className="w-3.5 h-3.5 text-orange-400" /> Focos NASA FIRMS
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isFirmsPanelOpen ? '' : '-rotate-90'}`} />
+            </button>
+            <div className="flex gap-1 shrink-0">
               {DENSITY_PERIODS.map((p) => (
                 <button
                   key={p.days}
                   onClick={() => setDensityDays(p.days)}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${densityDays === p.days ? 'bg-orange-600 border-orange-500 text-white' : 'border-slate-700 text-slate-400 hover:text-white'}`}
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono whitespace-nowrap border ${densityDays === p.days ? 'bg-orange-600 border-orange-500 text-white' : 'border-slate-700 text-slate-400 hover:text-white'}`}
                 >
                   {p.label}
                 </button>
               ))}
             </div>
           </div>
+          {isFirmsPanelOpen && (
+            <>
           {densityError && <p className="text-amber-300">No se pudo cargar la densidad: {densityError}</p>}
           {density && (
             <p className="font-mono text-[10px] text-slate-400">
@@ -2376,7 +2391,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 {DENSITY_LEVEL_COLORS.slice(1).map((c, i) => (
                   <div key={c} className="flex-1 text-center">
                     <div className="h-2.5 rounded-sm" style={{ backgroundColor: c }} />
-                    <span className="text-[9px] font-mono text-slate-500">
+                    <span className="text-[10px] font-mono text-slate-500">
                       {i === 0 ? `<${density?.levelThresholdsPer1000Km2[0] ?? 1}` : i === 3 ? `≥${density?.levelThresholdsPer1000Km2[2] ?? 6}` : `${density?.levelThresholdsPer1000Km2[i - 1]}-${density?.levelThresholdsPer1000Km2[i]}`}
                     </span>
                   </div>
@@ -2396,15 +2411,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             <input type="checkbox" checked={showLowPriority} onChange={(e) => setShowLowPriority(e.target.checked)} />
             <span>Mostrar prioridad baja</span>
           </label>
-          <p className="text-[9px] text-slate-500 leading-snug">
+          <p className="text-[10px] text-slate-500 leading-snug">
             Alta: fuego repetido en el mismo punto, o foco relevante en área protegida o a ≤25 km de zona minera. Media: confianza alta o FRP ≥ 10 MW.
           </p>
+            </>
+          )}
         </div>
       )}
 
       {/* Bottom Coordinate & Metric Ticker */}
       <div className="absolute bottom-2 left-2 right-12 sm:bottom-3 sm:left-4 sm:right-16 z-10 pointer-events-none">
-        <div className="inline-flex items-center gap-2 sm:gap-4 bg-[#080d14]/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono text-slate-300 shadow-xl pointer-events-auto max-w-full overflow-x-auto whitespace-nowrap scrollbar-none">
+        <div className="inline-flex items-center gap-2 sm:gap-4 bg-canvas/90 backdrop-blur-md border border-slate-800 rounded-lg px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-mono text-slate-300 shadow-xl pointer-events-auto max-w-full overflow-x-auto whitespace-nowrap scrollbar-none">
           <div className="flex items-center gap-1.5 text-sky-400 font-semibold shrink-0">
             <Compass className="w-3.5 h-3.5" />
             <span>AMAZONAS · BOLÍVAR · DELTA AMACURO · ESEQUIBO: [0.6°N - 10.1°N | 68.0°W - 57.8°W]</span>
@@ -2412,7 +2429,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           <span className="text-slate-700 hidden sm:inline">|</span>
           <div className="text-slate-400 shrink-0">
             {selectedCoordinates ? (
-              <span>PUNTO: <strong className="text-emerald-400">{selectedCoordinates[0].toFixed(4)}°N, {selectedCoordinates[1].toFixed(4)}°W</strong></span>
+              <span>Punto: <strong className="text-emerald-400">{selectedCoordinates[0].toFixed(4)}°N, {selectedCoordinates[1].toFixed(4)}°W</strong></span>
             ) : (
               <span className="hidden sm:inline">Haga clic en el mapa para inspección táctica</span>
             )}

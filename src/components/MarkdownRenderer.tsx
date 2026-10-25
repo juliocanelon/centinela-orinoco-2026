@@ -26,7 +26,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider mt-2.5 mb-1">
+            <h3 className="text-xs font-semibold text-amber-300 mt-2.5 mb-1">
               {children}
             </h3>
           ),
@@ -81,12 +81,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-[#0b1420] text-slate-300 font-mono text-[11px] uppercase">
+            <thead className="bg-surface text-slate-300 text-[11px]">
               {children}
             </thead>
           ),
           tbody: ({ children }) => (
-            <tbody className="divide-y divide-slate-800/60 bg-[#070b10]">
+            <tbody className="divide-y divide-slate-800/60 bg-canvas">
               {children}
             </tbody>
           ),
@@ -106,7 +106,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
             </td>
           ),
           code: ({ children }) => (
-            <code className="bg-[#0f172a] text-sky-300 px-1.5 py-0.5 rounded font-mono text-[11px] border border-slate-800">
+            <code className="bg-raised text-sky-300 px-1.5 py-0.5 rounded font-mono text-[11px] border border-slate-800">
               {children}
             </code>
           ),
