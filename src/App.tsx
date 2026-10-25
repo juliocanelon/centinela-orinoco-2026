@@ -273,7 +273,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b10] text-slate-200 flex flex-col font-sans selection:bg-sky-600 selection:text-white">
+    <div className="command-surface min-h-screen bg-[#071117] text-slate-200 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       {/* Top Navigation */}
       <Navbar
         currentView={currentView}
@@ -291,8 +291,8 @@ export default function App() {
       />
 
       {dataLoadErrors.length > 0 && (
-        <div className="px-4 py-2 bg-amber-950/80 border-b border-amber-800 text-amber-200 text-xs">
-          No se pudieron cargar algunos datos desde Supabase: {dataLoadErrors.join(' · ')}
+        <div className="mx-3 mt-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs text-amber-100 shadow-lg sm:mx-5">
+          <span className="font-semibold text-amber-200">Conexión parcial.</span> No se pudieron cargar algunos datos: {dataLoadErrors.join(' · ')}
         </div>
       )}
 
@@ -478,7 +478,7 @@ export default function App() {
       </main>
 
       {/* Academic credits footer */}
-      <footer className="px-4 py-3 border-t border-slate-900 bg-[#060a0f] text-center text-[11px] text-slate-500">
+      <footer className="mt-auto border-t border-white/[0.06] bg-[#071117]/85 px-4 py-3 text-center text-[11px] text-slate-500 backdrop-blur-sm">
         <span>
           Proyecto académico · {ACADEMIC_INFO.course} · {ACADEMIC_INFO.program} · {ACADEMIC_INFO.universityShortName} · {ACADEMIC_INFO.term}
         </span>
@@ -486,7 +486,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setIsAboutModalOpen(true)}
-          className="text-sky-400 hover:text-sky-300 underline underline-offset-2"
+          className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
         >
           Acerca del proyecto
         </button>

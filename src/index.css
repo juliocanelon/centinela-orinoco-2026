@@ -2,11 +2,36 @@
 @import "leaflet/dist/leaflet.css";
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: #0b1118;
+    min-width: 320px;
+    background:
+      radial-gradient(ellipse 90% 50% at 50% -20%, rgba(18, 93, 89, 0.26), transparent 70%),
+      radial-gradient(ellipse 55% 40% at 100% 10%, rgba(30, 64, 175, 0.15), transparent 75%),
+      #071117;
     color: #e2e8f0;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #5eead4;
+    outline-offset: 2px;
+  }
+}
+
+/* A quiet cartographic texture that unifies views without competing with map data. */
+.command-surface {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 /* Custom Tactical Leaflet Overrides */
