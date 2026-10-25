@@ -69,9 +69,18 @@ server/
   scripts/                Utilidades mongo:ping / init / verify
 src/
   components/             Vistas: mapa táctico, telemetría, corpus, denuncias, IA, etc.
+  components/AppShell.tsx Barra lateral, barra superior y selector de apariencia
+  index.css               Tokens de diseño (tipografía, superficies, Leaflet)
+  theme.css               Modos día/noche y acentos (generado por scripts/generate-theme-css.mjs)
   data/academicInfo.ts    Ficha académica (modal "Acerca del proyecto")
 supabase/migrations/      Esquema y RPC de persistencia híbrida
 ```
+
+## Apariencia
+
+El botón de sol/luna de la barra superior cambia el modo (**Día**, **Noche** o **Sistema**) y el color de acento (Caudal, Señal, Jade, Oro u Orquídea). La elección se guarda en el navegador.
+
+Los componentes usan las clases de Tailwind de siempre (`slate-*`, `sky-*`, `bg-surface`…). El modo y el acento cambian las variables CSS de esas rampas según los atributos `data-mode` y `data-accent` de `<html>`. En modo día las rampas se invierten (50 ↔ 950), así que una clase pensada para el modo oscuro mantiene el contraste sin reescribir el componente. Para ajustar colores o agregar un acento, edita `scripts/generate-theme-css.mjs` y ejecuta `npm run theme`.
 
 ## Puesta en marcha local
 
@@ -118,6 +127,7 @@ npm run mongo:verify   # valida la configuración
 | `npm start` | Ejecuta la compilación de producción |
 | `npm run lint` | Verificación de tipos con TypeScript |
 | `npm run clean` | Elimina artefactos de compilación |
+| `npm run theme` | Regenera `src/theme.css` (modos y acentos) |
 
 ## API principal
 

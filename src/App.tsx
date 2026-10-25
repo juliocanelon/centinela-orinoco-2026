@@ -195,6 +195,7 @@ export default function App() {
       setIncidentPrefilledCoords(coords);
     }
     setIsIncidentModalOpen(true);
+    setCurrentView('INCIDENTS');
   };
 
   const handleDispatchSarAlert = (anomaly: SarRadarAnomaly) => {
@@ -284,13 +285,15 @@ export default function App() {
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col relative z-0">
       <Topbar
         currentView={currentView}
         onOpenMobileNav={() => setIsMobileNavOpen(true)}
         onOpenNewIncidentModal={() => {
           setIncidentPrefilledCoords(null);
           setIsIncidentModalOpen(true);
+          // El formulario vive dentro de la vista de incidentes
+          setCurrentView('INCIDENTS');
         }}
         onOpenCommunityReportModal={() => setIsCommunityReportModalOpen(true)}
         onOpenAiDrawer={() => setIsAiDrawerOpen(true)}

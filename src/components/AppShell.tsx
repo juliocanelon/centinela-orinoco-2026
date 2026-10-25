@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert,
   Map,
@@ -16,10 +16,17 @@ import {
   Menu,
   X,
   Flame,
+  Palette,
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  ChevronRight,
 } from 'lucide-react';
 import { ViewMode } from '../types';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { ACADEMIC_INFO } from '../data/academicInfo';
+import { useTheme, THEME_ACCENTS, ThemeMode } from '../lib/theme';
 
 type NavItem = {
   id: ViewMode;
@@ -61,11 +68,11 @@ const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 // Marca: escudo del centinela sobre el meandro del río
 const BrandMark: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
-    <rect width="64" height="64" rx="16" fill="#0b2c44" />
-    <path d="M32 9 50 15.5v15c0 12-7.6 20.8-18 25-10.4-4.2-18-13-18-25v-15Z" fill="none" stroke="#42baf0" strokeWidth="3" strokeLinejoin="round" />
-    <circle cx="32" cy="24" r="4" fill="#d3f0fe" />
-    <path d="M20 36c4-3.4 8-3.4 12 0s8 3.4 12 0" fill="none" stroke="#d3f0fe" strokeWidth="3.5" strokeLinecap="round" />
-    <path d="M23.5 44c2.8-2.3 5.7-2.3 8.5 0s5.7 2.3 8.5 0" fill="none" stroke="#42baf0" strokeWidth="3" strokeLinecap="round" />
+    <rect width="64" height="64" rx="16" fill="var(--accent-950)" />
+    <path d="M32 9 50 15.5v15c0 12-7.6 20.8-18 25-10.4-4.2-18-13-18-25v-15Z" fill="none" stroke="var(--accent-400)" strokeWidth="3" strokeLinejoin="round" />
+    <circle cx="32" cy="24" r="4" fill="var(--accent-100)" />
+    <path d="M20 36c4-3.4 8-3.4 12 0s8 3.4 12 0" fill="none" stroke="var(--accent-100)" strokeWidth="3.5" strokeLinecap="round" />
+    <path d="M23.5 44c2.8-2.3 5.7-2.3 8.5 0s5.7 2.3 8.5 0" fill="none" stroke="var(--accent-400)" strokeWidth="3" strokeLinecap="round" />
   </svg>
 );
 
@@ -106,14 +113,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         id="centinela-navbar"
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 md:w-[72px] lg:w-60 shrink-0 flex flex-col bg-surface border-r border-line select-none transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto w-64 md:w-[72px] lg:w-60 shrink-0 flex flex-col bg-surface border-r border-line select-none transition-transform duration-200 md:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="h-14 px-4 md:px-0 lg:px-4 flex items-center md:justify-center lg:justify-start gap-3 border-b border-line">
           <BrandMark className="w-8 h-8 shrink-0" />
           <div className="md:hidden lg:block min-w-0">
-            <p className="text-[15px] font-semibold text-white leading-tight tracking-tight" style={{ fontStretch: '87.5%' }}>
+            <p className="font-display text-[15px] font-semibold text-white leading-tight">
               Centinela Orinoco
             </p>
             <p className="text-[11px] text-slate-500 leading-tight">Vigilancia de la cuenca</p>
@@ -156,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }`}
                       >
                         {isActive && (
-                          <span className="absolute -left-3 md:-left-2.5 lg:-left-3 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-sky-400 shadow-[0_0_12px_rgba(66,186,240,0.7)]" />
+                          <span className="absolute -left-3 md:-left-2.5 lg:-left-3 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-sky-400 shadow-[0_0_12px_color-mix(in_srgb,var(--color-sky-400)_70%,transparent)]" />
                         )}
                         <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-sky-300' : 'text-slate-500 group-hover:text-slate-300'}`} />
                         <span className="truncate md:hidden lg:inline">{item.label}</span>
@@ -200,6 +207,114 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 };
 
+const MODE_OPTIONS: { id: ThemeMode; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'light', label: 'Día', icon: Sun },
+  { id: 'dark', label: 'Noche', icon: Moon },
+  { id: 'system', label: 'Sistema', icon: Monitor },
+];
+
+// Selector de modo (día/noche) y color de acento
+const ThemeMenu: React.FC = () => {
+  const { mode, accent, setMode, setAccent } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setIsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsOpen(false);
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen]);
+
+  const ModeIcon = MODE_OPTIONS.find((o) => o.id === mode)?.icon ?? Moon;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        id="btn-theme-menu"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        title="Apariencia"
+        className={`h-9 w-9 flex items-center justify-center rounded-lg ring-1 ring-inset transition-colors ${
+          isOpen ? 'bg-raised text-white ring-slate-700' : 'text-slate-400 ring-line hover:text-white hover:bg-raised'
+        }`}
+      >
+        <ModeIcon className="w-4 h-4" />
+        <span className="sr-only">Apariencia</span>
+      </button>
+
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-label="Apariencia"
+          className="fixed left-3 right-3 top-14 sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-72 z-50 p-4 rounded-xl bg-surface ring-1 ring-slate-700 shadow-2xl shadow-black/40 space-y-4"
+        >
+          <div>
+            <p className="text-xs font-medium text-slate-400 mb-2">Modo</p>
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-canvas ring-1 ring-inset ring-line">
+              {MODE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const active = mode === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setMode(opt.id)}
+                    aria-pressed={active}
+                    className={`h-8 flex items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors ${
+                      active ? 'bg-raised text-white ring-1 ring-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-slate-400 mb-2">Color de acento</p>
+            <div className="flex items-center gap-2">
+              {THEME_ACCENTS.map((opt) => {
+                const active = accent === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setAccent(opt.id)}
+                    aria-pressed={active}
+                    title={opt.label}
+                    className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 ${
+                      active ? 'ring-2 ring-offset-2 ring-offset-surface ring-slate-300' : 'ring-1 ring-inset ring-black/10'
+                    }`}
+                    style={{ backgroundColor: opt.swatch }}
+                  >
+                    {active && <Check className="w-4 h-4 text-black/70" />}
+                    <span className="sr-only">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              {THEME_ACCENTS.find((a) => a.id === accent)?.label}: se aplica a botones, selección y foco.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface TopbarProps {
   currentView: ViewMode;
   onOpenMobileNav: () => void;
@@ -225,11 +340,12 @@ export const Topbar: React.FC<TopbarProps> = ({
   }, []);
 
   const current = ALL_ITEMS.find((i) => i.id === currentView);
+  const currentGroup = NAV_GROUPS.find((g) => g.items.some((i) => i.id === currentView))?.title;
   const localTime = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const utcTime = now.toISOString().slice(11, 16);
 
   return (
-    <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-5 bg-canvas/85 backdrop-blur border-b border-line select-none z-30">
+    <header className="h-14 shrink-0 flex items-center gap-3 px-3 sm:px-5 bg-canvas/85 backdrop-blur border-b border-line select-none relative z-[1100]">
       <button
         type="button"
         onClick={onOpenMobileNav}
@@ -239,12 +355,13 @@ export const Topbar: React.FC<TopbarProps> = ({
         <Menu className="w-5 h-5" />
       </button>
 
-      <div className="min-w-0 flex-1">
-        <h1 className="text-[15px] sm:text-base font-semibold text-white leading-tight truncate" style={{ fontStretch: '87.5%' }}>
+      <nav className="min-w-0 flex-1 flex items-center gap-1.5 text-sm" aria-label="Ubicación">
+        <span className="text-slate-500 hidden sm:inline">{currentGroup}</span>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-600 hidden sm:inline shrink-0" />
+        <h1 className="font-display text-[15px] font-semibold text-white truncate" title={current?.description}>
           {current?.label}
         </h1>
-        <p className="text-xs text-slate-500 leading-tight truncate hidden sm:block">{current?.description}</p>
-      </div>
+      </nav>
 
       {/* Lecturas de estado */}
       <div className="hidden lg:flex items-stretch h-9 rounded-lg border border-line bg-surface divide-x divide-line text-xs">
@@ -267,6 +384,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
+        <ThemeMenu />
         <button
           id="btn-quick-community-report"
           onClick={onOpenCommunityReportModal}
@@ -288,7 +406,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <button
           id="btn-quick-ai-assistant"
           onClick={onOpenAiDrawer}
-          className="h-9 flex items-center gap-2 px-3 rounded-lg text-[13px] font-semibold text-sky-950 bg-sky-400 hover:bg-sky-300 shadow-[0_0_0_1px_rgba(66,186,240,0.4),0_6px_20px_-6px_rgba(66,186,240,0.55)] transition-colors"
+          className="h-9 flex items-center gap-2 px-3 rounded-lg text-[13px] font-semibold text-sky-950 bg-sky-400 hover:bg-sky-300 shadow-[0_6px_20px_-6px_color-mix(in_srgb,var(--color-sky-400)_60%,transparent)] transition-colors"
         >
           <Bot className="w-4 h-4" />
           <span className="hidden sm:inline">Asistente IA</span>

@@ -128,7 +128,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap overflow-x-auto scrollbar-none touch-pan-x py-0.5 min-w-0 flex-1">
           {/* Base Map Switcher */}
           <div className="flex items-center gap-1.5 bg-canvas px-2 py-1 rounded-lg border border-slate-800 shrink-0">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400 uppercase tracking-wider font-mono mr-1">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-sky-400 mr-1">
               <Layers className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Capas:</span>
             </div>
@@ -225,7 +225,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-sky-400" />
-                  <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                  <span className="text-xs font-bold text-white">
                     Capas y Vectores Geoespaciales (12)
                   </span>
                 </div>
@@ -298,7 +298,7 @@ export const GeospatialLayerToolbar: React.FC<GeospatialLayerToolbarProps> = ({
                             {opt.count}
                           </span>
                         ) : opt.countLabel ? (
-                          <span className={`px-1.5 py-0.5 rounded font-mono text-[9px] ${
+                          <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] ${
                             isActive ? 'bg-sky-950 text-sky-300 border border-sky-800' : 'bg-slate-800 text-slate-500'
                           }`}>
                             {opt.countLabel}

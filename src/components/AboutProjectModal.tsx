@@ -70,11 +70,11 @@ export const AboutProjectModal: React.FC<AboutProjectModalProps> = ({ isOpen, on
               {ACADEMIC_INFO.institutionalHeader.map((line, index) => (
                 <p
                   key={line}
-                  className={`uppercase tracking-wide ${
-                    index === 1
-                      ? 'text-sm font-bold text-white'
-                      : 'text-[11px] text-slate-400'
-                  }`}
+                  className={`${
+ index === 1
+ ? 'text-sm font-bold text-white'
+ : 'text-[11px] text-slate-400'
+ }`}
                 >
                   {line}
                 </p>
@@ -84,7 +84,7 @@ export const AboutProjectModal: React.FC<AboutProjectModalProps> = ({ isOpen, on
 
           {/* Project */}
           <section className="rounded-xl border border-emerald-800/50 bg-emerald-950/20 p-4 space-y-2">
-            <p className="text-[11px] font-mono uppercase text-emerald-400">
+            <p className="text-[11px] text-emerald-400">
               Proyecto · {ACADEMIC_INFO.project.name}
             </p>
             <h3 className="text-base font-semibold text-white leading-snug">
@@ -101,7 +101,7 @@ export const AboutProjectModal: React.FC<AboutProjectModalProps> = ({ isOpen, on
 
           {/* Course details */}
           <section className="space-y-2">
-            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase text-sky-400">
+            <h3 className="flex items-center gap-1.5 text-xs font-semibold text-sky-400">
               <BookOpen className="w-3.5 h-3.5" />
               Datos académicos
             </h3>
@@ -117,7 +117,7 @@ export const AboutProjectModal: React.FC<AboutProjectModalProps> = ({ isOpen, on
 
           {/* Students */}
           <section className="space-y-2">
-            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase text-sky-400">
+            <h3 className="flex items-center gap-1.5 text-xs font-semibold text-sky-400">
               <Users className="w-3.5 h-3.5" />
               Maestrantes
             </h3>

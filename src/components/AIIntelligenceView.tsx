@@ -317,13 +317,13 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-sky-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Módulo IA de Inteligencia Táctica y Geoespacial
             </h2>
           </div>
@@ -341,9 +341,9 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
             <div className="space-y-2.5 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-400/40 flex items-center gap-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-400/40 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-                  EVENTO CARTOGRÁFICO VINCULADO PARA ANALÍTICA
+                  Evento cartográfico vinculado para analítica
                 </span>
                 {activeEventContext.generatingEvent?.typeLabel && (
                   <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-700/60">
@@ -370,19 +370,19 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
               {/* Geo & Satellite Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 text-xs font-mono">
                 <div className="bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block font-sans">Ubicación Satelital GPS</span>
+                  <span className="text-[10px] text-slate-400 block font-sans">Ubicación Satelital GPS</span>
                   <span className="text-sky-300 font-bold">
                     {activeEventContext.satelliteCoordinates || `${activeEventContext.coordinates.lat.toFixed(5)}° N, ${Math.abs(activeEventContext.coordinates.lng).toFixed(5)}° W`}
                   </span>
                 </div>
                 <div className="bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block font-sans">Sensor Satelital / Origen</span>
+                  <span className="text-[10px] text-slate-400 block font-sans">Sensor Satelital / Origen</span>
                   <span className="text-emerald-300 font-medium truncate block" title={activeEventContext.generatingEvent?.satelliteSensor}>
                     {activeEventContext.generatingEvent?.satelliteSensor || 'Constelación Satelital Híbrida'}
                   </span>
                 </div>
                 <div className="bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block font-sans">Superposición de Cuenca / ABRAE</span>
+                  <span className="text-[10px] text-slate-400 block font-sans">Superposición de Cuenca / ABRAE</span>
                   <span className="text-amber-300 font-medium truncate block" title={activeEventContext.protectedAreaOverlap}>
                     {activeEventContext.protectedAreaOverlap || 'Cuenca del Río Orinoco'}
                   </span>
@@ -431,18 +431,18 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Compass className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-white">
                 Evaluador Táctico por Sector de Cuenca
               </h3>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">
-              ANALYSIS ENGINE
+              Analysis engine
             </span>
           </div>
 
           {/* Preset Buttons & Active Event Selector */}
           <div className="space-y-1.5">
-            <label className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">
+            <label className="text-[10px] text-slate-400 block">
               {activeEventContext ? 'Evento Activo y Sectores de Alta Prioridad' : 'Sectores de Alta Prioridad'}
             </label>
 
@@ -523,7 +523,7 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
           {/* Analysis Output Box */}
           <div className="flex-1 bg-canvas border border-slate-800 rounded-xl p-4 flex flex-col space-y-2 min-h-[300px]">
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 flex-wrap gap-2">
-              <span className="text-[10px] font-mono uppercase text-slate-400 flex items-center gap-1">
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
                 <Satellite className="w-3 h-3 text-sky-400" />
                 Dictamen Táctico Oficial (Predictivo, Perceptivo y Prescriptivo)
               </span>
@@ -580,12 +580,12 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-white">
                 Asistente Táctico Centinela (Chat en Vivo)
               </h3>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-              TACTICAL AI
+              Tactical AI
             </span>
           </div>
 

@@ -92,13 +92,13 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Generador Oficial de Boletines de Situación y Comandancia
             </h2>
           </div>
@@ -155,7 +155,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
       {/* Inputs + Summary Metrics Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface p-4 sm:p-5 rounded-xl border border-slate-800 text-xs sm:text-sm">
         <div className="md:col-span-2 space-y-1.5">
-          <label className="text-[11px] sm:text-xs text-slate-300 uppercase font-mono tracking-wider block font-semibold">
+          <label className="text-[11px] sm:text-xs text-slate-300 block font-semibold">
             Título del Despacho
           </label>
           <input
@@ -167,7 +167,7 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] sm:text-xs text-slate-300 uppercase font-mono tracking-wider block font-semibold">
+          <label className="text-[11px] sm:text-xs text-slate-300 block font-semibold">
             Período de Observación
           </label>
           <input
@@ -187,17 +187,17 @@ export const BulletinGenerator: React.FC<BulletinGeneratorProps> = ({
               CEN
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-white">
                 SISTEMA DE ALERTA TEMPRANA &quot;CENTINELA ORINOCO&quot;
               </h3>
               <p className="text-[11px] text-slate-400 font-mono">
-                DESPACHO DE INFORMACIÓN GEOESPACIAL Y SEGURIDAD AMBIENTAL
+                Despacho de información geoespacial y seguridad ambiental
               </p>
             </div>
           </div>
           <div className="text-right text-[11px] font-mono text-slate-400">
             <div>FECHA DE CORTE: {new Date().toISOString().slice(0, 10)}</div>
-            <div className="text-emerald-400 font-semibold">VALIDADO POR CENTINELA AI</div>
+            <div className="text-emerald-400 font-semibold">Validado por Centinela AI</div>
           </div>
         </div>
 

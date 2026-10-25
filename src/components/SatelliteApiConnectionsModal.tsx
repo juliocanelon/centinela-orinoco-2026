@@ -97,7 +97,7 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-wide">
+                <h2 className="font-display text-xl font-semibold text-white">
                   Conexiones Satelitales & Endpoints de Ingesta
                 </h2>
                 <span className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full">
@@ -305,7 +305,7 @@ export const SatelliteApiConnectionsModal: React.FC<SatelliteApiConnectionsModal
 
                 {/* Active Endpoint URL Block */}
                 <div className="space-y-2 mb-3">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                     <span>URL Oficial de Conexión Satelital</span>
                     <span className="text-[10px] text-cyan-400 font-mono">Formato: {conn.payloadFormat}</span>
                   </div>

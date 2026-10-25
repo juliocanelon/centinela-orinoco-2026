@@ -114,13 +114,13 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 font-mono text-xs font-semibold uppercase">
+              <span className="px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 text-xs font-semibold">
                 Veeduría Ambiental Comunitaria
               </span>
               <span className="text-slate-500 text-xs">·</span>
               <span className="text-slate-400 text-xs">Pueblos Indígenas & Ribereños del Orinoco</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">
+            <h1 className="font-display text-2xl sm:text-[28px] font-semibold text-white">
               Centro de Denuncias y Veeduría Territorial
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
@@ -363,7 +363,7 @@ export const CommunityReportsView: React.FC<CommunityReportsViewProps> = ({
                                   <div className="w-6 h-6 rounded-full bg-sky-950/90 border border-sky-400 flex items-center justify-center text-sky-300 shadow group-hover:scale-110 transition-transform mb-0.5">
                                     <Play className="w-3 h-3 ml-0.5" />
                                   </div>
-                                  <span className="text-[8px] font-mono uppercase font-bold text-sky-300">Video</span>
+                                  <span className="text-[8px] font-bold text-sky-300">Video</span>
                                 </div>
                               ) : (
                                 <img

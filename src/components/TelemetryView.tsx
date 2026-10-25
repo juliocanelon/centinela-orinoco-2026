@@ -12,6 +12,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { HydrologicalStation } from '../types';
+import { formatLabel } from '../lib/labels';
 
 interface TelemetryViewProps {
   stations: HydrologicalStation[];
@@ -94,13 +95,13 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
   const pct = currentStation ? levelPercentage(currentStation) : null;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Top Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <Droplets className="w-5 h-5 text-sky-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Nivel del Río Orinoco (INAMEH)
             </h2>
           </div>
@@ -130,13 +131,13 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
           <div className="lg:col-span-1 bg-surface border border-slate-800 rounded-xl p-5 space-y-5 shadow-xl">
             <div className="flex items-start justify-between pb-3 border-b border-slate-800 gap-2">
               <div>
-                <span className="text-[10px] font-mono uppercase text-sky-400 tracking-wider">
+                <span className="text-[10px] text-sky-400">
                   Estación {currentStation.id} · {currentStation.state}
                 </span>
                 <h3 className="text-base font-bold text-white mt-0.5">{currentStation.name}</h3>
                 <p className="text-xs text-slate-400">{currentStation.river}</p>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold text-right ${statusClass(currentStation.status)}`}>
+              <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap text-right ${statusClass(currentStation.status)}`}>
                 {STATUS_LABELS[currentStation.status]}
               </span>
             </div>
@@ -242,25 +243,25 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] font-mono text-slate-400 uppercase">{station.id} · {station.state}</span>
+                      <span className="text-[10px] text-slate-400">{station.id} · {station.state}</span>
                       <h4 className="text-sm font-bold text-white">{station.name}</h4>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${statusClass(station.status)}`}>
-                      {station.status}
+                    <span className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded text-[10px] font-medium ${statusClass(station.status)}`}>
+                      {formatLabel(station.status)}
                     </span>
                   </div>
 
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80 grid grid-cols-3 gap-2 text-center text-xs font-mono">
                     <div>
-                      <span className="text-[9px] text-slate-500 uppercase block">Nivel</span>
+                      <span className="text-[10px] text-slate-500 block">Nivel</span>
                       <strong className="text-sky-400">{station.currentLevelM === null ? 's/d' : station.currentLevelM.toFixed(2)}</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-slate-500 uppercase block">Variación</span>
+                      <span className="text-[10px] text-slate-500 block">Variación</span>
                       <strong className="text-slate-300">{formatChange(station.dailyChangeM)}</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-slate-500 uppercase block">Boletín</span>
+                      <span className="text-[10px] text-slate-500 block">Boletín</span>
                       <strong className={station.isStale ? 'text-amber-400' : 'text-slate-300'}>{station.readingDate ?? 's/f'}</strong>
                     </div>
                   </div>
@@ -271,7 +272,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
 
           {currentStation && (
             <div className="bg-surface border border-slate-800 rounded-xl p-4">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-semibold text-white mb-2">
                 Historial de lecturas · {currentStation.name}
               </h4>
               {readingsError && <p className="text-xs text-amber-300">No se pudo cargar el historial: {readingsError}</p>}
@@ -292,7 +293,7 @@ export const TelemetryView: React.FC<TelemetryViewProps> = ({
                         <td className="py-1">{r.reading_date}{r.is_stale ? ' *' : ''}</td>
                         <td>{Number(r.level_msnm).toFixed(2)}</td>
                         <td>{formatChange(r.daily_change_m === null ? null : Number(r.daily_change_m))}</td>
-                        <td>{r.alert_status}</td>
+                        <td>{formatLabel(r.alert_status)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -19,6 +19,7 @@ import {
 import { SarRadarAnomaly, Sentinel1Scene } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { LivePipelineService } from '../services/liveDataPipelineService';
+import { formatLabel } from '../lib/labels';
 
 /**
  * Sin perturbaciones SAR medidas (Nivel 2 pendiente): muestra las pasadas reales de Sentinel-1
@@ -34,7 +35,7 @@ const SarLevel2Pending: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-4 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-4 text-slate-200">
       <div className="bg-surface border border-slate-800 rounded-xl p-5 space-y-2">
         <div className="flex items-center gap-2">
           <Radar className="w-5 h-5 text-sky-400" />
@@ -47,7 +48,7 @@ const SarLevel2Pending: React.FC = () => {
       </div>
       {error && <p className="text-xs text-amber-300">No se pudo cargar el catálogo: {error}</p>}
       <div className="bg-surface border border-slate-800 rounded-xl overflow-x-auto">
-        <table className="w-full text-xs font-mono">
+        <table className="w-full min-w-[640px] text-xs font-mono whitespace-nowrap">
           <thead>
             <tr className="text-slate-500 text-left border-b border-slate-800">
               <th className="p-2">Satélite</th><th className="p-2">Adquisición</th><th className="p-2">Modo</th><th className="p-2">Órbita</th><th className="p-2"></th>
@@ -146,13 +147,13 @@ Genera un dictamen técnico de auditoría satelital que determine:
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <Radar className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Visor de Detección Satelital SAR & Variaciones de Cobertura
             </h2>
           </div>
@@ -207,7 +208,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
                   <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
                     {currentAnomaly.code}
                   </span>
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">
+                  <span className="text-[10px] text-slate-400">
                     Sentinel-1 SAR C-Band
                   </span>
                 </div>
@@ -221,7 +222,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
                     ? 'bg-red-950 text-red-300 border border-red-800 animate-pulse'
                     : 'bg-amber-950 text-amber-300 border border-amber-800'
                 }`}>
-                  {currentAnomaly.severity}
+                  {formatLabel(currentAnomaly.severity)}
                 </span>
                 <div className="text-[10px] text-slate-500 font-mono mt-1">
                   Pase Satelital: {currentAnomaly.currentPassDate}
@@ -232,41 +233,41 @@ Genera un dictamen técnico de auditoría satelital que determine:
             {/* Radar Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
               <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-500 uppercase block">Pérdida Coherencia</span>
+                <span className="text-[10px] text-slate-500 block">Pérdida Coherencia</span>
                 <span className="text-base font-bold text-amber-400">
                   {currentAnomaly.coherenceLossPercent}%
                 </span>
-                <span className="text-[9px] text-slate-500 block">Interferometría InSAR</span>
+                <span className="text-[10px] text-slate-500 block">Interferometría InSAR</span>
               </div>
 
               <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-500 uppercase block">Retrodispersión (dB)</span>
+                <span className="text-[10px] text-slate-500 block">Retrodispersión (dB)</span>
                 <span className={`text-base font-bold ${currentAnomaly.sarBackscatterChangeDb > 0 ? 'text-rose-400' : 'text-sky-400'}`}>
                   {currentAnomaly.sarBackscatterChangeDb > 0 ? `+${currentAnomaly.sarBackscatterChangeDb}` : currentAnomaly.sarBackscatterChangeDb} dB
                 </span>
-                <span className="text-[9px] text-slate-500 block">Firma VV/VH</span>
+                <span className="text-[10px] text-slate-500 block">Firma VV/VH</span>
               </div>
 
               <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-500 uppercase block">Caída NDVI Óptico</span>
+                <span className="text-[10px] text-slate-500 block">Caída NDVI Óptico</span>
                 <span className="text-base font-bold text-red-400">
                   -{currentAnomaly.opticalNdviDropPercent}%
                 </span>
-                <span className="text-[9px] text-slate-500 block">Sentinel-2 MSI</span>
+                <span className="text-[10px] text-slate-500 block">Sentinel-2 MSI</span>
               </div>
 
               <div className="bg-canvas p-3 rounded-lg border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-500 uppercase block">Probabilidad Draga</span>
+                <span className="text-[10px] text-slate-500 block">Probabilidad Draga</span>
                 <span className="text-base font-bold text-emerald-400">
                   {currentAnomaly.dredgePresenceProbability}%
                 </span>
-                <span className="text-[9px] text-slate-500 block">Modelo Predictivo</span>
+                <span className="text-[10px] text-slate-500 block">Modelo Predictivo</span>
               </div>
             </div>
 
             {/* Radar Diagnosis & Technical Notes */}
             <div className="bg-canvas p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+              <span className="text-[10px] text-slate-400 block">
                 Firma Radar y Diagnóstico de Cobertura
               </span>
               <p className="text-slate-200 leading-relaxed font-mono text-[11px]">
@@ -314,7 +315,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
             {aiAuditReport && (
               <div className="bg-canvas border border-amber-500/40 rounded-xl p-4 space-y-2 text-xs text-slate-300 leading-relaxed font-sans shadow-lg">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center gap-1.5">
+                  <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
                     Dictamen Técnico de Teledetección SAR (Gemini 3.7)
                   </span>
@@ -330,7 +331,7 @@ Genera un dictamen técnico de auditoría satelital que determine:
         {/* Right Column: SAR Anomalies List (5 cols) */}
         <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between px-1">
-            <label className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
+            <label className="text-[10px] text-slate-400">
               Anomalías de Radar Detectadas ({filteredAnomalies.length})
             </label>
             <span className="text-[10px] font-mono text-emerald-400">
@@ -361,10 +362,10 @@ Genera un dictamen técnico de auditoría satelital que determine:
                       <span className="text-[10px] font-mono text-slate-400">{item.basin}</span>
                     </div>
 
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                    <span className={`px-1.5 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                       isCritical ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-amber-950 text-amber-300 border border-amber-800'
                     }`}>
-                      {item.severity}
+                      {formatLabel(item.severity)}
                     </span>
                   </div>
 
@@ -372,15 +373,15 @@ Genera un dictamen técnico de auditoría satelital que determine:
 
                   <div className="mt-2 pt-2 border-t border-slate-800/80 grid grid-cols-3 gap-1 text-center text-[10px] font-mono">
                     <div>
-                      <span className="text-slate-500 block text-[9px]">Pérdida Coh.</span>
+                      <span className="text-slate-500 block text-[10px]">Pérdida Coh.</span>
                       <strong className="text-amber-400">{item.coherenceLossPercent}%</strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 block text-[9px]">Área</span>
+                      <span className="text-slate-500 block text-[10px]">Área</span>
                       <strong className="text-slate-200">{item.affectedSurfaceHa} Ha</strong>
                     </div>
                     <div>
-                      <span className="text-slate-500 block text-[9px]">Prob. Draga</span>
+                      <span className="text-slate-500 block text-[10px]">Prob. Draga</span>
                       <strong className="text-emerald-400">{item.dredgePresenceProbability}%</strong>
                     </div>
                   </div>

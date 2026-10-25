@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { IncidentReport, AlertSeverity } from '../types';
 import { SupabaseRpcService } from '../lib/supabaseClient';
+import { formatLabel } from '../lib/labels';
 
 interface IncidentManagerProps {
   incidents: IncidentReport[];
@@ -136,13 +137,13 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-200">
       {/* Header & Actions */}
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-surface p-4 rounded-xl border border-slate-800">
+      <div className="flex items-end justify-between flex-wrap gap-4 pb-5 border-b border-line">
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">
+            <h2 className="font-display text-xl font-semibold text-white">
               Centro de Gestión de Incidentes y Alertas Territoriales
             </h2>
           </div>
@@ -238,39 +239,39 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
               >
                 <div className="flex items-start justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-900 text-sky-400 border border-slate-800">
+                    <span className="font-mono text-xs font-bold whitespace-nowrap px-2 py-0.5 rounded-md bg-slate-900 text-sky-400 border border-slate-800">
                       {inc.code}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                       isCritical ? 'bg-red-950 text-red-300 border border-red-800' :
                       isHigh ? 'bg-amber-950 text-amber-300 border border-amber-800' :
                       'bg-slate-900 text-slate-300 border border-slate-700'
                     }`}>
-                      {inc.severity}
+                      {formatLabel(inc.severity)}
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded bg-slate-800/80 text-slate-300">
-                      {inc.category.replace('_', ' ')}
+                      {formatLabel(inc.category)}
                     </span>
                   </div>
 
                   {/* Status Dropdown */}
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-400">Estado Operativo:</span>
+                    <span className="text-slate-400">Estado</span>
                     <select
                       value={inc.status}
                       onChange={(e) => onUpdateStatus(inc.id, e.target.value as any)}
-                      className={`px-2.5 py-1 rounded text-xs font-mono font-medium outline-none border cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium outline-none border cursor-pointer ${
                         inc.status === 'OPERATIVO_EN_CURSO' ? 'bg-sky-950 text-sky-300 border-sky-800' :
                         inc.status === 'RESUELTO' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
                         inc.status === 'EN_VERIFICACION' ? 'bg-amber-950 text-amber-300 border-amber-800' :
                         'bg-red-950 text-red-300 border-red-800'
                       }`}
                     >
-                      <option value="ACTIVO" className="bg-slate-900 text-red-300">ACTIVO</option>
-                      <option value="EN_VERIFICACION" className="bg-slate-900 text-amber-300">EN VERIFICACIÓN</option>
-                      <option value="OPERATIVO_EN_CURSO" className="bg-slate-900 text-sky-300">OPERATIVO EN CURSO</option>
-                      <option value="RESUELTO" className="bg-slate-900 text-emerald-300">RESUELTO</option>
-                      <option value="ARCHIVADO" className="bg-slate-900 text-slate-400">ARCHIVADO</option>
+                      <option value="ACTIVO" className="bg-slate-900 text-red-300">Activo</option>
+                      <option value="EN_VERIFICACION" className="bg-slate-900 text-amber-300">En verificación</option>
+                      <option value="OPERATIVO_EN_CURSO" className="bg-slate-900 text-sky-300">Operativo en curso</option>
+                      <option value="RESUELTO" className="bg-slate-900 text-emerald-300">Resuelto</option>
+                      <option value="ARCHIVADO" className="bg-slate-900 text-slate-400">Archivado</option>
                     </select>
                   </div>
                 </div>
@@ -301,8 +302,8 @@ export const IncidentManager: React.FC<IncidentManagerProps> = ({
 
       {/* Modal: Registrar Nuevo Incidente */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-slate-200">
+        <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl w-full max-w-lg p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-red-400" />

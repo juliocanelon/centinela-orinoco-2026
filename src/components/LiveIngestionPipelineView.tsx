@@ -32,6 +32,7 @@ import {
 } from '../types';
 import { LivePipelineService } from '../services/liveDataPipelineService';
 import { SATELLITE_API_CONNECTIONS, SatelliteApiConnection, MONITORING_BBOX } from '../data/satelliteApiDirectory';
+import { formatLabel } from '../lib/labels';
 
 interface LiveIngestionPipelineViewProps {
   onNavigateToMapWithCoords?: (lat: number, lng: number, zoom?: number) => void;
@@ -244,11 +245,11 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-white tracking-wide font-sans">
+                <h1 className="font-display text-xl font-semibold text-white">
                   Ingesta de Datos Satelitales e Hidrológicos
                 </h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  DATOS REALES
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  Datos reales
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -331,17 +332,17 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                         : task.status === 'SUCCESS' ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
                         : 'bg-slate-900 text-slate-300 border-slate-700'
                     }`}>
-                      {task.status}
+                      {formatLabel(task.status)}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400">{task.satelliteMission} · {task.nominalCadenceText}</p>
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                     <div className="bg-canvas p-2 rounded border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">EN LA TABLA</span>
+                      <span className="text-[10px] text-slate-500 block">En la tabla</span>
                       <span className="text-emerald-400 font-bold">{task.totalIngested}</span>
                     </div>
                     <div className="bg-canvas p-2 rounded border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">ÚLTIMA EJECUCIÓN</span>
+                      <span className="text-[10px] text-slate-500 block">Última ejecución</span>
                       <span className="text-slate-200">{task.lastInserted === null ? '—' : `+${task.lastInserted} / ${task.lastSkipped} omit.`}</span>
                     </div>
                   </div>
@@ -420,7 +421,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
                     <div className="space-y-1.5 mt-3">
                       <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                        <span>URL DE CONSUMO:</span>
+                        <span>URL de consumo:</span>
                         <span className="text-cyan-400">Formato: {conn.payloadFormat}</span>
                       </div>
                       <div className="flex items-center gap-2 p-2.5 bg-canvas border border-slate-800 rounded-lg font-mono text-xs text-cyan-300 overflow-x-auto">
@@ -440,7 +441,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-800/70 text-xs">
-                      <span className="text-[10px] text-slate-400 font-mono block mb-1">COMANDO CURL:</span>
+                      <span className="text-[10px] text-slate-400 font-mono block mb-1">Comando cURL:</span>
                       <div className="font-mono text-[10px] text-slate-400 break-all select-all">{conn.sampleCurlCommand}</div>
                     </div>
                   </div>
@@ -608,14 +609,14 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                       <td className="p-2">{s.name}</td>
                       <td className="p-2">{s.currentLevelM ?? 's/d'} msnm</td>
                       <td className="p-2">{s.readingDate ?? 's/f'}{s.isStale ? ' (desactualizado)' : ''}</td>
-                      <td className="p-2">{s.status}</td>
+                      <td className="p-2">{formatLabel(s.status)}</td>
                     </tr>
                   ))}
                   {feedFilter === 'KOBO' && koboReports.map((r) => (
                     <tr key={r.id} className="border-b border-slate-800/60">
                       <td className="p-2 text-emerald-300">{r.submissionTime}</td>
                       <td className="p-2">{r.officerName}</td>
-                      <td className="p-2">{r.category}</td>
+                      <td className="p-2">{formatLabel(r.category)}</td>
                       <td className="p-2">{r.latitude}, {r.longitude}</td>
                       <td className="p-2">{r.mercuryDetectedPpm === undefined ? 'Hg no medido' : `Hg ${r.mercuryDetectedPpm} ppm (campo)`}</td>
                     </tr>
@@ -702,8 +703,8 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
 
       {/* MODAL: minuta de campo Kobo / ODK */}
       {koboModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[2000] flex items-start justify-center overflow-y-auto p-4">
+          <div className="my-auto bg-surface border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800">
@@ -720,32 +721,32 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
             <form onSubmit={handleDispatchKoboWebhook} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">OFICIAL:</span>
+                  <span className="block text-slate-400 font-mono mb-1">Oficial:</span>
                   <input type="text" value={webhookOfficer} onChange={(e) => setWebhookOfficer(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">UNIDAD:</span>
+                  <span className="block text-slate-400 font-mono mb-1">Unidad:</span>
                   <input type="text" value={webhookUnit} onChange={(e) => setWebhookUnit(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <label className="block sm:col-span-2">
-                  <span className="block text-slate-400 font-mono mb-1">RÍO / SECTOR:</span>
+                  <span className="block text-slate-400 font-mono mb-1">Río / sector:</span>
                   <input type="text" value={webhookRiver} onChange={(e) => setWebhookRiver(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">LATITUD:</span>
+                  <span className="block text-slate-400 font-mono mb-1">Latitud:</span>
                   <input type="text" value={webhookLat} onChange={(e) => setWebhookLat(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
                 <label className="block">
-                  <span className="block text-slate-400 font-mono mb-1">LONGITUD:</span>
+                  <span className="block text-slate-400 font-mono mb-1">Longitud:</span>
                   <input type="text" value={webhookLng} onChange={(e) => setWebhookLng(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white font-mono" />
                 </label>
               </div>
 
               <label className="block">
-                <span className="block text-slate-400 font-mono mb-1">CATEGORÍA:</span>
+                <span className="block text-slate-400 font-mono mb-1">Categoría:</span>
                 <select value={webhookCategory} onChange={(e) => setWebhookCategory(e.target.value as KoboFieldPatrolReport['category'])} className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white">
                   <option value="MINERIA_ILEGAL">Minería ilegal</option>
                   <option value="DEFORESTACION">Deforestación</option>
@@ -765,7 +766,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
               </div>
 
               <label className="block">
-                <span className="block text-slate-400 font-mono mb-1">NARRATIVA:</span>
+                <span className="block text-slate-400 font-mono mb-1">Narrativa:</span>
                 <textarea rows={3} value={webhookNarrative} onChange={(e) => setWebhookNarrative(e.target.value)} required className="w-full bg-canvas border border-slate-700 rounded-lg p-2 text-white text-xs" />
               </label>
 

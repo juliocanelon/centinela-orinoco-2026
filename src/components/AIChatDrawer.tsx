@@ -79,12 +79,12 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
             <Bot className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-white">
               Centinela AI Companion
             </h3>
             <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              GEMINI 3.7 FLASH ACTIVO
+              Gemini 3.7 flash activo
             </p>
           </div>
         </div>
