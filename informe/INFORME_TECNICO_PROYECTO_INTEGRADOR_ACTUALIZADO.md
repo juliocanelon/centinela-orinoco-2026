@@ -222,7 +222,7 @@ No se ha documentado una evaluación de usabilidad con guardaparques, comunidade
 
 ## 3.6 Despliegue y operación
 
-La solución se ejecuta mediante servicios web y contempla su publicación en una plataforma de alojamiento que requiere configurar de forma segura las credenciales de Supabase, MongoDB y Gemini. La arquitectura actual no especifica contenedorización ni un esquema de alta disponibilidad. El plan de despliegue deberá incluir empaquetado de los componentes, administración segura de credenciales, comprobaciones de salud, observabilidad, copias de seguridad, políticas de actualización y procedimientos de recuperación. En áreas con conectividad intermitente, el nodo de campo deberá conservar los datos de forma cifrada y sincronizarlos cuando se restablezca el enlace. La selección de infraestructura deberá responder a las condiciones de energía, cobertura y operación del sur de Venezuela.
+El artículo IEEE declara que la aplicación se publica en Google Cloud Run mediante Google AI Studio y utiliza Supabase gestionado y MongoDB Atlas. Esta información se registra como despliegue declarado por la fuente, no como servicio verificado durante la presente evaluación. La arquitectura actual no documenta contenedorización propia ni un esquema de alta disponibilidad. El plan de despliegue deberá incluir empaquetado de los componentes, administración segura de credenciales, comprobaciones de salud, observabilidad, copias de seguridad, políticas de actualización y procedimientos de recuperación. En áreas con conectividad intermitente, el nodo de campo deberá conservar los datos de forma cifrada y sincronizarlos cuando se restablezca el enlace. La selección de infraestructura deberá responder a las condiciones de energía, cobertura y operación del sur de Venezuela.
 
 El artículo IEEE propone una correspondencia de servicios AWS como arquitectura objetivo. Esta equivalencia no implica que el prototipo se encuentre desplegado en AWS:
 
@@ -318,3 +318,7 @@ Las referencias siguientes se transcriben del artículo IEEE y del informe preli
 24. República Bolivariana de Venezuela. (2016). *Decreto N.º 2.248 mediante el cual se crea la Zona de Desarrollo Estratégico Nacional Arco Minero del Orinoco*. *Gaceta Oficial de la República Bolivariana de Venezuela*, N.º 40.855, 24 de febrero de 2016.
 
 La indexación de las referencias 1, 2, 3, 4, 6, 7, 8, 15, 17, 18 y 22 debe verificarse según lo señalado en el capítulo II. Las referencias sobre el Decreto y UNESCO son institucionales, no artículos científicos indexados.
+
+### Documento institucional de referencia
+
+Universidad Nacional Experimental de Guayana. (2026). *Propuesta del Proyecto Integrador: Aplicaciones de Arquitectura de Datos Inteligente para la Amazonía* [Documento de asignación académica].
