@@ -224,7 +224,9 @@ donde $s$ es la similitud coseno, $d$ la distancia en km, $t$ la antigüedad en 
 La generación usa una cascada de cuatro modelos Gemini con cuotas diarias: ante un error de cuota o HTTP~429 el modelo se marca como agotado y se pasa al siguiente; si todos fallan, se devuelve una respuesta determinística de contingencia.
 
 \subsection{Flujo dinámico automatizado}
-La Tabla~\ref{tab:reglas} define las reglas de decisión que, en el diseño objetivo, ejecutaría un DAG de Apache Airflow después de ingerir y correlar espacialmente las fuentes. La regla central exige la coincidencia de dos sensores independientes, porque un foco térmico aislado no prueba minería: puede ser una quema agrícola. En ese diseño, cada tarea de ingesta tendría tres reintentos con espera exponencial, y el fallo de una fuente no bloquearía las demás ramas. En el prototipo, un \emph{scheduler} propio ejecuta la ingesta de forma independiente por fuente y, si una falla, registra el error y la reintenta en su siguiente ejecución programada; las reglas aún no se aplican, porque R1 a R3 requieren el análisis de píxeles satelitales.
+En el prototipo, el flujo automático ya opera así: un \emph{scheduler} ejecuta la ingesta de cada fuente con su propia cadencia, la reintenta en la siguiente ejecución si falla y, cuando entran documentos nuevos, dispara su vectorización. Agentes de IA deciden qué documentos del corpus son pertinentes para la región y qué modelo de lenguaje usar según la cuota disponible.
+
+La Tabla~\ref{tab:reglas} completa el diseño con las reglas de alerta. La regla central exige que coincidan dos sensores independientes, porque un foco térmico aislado puede ser una quema agrícola. Estas reglas requieren el análisis de píxeles satelitales y se ejecutarían en un DAG de Apache Airflow, con reintentos y aislamiento de fallos por fuente.
 
 \begin{table}[!t]
 \caption{Reglas de decisión del diseño objetivo (umbrales iniciales)}

@@ -706,6 +706,8 @@ Los pesos son iniciales y deben calibrarse con un conjunto etiquetado. Sin punto
 
 ## III.6 Flujo dinámico automatizado
 
+En el prototipo, el flujo automático ya opera así: el scheduler ejecuta la ingesta de cada fuente con su propia cadencia, la reintenta en la siguiente ejecución si falla y, cuando entran documentos nuevos, dispara su vectorización. Agentes de IA deciden qué documentos del corpus son pertinentes para la región y qué modelo de lenguaje usar según la cuota disponible. Las reglas de alerta de la Tabla T4 completan el diseño: requieren el análisis de píxeles satelitales y se ejecutarían en un DAG de Apache Airflow.
+
 **Orquestador actual [Implementado].** El scheduler propio ejecuta tareas por constelación y expone:
 
 - estado: `GET /api/scheduler/status`;
