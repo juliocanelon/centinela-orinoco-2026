@@ -702,7 +702,7 @@ Justificación de los pesos:
 - La condición de **arbitrado** (0,10) favorece la evidencia científica revisada por pares.
 - La **severidad** (0,10) desempata a favor de lo crítico.
 
-Los pesos son iniciales y deben calibrarse con un conjunto etiquetado. Sin punto de consulta, el peso de la proximidad pasa a la similitud. Si no es posible vectorizar la consulta, la búsqueda usa coincidencia de texto y distancia geodésica.
+El umbral de 0,65 se fijó con un criterio de precisión: un documento recuperado que no es pertinente resulta más costoso que uno omitido, y las consultas que no lo alcanzan quedan cubiertas por la búsqueda por texto; en las pruebas, los documentos pertinentes obtuvieron similitudes de 0,69 a 0,74. El umbral y los pesos son valores de diseño. Se propone calibrarlos con consultas etiquetadas: especialistas marcan los documentos pertinentes de cada consulta de prueba, se evalúan umbrales de 0,50 a 0,70 y se elige el que equilibre los pertinentes recuperados con los resultados no pertinentes. Sin punto de consulta, el peso de la proximidad pasa a la similitud. Si no es posible vectorizar la consulta, la búsqueda usa coincidencia de texto y distancia geodésica.
 
 ## III.6 Flujo dinámico automatizado
 
@@ -979,13 +979,13 @@ flowchart TB
 
 1. **OE1.** Se caracterizaron ocho fuentes de datos (T1), cinco de ellas con ingesta real automatizada, y se mostró que su heterogeneidad (variedad), su cadencia (velocidad) y su incertidumbre (veracidad) exceden la capacidad de un sistema transaccional tradicional.
 2. **OE2.** Se diseñó una arquitectura por capas con persistencia políglota. Su núcleo, la saga PostgreSQL–MongoDB con idempotencia y compensación, está implementado, con restricciones de integridad verificables en las migraciones. La resiliencia offline está implementada en el servidor y diseñada para el borde.
-3. **OE3.** Se implementó una memoria semántica georreferenciada sobre pgvector y PostGIS: los documentos se vectorizan con Gemini y la búsqueda combina similitud coseno y radio geográfico en una sola consulta, con un reranker compuesto y respaldo por texto. El pipeline de ingesta del corpus y el geofencing semántico funcionan. Falta calibrar el umbral y los pesos con consultas etiquetadas.
+3. **OE3.** Se implementó una memoria semántica georreferenciada sobre pgvector y PostGIS: los documentos se vectorizan con Gemini y la búsqueda combina similitud coseno y radio geográfico en una sola consulta, con un reranker compuesto y respaldo por texto. El pipeline de ingesta del corpus y el geofencing semántico funcionan. Se propone calibrar el umbral y los pesos con consultas etiquetadas (§III.5).
 4. **OE4.** El scheduler automatiza la ingesta real de FIRMS, Sentinel-1/2/3 e INAMEH con cadencias de producción, sin duplicados y con historial de ejecuciones. También se formalizaron cinco reglas de decisión y su DAG equivalente en Airflow. Las reglas están diseñadas, no implementadas.
 5. **OE5.** La capa de consumo está prototipada en React con más de diez vistas operativas. La memoria semántica tiene 26 pruebas automatizadas; las pruebas de ingesta y saga ante datos corruptos o vacíos están especificadas (T7), pero aún no automatizadas.
 
 ## IV.3 Recomendaciones y trabajo futuro
 
-1. Calibrar el umbral de similitud (0,65) y los pesos del reranker con consultas etiquetadas.
+1. Aplicar la calibración propuesta del umbral de similitud (0,65) y de los pesos del reranker con consultas etiquetadas (§III.5).
 2. Agregar a `tests/` los casos de T7, y crear el `Dockerfile` y el `docker-compose.yml` (Anexo A.3).
 3. Pasar del catálogo a los píxeles: descargar bandas Sentinel-1/2 y calcular retrodispersión, NDVI y turbidez sobre las escenas ya registradas.
 4. Migrar la ingesta a Kafka y el histórico a Delta Lake/MinIO con Spark.
