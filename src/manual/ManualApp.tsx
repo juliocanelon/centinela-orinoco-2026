@@ -169,6 +169,9 @@ const MANUAL_ARTICLES: ManualArticle[] = [
     section: 'Operación',
     title: 'Incidentes',
     summary: 'Consulta, registra y actualiza alertas con estados y exportación de datos.',
+    imageUrl: '/manual/images/incidentes.png',
+    imageAlt: 'Vista de Incidentes con búsqueda, filtros por severidad y categoría, exportación CSV y lista de alertas con sus estados.',
+    imageCaption: 'Usa la búsqueda y los filtros para encontrar alertas. Registrar alerta, en la barra superior, abre el formulario de registro.',
     sections: [
       {
         heading: 'Qué permite',
