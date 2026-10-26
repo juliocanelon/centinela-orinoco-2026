@@ -105,114 +105,72 @@ export const ScientificCorpusReader: React.FC<ScientificCorpusReaderProps> = ({
 
 ### 1. RESUMEN EJECUTIVO
 
-El presente informe detalla la implementación y adecuación de los flujos de ingesta en el sistema de seguridad y vigilancia ambiental **"Centinela Orinoco"**. El objetivo principal ha sido automatizar la captación de datos de misiones satelitales directamente en la base de datos **Supabase (PostgreSQL + PostGIS + pgvector)** y expandir las capacidades del **Corpus Científico** para admitir documentos científicos en formatos diversos (PDF, URL, DOI, o Texto directo), sometiéndolos a un filtrado geopolítico estricto (geofencing de la Amazonía venezolana) y a un proceso automatizado de vectorización y almacenamiento semántico.
+El presente informe describe los flujos de ingesta del sistema de vigilancia ambiental **"Centinela Orinoco"**: la captura automática de datos satelitales e hidrológicos reales en **Supabase (PostgreSQL + PostGIS + pgvector)** y el **Corpus Científico**, que admite documentos en PDF, URL, DOI o texto, los filtra por pertinencia territorial (Amazonía venezolana) y los incorpora a una memoria semántica vectorial.
 
 ---
 
-### 2. ARQUITECTURA DE INGESTA SATELITAL AUTOMATIZADA
+### 2. INGESTA SATELITAL E HIDROLÓGICA AUTOMATIZADA
 
-El sistema de ingesta satelital opera mediante el orquestador backend \`SatelliteAutomatedScheduler\`, el cual maneja tareas programadas concurrentes basadas en los ciclos orbitales de cada constelación:
+El orquestador \`SatelliteAutomatedScheduler\` ejecuta una tarea por fuente con cadencia de producción e inserta solo registros nuevos:
 
-1. **NASA FIRMS (VIIRS/MODIS):** Escaneo de anomalías térmicas en intervalos simulados de 3 horas.
-2. **Copernicus Sentinel-1 (Radar SAR):** Monitoreo de pérdida de retrodispersión y coherencia interferométrica cada 12 horas.
-3. **Copernicus Sentinel-2 (Óptico MSI):** Descarga de mosaicos multiespectrales (T19PHC, T20PHD, T20PJD) y análisis espectral de turbidez e índice NDVI cada 24 horas.
-4. **Red de Telemetría Hidrométrica:** Mediciones telemétricas de cota de ríos y estimación de turbidez/mercurio cada hora.
+1. **NASA FIRMS (VIIRS/MODIS):** anomalías térmicas cada 3 horas.
+2. **Copernicus Sentinel-1 (SAR GRD):** catálogo de escenas cada 12 horas.
+3. **Copernicus Sentinel-2 (MSI L2A):** catálogo de productos cada 24 horas.
+4. **Copernicus Sentinel-3 (OLCI/SLSTR):** productos de agua cada 24 horas.
+5. **INAMEH:** cota del río Orinoco desde boletines PDF cada 6 horas. INAMEH no publica turbidez, pH, conductividad ni mercurio.
 
-#### Mecanismo de Sincronización y Persistencia:
-- **Resiliencia ante Desconexiones:** Si Supabase se encuentra temporalmente offline, el scheduler almacena los eventos en un buffer de memoria de contingencia en el servidor Express, sincronizando de forma diferida una vez reanudada la conexión.
-- **Inserción Semántica:** Cada pasada de órbita genera un registro estructurado en su respectiva tabla espacial y, de forma simultánea, compila un fragmento narrativo (\`content_chunk\`) que se inyecta en la tabla \`public.environmental_rag_documents\` para alimentar las consultas semánticas.
+Cada ejecución queda en \`ingestion_runs\`. Los focos relevantes y las lecturas hidrológicas generan además un fragmento narrativo (\`content_chunk\`) en \`public.environmental_rag_documents\`.
 
 ---
 
-### 3. TUBERÍA DE INGESTA DEL CORPUS CIENTÍFICO
-
-Para el módulo de investigación, se ha adecuado el componente del **Corpus Científico** (\`ScientificCorpusReader.tsx\`) con un formulario y pipeline de backend (\`/api/corpus/ingest\`) capaz de procesar diferentes canales de entrada:
+### 3. TUBERÍA DEL CORPUS CIENTÍFICO
 
 [Entrada de Documento] ──> (PDF / URL / DOI / Texto)
                                 │
                                 ▼
-                   [Validación de Geofencing] ──> ¿Pertenece a Amazonas, Bolívar o Delta Amacuro?
-                                │                 (Si NO: Rechazo de Seguridad con Error 400)
+                   [Geofencing con LLM] ──> ¿Amazonas, Bolívar o Delta Amacuro?
+                                │            (Si NO: rechazo con HTTP 400)
                                 ▼
-             [Extracción Automática por IA (Gemini)]
+             [Extracción de metadatos y sitios (Gemini)]
                                 │
                                 ▼
-            [Orquestación Vectorial (Voyage Embeddings)]
+        [Documento RAG por sitio en Supabase (PostGIS)]
                                 │
                                 ▼
-         [Persistencia en Supabase: pgvector + PostGIS]
+      [Embedding gemini-embedding-001, 768 dimensiones (pgvector)]
 
-#### Características del Pipeline:
-* **Clasificación Rigurosa:** Permite diferenciar de forma explícita entre documentos **Arbitrados por Pares / Indexados** en revistas de impacto frente a documentos **No Indexados / No Arbitrados** (informes de campo de ONG, minutas locales), aplicando etiquetas visuales y metadatos específicos.
-* **Control de Formato y Entrada:**
-  - **PDF:** Soporte para carga de archivos, extrayendo y poblando el motor mediante simulación inteligente del contenido textual con referencias espaciales.
-  - **URL / DOI:** Envío directo al backend para la resolución de metadatos académicos y catalogación de fuentes.
-* **Filtro Geográfico de Seguridad (Geofencing):** 
-  - Un modelo de lenguaje especializado analiza si el texto se vincula directamente a la **Amazonía venezolana** (regiones de Amazonas, Bolívar o Delta Amacuro, o microcuencas como Caura, Caroní, Yapacana, Ventuari, Atabapo, etc.).
-  - Si el documento se desvía de estos cuadrantes o de la tecnología del sistema, es **rechazado de forma inmediata** con el mensaje normativo: *"El documento ingresado no está relacionado con la Amazonía venezolana (Amazonas, Bolívar, Delta Amacuro) ni con la tecnología asociada al sistema, por lo que fue rechazado según las políticas operativas."*
+* **Clasificación:** distingue documentos **arbitrados / indexados** de documentos **no arbitrados** (informes de ONG, minutas de campo).
+* **Geofencing:** un modelo de lenguaje decide si el texto se vincula con la Amazonía venezolana (Amazonas, Bolívar, Delta Amacuro, o cuencas como Caura, Caroní, Ventuari o Atabapo). Si no, el documento se rechaza.
 
 ---
 
-### 4. ORQUESTACIÓN VECTORIAL Y CASCADA DE FALLBACK DE MODELOS
+### 4. MEMORIA SEMÁNTICA VECTORIAL
 
-Para garantizar la analítica de datos ininterrumpida, el consumo y la vectorización del sistema utilizan una **estrategia de contingencia en cascada con soporte de hasta 12 modelos de lenguaje simultáneos** administrados de forma dinámica en \`server.ts\`:
-
-1. **Orquestador de Embedding:** Se priorizan llamadas a la API de **Voyage AI** (\`voyage-3\` o similar) para procesar embeddings de alta densidad (768 dimensiones). Si no se encuentra una clave activa en el entorno, el sistema activa el fallback automático a **Gemini text-embedding-004**, guardando logs claros del cambio de orquestador.
-2. **Estrategia de Fallback de 12 Modelos (Gemini):** Para la síntesis RAG y extracción de metadatos, el servidor recorre secuencialmente la siguiente lista ordenada en caso de experimentar límites de tarifa (429) o indisponibilidad temporal (503):
-   - \`gemini-3.7-flash\` (Principal)
-   - \`gemini-3.6-flash\`
-   - \`gemini-3.1-pro-preview\`
-   - \`gemini-3.1-flash-lite\`
-   - \`gemini-2.5-pro\`
-   - \`gemini-2.5-flash\`
-   - \`gemini-2.0-pro-exp-02-05\`
-   - \`gemini-2.0-flash-thinking-exp-01-21\`
-   - \`gemini-2.0-flash\`
-   - \`gemini-1.5-pro\`
-   - \`gemini-1.5-flash\`
-   - \`gemini-flash-latest\` (Último recurso)
+1. **Embeddings:** cada documento de \`environmental_rag_documents\` se vectoriza con **Gemini \`gemini-embedding-001\`** (768 dimensiones, normalizado). Los documentos se insertan sin vector y un proceso del servidor los completa por lotes, respetando la cuota de Gemini; si falta cuota, quedan pendientes para la siguiente pasada.
+2. **Búsqueda:** la función \`match_environmental_documents\` combina en una sola consulta la similitud coseno (índice HNSW de pgvector) y el radio geográfico (\`ST_DWithin\` de PostGIS). Un reranker ordena los resultados por similitud, proximidad, recencia, revisión por pares y severidad.
+3. **Respaldo:** si Gemini no responde, la búsqueda usa coincidencia de texto y distancia geodésica.
+4. **Síntesis:** una cascada de 4 modelos Gemini resume las evidencias; si todos fallan, se devuelve la lista de documentos sin síntesis de IA.
 
 ---
 
-### 5. INTEGRACIÓN EN LA BASE DE DATOS (SUPABASE SCHEMA)
-
-El script SQL generado automatiza la inserción del corpus georreferenciado aplicando funciones espaciales:
+### 5. ESQUEMA EN SUPABASE
 
 \`\`\`sql
--- Estructura de documentos RAG ambientales
-CREATE TABLE IF NOT EXISTS public.environmental_rag_documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    doc_type VARCHAR(50) NOT NULL, -- 'SCIENTIFIC_CORPUS', 'NASA_FIRMS', etc.
-    source_reference_id TEXT,
-    title TEXT NOT NULL,
-    location_name TEXT NOT NULL,
-    sub_basin TEXT NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    geom geometry(Point, 4326), -- Generación automática vía trigger
-    content_chunk TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    embedding vector(768), -- Resuelto por Voyage o Gemini Embeddings
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- supabase/migrations/202610260001_rag_vector_search.sql (extracto)
+alter table public.environmental_rag_documents
+  add column if not exists embedding vector(768),
+  add column if not exists geom geometry(Point, 4326) generated always as (
+    st_setsrid(st_makepoint(longitude, latitude), 4326)) stored;
 
--- Trigger para indexar coordenadas en PostGIS
-CREATE OR REPLACE FUNCTION public.trg_auto_populate_spatial_geom()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL AND NEW.geom IS NULL THEN
-        NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+create index if not exists idx_rag_documents_embedding_hnsw
+  on public.environmental_rag_documents using hnsw (embedding vector_cosine_ops);
 \`\`\`
 
 ---
 
 ### 6. CONCLUSIÓN
 
-La adecuación realizada eleva el componente del **Corpus Científico** a una herramienta táctica real para la Sala GIS de monitoreo. La combinación de control de revisión por pares, filtros geopolíticos estrictos, automatización de embeddings en Voyage, y la robustez del bucle de reintentos con 12 modelos Gemini asegura la disponibilidad continua del sistema, incluso bajo condiciones de alta demanda o fallos de red.`;
+El Corpus Científico y las fuentes satelitales alimentan una misma memoria semántica georreferenciada. La combinación de filtro territorial, clasificación por revisión de pares, búsqueda vectorial con filtro espacial y respaldos ante fallos de la IA permite consultar la evidencia por tema y por lugar, incluso con cuotas limitadas.`;
 
     const blob = new Blob([reportContent], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -836,7 +794,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                   </div>
                   <div className="flex items-center gap-2 text-slate-600">
                     <div className="w-2 h-2 rounded-full bg-slate-800"></div>
-                    <span>Vectorizando resumen con embeddings Voyage e indexando RAG...</span>
+                    <span>Guardando sitios en Supabase y calculando embeddings (Gemini)...</span>
                   </div>
                 </div>
               </div>
@@ -965,7 +923,7 @@ La adecuación realizada eleva el componente del **Corpus Científico** a una he
                 {successLogs.length > 0 && (
                   <div className="bg-teal-950/15 border border-teal-900/40 rounded-xl p-3.5 space-y-2">
                     <span className="text-xs text-teal-400 block font-bold">
-                      Detalles de Sincronización Vectorial RAG (Supabase & Voyage)
+                      Detalles de sincronización RAG (Supabase y embeddings Gemini)
                     </span>
                     <div className="font-mono text-[11px] sm:text-xs text-teal-300/90 bg-slate-950/80 p-3 rounded-lg border border-teal-900/20 max-h-28 overflow-y-auto space-y-1">
                       {successLogs.map((log, idx) => (

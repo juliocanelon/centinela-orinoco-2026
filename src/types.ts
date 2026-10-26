@@ -174,7 +174,7 @@ export interface LiveIngestionItem {
   attributes: Record<string, any>;
 }
 
-/** Documento recuperado por coincidencia de texto (la tabla no tiene embeddings). */
+/** Documento recuperado de la memoria semántica (vectorial, o por texto como respaldo). */
 export interface VectorRagSearchResult {
   id: string;
   source: string;
@@ -183,7 +183,8 @@ export interface VectorRagSearchResult {
   latitude: number | null;
   longitude: number | null;
   distanceKmFromQueryTarget?: number;
-  relevanceScore: number; // fracción de términos de la consulta presentes (0-1)
+  relevanceScore: number; // vectorial: puntaje del reranker; texto: fracción de términos presentes (0-1)
+  similarity?: number; // similitud coseno (solo búsqueda vectorial)
   contentSnippet: string;
   createdAt: string;
 }
@@ -192,6 +193,8 @@ export interface RagIntelligenceSynthesis {
   query: string;
   timestamp: string;
   searchMethod?: string;
+  searchMode?: 'vector' | 'text-fallback';
+  fallbackReason?: string;
   terms?: string[];
   engine?: string;
   matchesFoundCount: number;
@@ -442,6 +445,17 @@ export interface SchedulerStatusResponse {
   recentLogs: SchedulerLogEntry[];
   totalSatelliteEventsIngested: number;
   vectorRagDocsCount: number;
+  /** Vectorización de la memoria semántica (worker de embeddings del servidor). */
+  ragEmbeddings?: {
+    running: boolean;
+    model: string;
+    embeddedDocs: number | null;
+    pendingDocs: number | null;
+    pausedUntil: string | null;
+    lastRunAt: string | null;
+    lastRunEmbedded: number;
+    lastError: string | null;
+  };
 }
 
 // === Zone Predictive & Perceptive Analytics Types ===

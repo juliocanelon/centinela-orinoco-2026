@@ -397,7 +397,7 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
                 className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-sky-400/40"
               >
                 <Sparkles className="w-3.5 h-3.5 text-sky-200 animate-pulse" />
-                <span>Abrir Modal Completo (RAG + 10 Modelos)</span>
+                <span>Abrir Modal Completo (datos + cascada IA)</span>
               </button>
               
               {onNavigateToMap && (
@@ -507,7 +507,7 @@ export const AIIntelligenceView: React.FC<AIIntelligenceViewProps> = ({
               className="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-sky-950/50 transition-all flex items-center justify-center gap-2 cursor-pointer border border-sky-400/30"
             >
               <Sparkles className="w-4 h-4 text-sky-200 animate-pulse" />
-              <span>Analítica de la Zona (RAG + 10 Modelos)</span>
+              <span>Analítica de la Zona (datos + cascada IA)</span>
             </button>
             <button
               onClick={() => handleAnalyzeZone(selectedZone, activeEventContext?.zoneName === selectedZone ? activeEventContext : undefined)}

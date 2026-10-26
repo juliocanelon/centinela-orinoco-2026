@@ -111,7 +111,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                   Analítica de la Zona
                 </h2>
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-full">
-                  RAG Semántico + Cascada 10 Modelos
+                  Datos Supabase + Cascada de modelos
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -185,7 +185,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                 Ejecutando Analítica Predictiva y Perceptiva
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Consultando en Supabase datos de radar Sentinel-1 SAR, óptico Sentinel-2, anomalías térmicas NASA FIRMS y el corpus científico de hidrología con rotación de hasta 10 modelos de IA...
+                Consultando en Supabase datos de radar Sentinel-1 SAR, óptico Sentinel-2, anomalías térmicas NASA FIRMS y el corpus científico de hidrología con rotación entre los modelos de IA disponibles...
               </p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-sky-400/90 font-mono bg-sky-950/40 px-3 py-1.5 rounded-full border border-sky-800/40">
@@ -296,7 +296,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                   }`}
                 >
                   <Cpu className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Pool de 10 Modelos IA</span>
+                  <span>Pool de modelos IA</span>
                   <span className="px-1.5 py-0.5 text-[9.5px] rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">
                     10
                   </span>
@@ -556,7 +556,7 @@ export const ZoneAnalyticsModal: React.FC<ZoneAnalyticsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-semibold text-white flex items-center gap-1.5">
                         <Cpu className="w-4 h-4 text-sky-400" />
-                        Pool de Alta Disponibilidad: Cascada de hasta 10 Modelos de IA
+                        Pool de alta disponibilidad: cascada de modelos de IA
                       </h3>
                       <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
                         Servicio 100% Disponible

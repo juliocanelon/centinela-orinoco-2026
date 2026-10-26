@@ -10,9 +10,11 @@
     "mongo:ping": "tsx server/scripts/pingMongo.ts",
     "mongo:init": "tsx server/scripts/initializeMongo.ts",
     "mongo:verify": "tsx server/scripts/verifyMongo.ts",
+    "rag:embed": "tsx server/scripts/embedPending.ts",
     "clean": "rm -rf dist server.js",
     "theme": "node scripts/generate-theme-css.mjs",
-    "lint": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit"
+    "lint": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

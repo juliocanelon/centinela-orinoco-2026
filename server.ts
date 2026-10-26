@@ -6,7 +6,9 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { PDFParse } from "pdf-parse";
 import { SatelliteAutomatedScheduler, SchedulerCache, getSupabaseServerClient } from "./server/satelliteScheduler";
-import { RagMatch, searchRagDocuments, supabaseCandidateFetcher } from "./server/ragSearch";
+import { RagMatch, hybridSearch, supabaseCandidateFetcher, supabaseVectorMatcher } from "./server/ragSearch";
+import { EmbeddingWorker } from "./server/embeddingWorker";
+import { embedTexts } from "./server/embeddings";
 import { fetchWithTimeout } from "./server/ingestion/common";
 import { DENSITY_PERIODS_DAYS, computeHotspotDensity } from "./server/hotspotDensity";
 import { SATELLITE_API_CONNECTIONS } from "./src/data/satelliteApiDirectory";
@@ -47,6 +49,9 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 // Resilient model invocation with automatic retry and model fallback
+/** Columnas de environmental_rag_documents sin el embedding (768 valores por fila). */
+const RAG_DOCUMENT_COLUMNS = "id,doc_type,source_reference_id,title,location_name,sub_basin,latitude,longitude,content_chunk,metadata,created_at,updated_at";
+
 async function generateContentWithFallback(
   prompt: string,
   systemInstruction?: string,
@@ -827,6 +832,12 @@ DO UPDATE SET
   // --- AUTOMATED SATELLITE SCHEDULER ENGINE ---
   const scheduler = new SatelliteAutomatedScheduler();
 
+  // Vectorización de la memoria semántica: los documentos se insertan sin embedding y este
+  // worker los completa por lotes (al arrancar, tras cada ingesta y al ingresar corpus).
+  const embeddingWorker = new EmbeddingWorker(getSupabaseServerClient, () => aiModelCascadeManager.getGeminiClient());
+  scheduler.onRagDocumentsInserted = () => { void embeddingWorker.run(); };
+  void scheduler.whenReady().then(() => embeddingWorker.run());
+
   /** Espera mínima entre ejecuciones manuales sin token, para no saturar las fuentes ni el Disk IO de Supabase. */
   const MANUAL_TRIGGER_COOLDOWN_MS = 15 * 60 * 1000;
 
@@ -858,7 +869,7 @@ DO UPDATE SET
 
   // Scheduler Status & Metrics
   app.get("/api/scheduler/status", (req, res) => {
-    return res.json(scheduler.getStatus());
+    return res.json({ ...scheduler.getStatus(), ragEmbeddings: embeddingWorker.getStats() });
   });
 
   // Ejecución manual de una tarea
@@ -1500,7 +1511,7 @@ DO UPDATE SET
 
     const { data: records, error } = await supabaseClient
       .from("environmental_rag_documents")
-      .select("*")
+      .select(RAG_DOCUMENT_COLUMNS)
       .eq("doc_type", "SCIENTIFIC_CORPUS");
 
     if (error || !records || records.length === 0) {
@@ -1637,7 +1648,7 @@ DO UPDATE SET
       if (supabase) {
         const { data: records, error } = await supabase
           .from("environmental_rag_documents")
-          .select("*")
+          .select(RAG_DOCUMENT_COLUMNS)
           .eq("doc_type", "SCIENTIFIC_CORPUS");
 
         if (!error && records && records.length > 0) {
@@ -2204,7 +2215,7 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
         try {
           const { data: dbRecords } = await supabase
             .from("environmental_rag_documents")
-            .select("*")
+            .select(RAG_DOCUMENT_COLUMNS)
             .eq("doc_type", "SCIENTIFIC_CORPUS");
 
           if (dbRecords && dbRecords.length > 0) {
@@ -2304,13 +2315,9 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
         tags: Array.from(new Set(parsedResult.tags || ["Amazonía", "Corpus"]))
       };
 
-      // 4. Automated Vectorization / embedding and RAG Sync to Supabase
+      // 4. Guardar un documento RAG por sitio; el embedding lo calcula después el worker
       let vectorizationLogs: string[] = [];
       let syncStatus = "MEMORIA_LOCAL_BUFFER";
-
-      const hasVoyageKey = !!process.env.VOYAGE_API_KEY;
-      vectorizationLogs.push(`[Voyage API] Comprobando disponibilidad de llave de embeddings... ${hasVoyageKey ? 'Disponible' : 'No disponible. Usando fallback integrado de Gemini embeddings'}`);
-      vectorizationLogs.push(`[Embedding] Generando vector de 768-D para el resumen ejecutivo validado y los sitios de muestreo`);
 
       if (supabase) {
         try {
@@ -2345,7 +2352,6 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
                 ethnic_territory: site.ethnicTerritory,
                 sample_type: site.sampleType,
                 tags: newArticle.tags,
-                orchestrator: hasVoyageKey ? "Voyage-Embeddings-3" : "Gemini-Text-Embedding-004",
                 timestamp: new Date().toISOString()
               }
             }]);
@@ -2355,7 +2361,11 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
             }
           }
           syncStatus = "SUPABASE_RAG_SYNCHRONIZED";
-          vectorizationLogs.push(`[Supabase] Inserción semántica y vectorial completada de manera exitosa en public.environmental_rag_documents`);
+          vectorizationLogs.push(`[Supabase] ${newArticle.investigationSites.length} documentos guardados en public.environmental_rag_documents.`);
+          const embedResult = await embeddingWorker.run();
+          vectorizationLogs.push(embedResult && !embedResult.stoppedReason
+            ? `[Embeddings] Vectorizados con gemini-embedding-001 (768 dimensiones). Pendientes en la base: ${embedResult.pending ?? "?"}.`
+            : `[Embeddings] Vectorización pendiente: ${embedResult?.stoppedReason || "el worker está procesando otro lote; se completará en la próxima pasada."}`);
         } catch (dbErr: any) {
           console.error("[Corpus Sync] Error Supabase:", dbErr);
           vectorizationLogs.push(`[Supabase Fallback] Error de red Supabase. Datos agregados temporalmente en el buffer local del Centinela.`);
@@ -2419,12 +2429,18 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
 
     let terms: string[] = [];
     let matches: RagMatch[] = [];
+    let method: "vector" | "text-fallback" = "text-fallback";
+    let fallbackReason: string | undefined;
     try {
-      ({ terms, matches } = await searchRagDocuments(supabaseCandidateFetcher(supabase), {
+      ({ terms, matches, method, fallbackReason } = await hybridSearch({
+        embedQuery: async (q) => (await embedTexts(aiModelCascadeManager.getGeminiClient(), [q], "RETRIEVAL_QUERY", { retries: 1 }))[0],
+        matchDocuments: supabaseVectorMatcher(supabase),
+        fetchCandidates: supabaseCandidateFetcher(supabase),
+      }, {
         query: String(query || ""),
-        filterLat: filterLat === undefined ? undefined : Number(filterLat),
-        filterLng: filterLng === undefined ? undefined : Number(filterLng),
-        radiusKm: radiusKm === undefined ? undefined : Number(radiusKm),
+        filterLat: filterLat === undefined || filterLat === null ? undefined : Number(filterLat),
+        filterLng: filterLng === undefined || filterLng === null ? undefined : Number(filterLng),
+        radiusKm: radiusKm === undefined || radiusKm === null ? undefined : Number(radiusKm),
         maxMatches: maxMatches === undefined ? undefined : Number(maxMatches),
       }));
     } catch (err: any) {
@@ -2432,7 +2448,7 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
     }
 
     const evidence = matches.map((m, i) =>
-      `${i + 1}. [${m.source}] ${m.title} (${m.location}${m.distanceKmFromQueryTarget === undefined ? "" : `, a ${m.distanceKmFromQueryTarget} km`}): ${m.contentSnippet}`
+      `${i + 1}. [${m.source}] ${m.title} (${m.location}${m.distanceKmFromQueryTarget === undefined ? "" : `, a ${m.distanceKmFromQueryTarget} km`}${m.similarity === undefined ? "" : `, similitud ${m.similarity}`}): ${m.contentSnippet}`
     ).join("\n");
 
     const top = matches[0];
@@ -2449,7 +2465,7 @@ Devuelve únicamente el bloque JSON solicitado con los datos auténticos del aut
     let engine = "gemini";
     if (matches.length === 0) {
       engine = "none";
-      synthesisMarkdown = `No se encontraron documentos que contengan los términos: ${terms.join(", ") || "(consulta vacía)"}.`;
+      synthesisMarkdown = `No se encontraron documentos relacionados con la consulta (ni por similitud semántica ni por los términos: ${terms.join(", ") || "consulta vacía"}).`;
     } else {
       const prompt = `Eres el analista de "Centinela Orinoco". Resume en español, en Markdown claro y sin LaTeX, lo que muestran ÚNICAMENTE estas evidencias recuperadas de la base de datos. No inventes cifras, lugares ni mediciones que no estén en ellas. Si una conclusión requiere verificación de campo, dilo. Turbidez, pH, conductividad y mercurio no se miden en esta plataforma.
 
@@ -2471,7 +2487,11 @@ Estructura: 1) Hallazgos, 2) Limitaciones de los datos, 3) Siguiente paso recome
     return res.json({
       query: query || "",
       timestamp: new Date().toISOString(),
-      searchMethod: "Coincidencia de texto sobre environmental_rag_documents (sin embeddings) + distancia geodésica",
+      searchMethod: method === "vector"
+        ? "Similitud coseno (pgvector, gemini-embedding-001) + filtro espacial PostGIS + reranker compuesto"
+        : "Coincidencia de texto + distancia geodésica (respaldo)",
+      searchMode: method,
+      fallbackReason,
       terms,
       engine,
       matchesFoundCount: matches.length,
@@ -2484,7 +2504,7 @@ Estructura: 1) Hallazgos, 2) Limitaciones de los datos, 3) Siguiente paso recome
     });
   });
 
-  // Endpoints para el Pool de 10 Modelos de IA con gestión de tokens y cuotas
+  // Endpoints para el pool de modelos de IA con gestión de tokens y cuotas
   app.get("/api/ai/models-pool", (req, res) => {
     res.json({
       activeModel: aiModelCascadeManager.getActiveModel(),
@@ -2495,12 +2515,12 @@ Estructura: 1) Hallazgos, 2) Limitaciones de los datos, 3) Siguiente paso recome
   app.post("/api/ai/models-pool/reset", (req, res) => {
     const updatedPool = aiModelCascadeManager.resetPoolQuotas();
     res.json({
-      message: "Pool de 10 modelos reseteado a modelo 0 exitosamente.",
+      message: "Pool de modelos reseteado al modelo 0 exitosamente.",
       pool: updatedPool,
     });
   });
 
-  // AI Endpoint: Analítica Predictiva y Perceptiva de la Zona (RAG Semántico Supabase + Cascada de hasta 10 Modelos)
+  // AI Endpoint: Analítica Predictiva y Perceptiva de la Zona (datos de Supabase + cascada de modelos)
   app.post("/api/ai/zone-predictive-analytics", async (req, res) => {
     await scheduler.whenReady();
     try {
