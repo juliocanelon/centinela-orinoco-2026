@@ -307,6 +307,9 @@ const MANUAL_ARTICLES: ManualArticle[] = [
     section: 'Análisis',
     title: 'Inteligencia IA',
     summary: 'Analiza zonas, contexto y documentos con ayuda de un asistente de IA.',
+    imageUrl: '/manual/images/inteligencia-ia.png',
+    imageAlt: 'Vista Inteligencia IA con cinco sectores de alta prioridad, botones de análisis y resumen, y chat táctico.',
+    imageCaption: 'Selecciona un sector para contextualizar la consulta; Analítica de la Zona inicia el análisis y el panel derecho permite escribir al asistente.',
     sections: [
       {
         heading: 'Qué permite',
