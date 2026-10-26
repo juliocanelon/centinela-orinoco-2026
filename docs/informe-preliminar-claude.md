@@ -706,6 +706,8 @@ Los pesos son iniciales y deben calibrarse con un conjunto etiquetado. Sin punto
 
 ## III.6 Flujo dinámico automatizado
 
+En el prototipo, el flujo automático ya opera así: el scheduler ejecuta la ingesta de cada fuente con su propia cadencia, la reintenta en la siguiente ejecución si falla y, cuando entran documentos nuevos, dispara su vectorización. Agentes de IA deciden qué documentos del corpus son pertinentes para la región y qué modelo de lenguaje usar según la cuota disponible. Las reglas de alerta de la Tabla T4 completan el diseño: requieren el análisis de píxeles satelitales y se ejecutarían en un DAG de Apache Airflow.
+
 **Orquestador actual [Implementado].** El scheduler propio ejecuta tareas por constelación y expone:
 
 - estado: `GET /api/scheduler/status`;
@@ -831,6 +833,7 @@ flowchart LR
 - **Cascada LLM con respaldo determinístico.** Descrita en §III.5.
 - **Respuesta de contingencia del RAG.** Cuando el LLM falla, se devuelve la lista de documentos encontrados sin síntesis de IA.
 - **Idempotencia** (`Idempotency-Key`) en la elevación de incidentes. Permite reintentos seguros tras cortes.
+- **Vectorización tolerante a cuota.** Si se agota la cuota de Gemini, el worker de embeddings se pausa y retoma solo al renovarse, sin detener la ingesta.
 
 **Diseño de borde:**
 
