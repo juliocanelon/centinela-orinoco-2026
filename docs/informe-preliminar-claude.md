@@ -723,7 +723,7 @@ El modo acelerado de demostración se eliminó; el scheduler opera solo con la c
 - análisis predictivo por zona (`/api/ai/zone-predictive-analytics`, `/api/ai/analyze-zone`);
 - chat operativo (`/api/ai/chat`).
 
-**Tabla T4. Reglas de decisión automatizada [Diseño; umbrales iniciales a calibrar]**
+**Tabla T4. Reglas de decisión automatizada [Diseño; no implementadas; umbrales iniciales a calibrar]**
 
 | # | Condición | Acción | Responsable |
 |---|---|---|---|
@@ -745,13 +745,15 @@ flowchart LR
   br -->|R1-R4| al[create_incident + bulletin + notify]
   br -->|R5| lg[log_only]
 ```
-*Figura F12. DAG equivalente en Apache Airflow. Elaboración propia.*
+*Figura F12. DAG equivalente en Apache Airflow [Diseño]. Elaboración propia.*
 
 **Criterios de reintento y fallo:**
 
-- Cada tarea de ingesta tiene 3 reintentos con espera exponencial (1, 2 y 4 min).
-- Un fallo de ingesta no bloquea las demás ramas (`trigger_rule="all_done"` en `correlate_spatial`).
-- Si todos los LLM fallan, el boletín se genera con la plantilla determinística.
+- **[Diseño]** En el DAG, cada tarea de ingesta tendría 3 reintentos con espera exponencial (1, 2 y 4 min), y un fallo de ingesta no bloquearía las demás ramas (`trigger_rule="all_done"` en `correlate_spatial`).
+- **[Implementado]** El scheduler actual ejecuta cada fuente como una tarea independiente: si una falla, la ejecución queda como `ERROR` o `PARTIAL` en `ingestion_runs` y la tarea se reintenta en su siguiente ejecución programada, sin afectar a las demás. Como las fuentes publican ventanas de varios días, esa ejecución recupera lo que faltó.
+- **[Implementado]** La vectorización reintenta ante límites de cuota por minuto, respetando la espera que indica Gemini, y se pausa si se agota la cuota diaria.
+- **[Implementado]** Si todos los LLM fallan, el boletín se genera con la plantilla determinística.
+- **[Diseño]** Las reglas R1 a R5 aún no se ejecutan: R1 a R3 requieren el análisis de píxeles Sentinel.
 
 ## III.7 Capa de consumo y gobernanza
 
