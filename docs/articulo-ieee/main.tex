@@ -252,6 +252,38 @@ En los puestos de Guardería, un nodo de borde (Raspberry Pi o Jetson, con panel
 \subsection{Gobernanza y privacidad}
 La denuncia es anónima por defecto, y una restricción de la base de datos impide guardar nombre o contacto cuando lo es. Los datos de contacto nunca salen de PostgreSQL, los registros no contienen datos personales y la seguridad a nivel de fila (RLS) restringe el acceso al \emph{backend}. El diseño agrega control de acceso por roles (administrador, operador, analista, comunidad), generalización de coordenadas de comunidades a 0,01° (unos 1,1~km), eliminación de metadatos EXIF y consentimiento comunitario previo según los principios CARE~\cite{carroll2020}. El hash SHA-256 de cada evidencia puede registrarse en una cadena de bloques permisionada para demostrar ante las autoridades que no fue alterada.
 
+\subsection{Despliegue objetivo en la nube}
+El prototipo corre hoy en servicios gestionados (Cloud Run, Supabase y MongoDB Atlas) sin contenedores propios. Para producción institucional se propone una arquitectura en AWS que conserva los mismos flujos funcionales (Tabla~\ref{tab:aws}). La API se empaqueta en contenedores sobre Amazon ECS con Fargate y escala de forma horizontal; los conectores de ingesta pasan a funciones AWS Lambda disparadas por Amazon EventBridge Scheduler, y AWS Step Functions orquesta los reintentos y las dependencias que hoy resuelve el \emph{scheduler} en proceso. Las credenciales de las fuentes se guardan en AWS Secrets Manager, los objetos y volúmenes se cifran con AWS KMS, y Amazon CloudWatch y AWS CloudTrail registran métricas, alarmas y auditoría. En los puestos de Guardería, AWS IoT Greengrass ejecuta el nodo de borde con almacenamiento local y publica por MQTT hacia AWS IoT Core cuando hay enlace.
+
+La memoria semántica se mantiene en PostgreSQL: Amazon Aurora PostgreSQL admite PostGIS y pgvector, de modo que la búsqueda vectorial y el filtro espacial siguen resolviéndose en una sola consulta. Una base vectorial aparte, como Amazon OpenSearch, solo se justificaría si el volumen de documentos superara lo que el índice HNSW de PostgreSQL maneja con la latencia requerida.
+
+\begin{table*}[!t]
+\caption{Correspondencia entre el prototipo y la arquitectura objetivo en AWS}
+\label{tab:aws}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{42mm} p{48mm} p{78mm}@{}}
+\toprule
+Componente actual & Servicio AWS objetivo & Función \\
+\midrule
+SPA React + Vite & Amazon CloudFront + S3 & Distribución de la interfaz web con TLS \\
+Sin autenticación de usuarios & Amazon Cognito + AWS WAF & Identidad, RBAC por rol y filtrado de tráfico en el borde \\
+API Express (Node.js) & Amazon API Gateway + ECS Fargate & API REST en contenedores con escalado horizontal \\
+Scheduler en proceso & EventBridge Scheduler + AWS Lambda & Ejecución periódica de los conectores FIRMS, STAC/OData, INAMEH y corpus \\
+Reintentos en el scheduler & AWS Step Functions & Orquestación con dependencias, reintentos y control de ejecución \\
+Supabase PostgreSQL + PostGIS + pgvector & Amazon Aurora PostgreSQL & Datos relacionales, espaciales y vectoriales en un mismo motor \\
+Supabase Storage & Amazon S3 & Evidencias privadas y zonas Bronze, Silver y Gold del Lakehouse \\
+(no implementado) & AWS Glue Data Catalog + Amazon Athena & Catálogo y consulta analítica del Lakehouse \\
+MongoDB Atlas & Amazon DocumentDB & Documentos de evidencia y auditoría de incidentes \\
+Google Gemini (LLM y embeddings) & Gemini o Amazon Bedrock & Síntesis y embeddings; un cambio de modelo exige revectorizar \\
+Nodo de borde (diseño) & AWS IoT Greengrass + IoT Core & Procesamiento local sin conexión y mensajería MQTT \\
+Variables de entorno & Secrets Manager, KMS, IAM & Credenciales, cifrado y privilegio mínimo \\
+Registros del servidor & CloudWatch + CloudTrail & Métricas, alarmas, trazas y auditoría \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
 % ---------------------------------------------------------------------------
 \section{Implementación del prototipo}\label{sec:impl}
 
@@ -350,7 +382,7 @@ El umbral de similitud y los pesos del reranker no están calibrados, y la cuota
 
 Centinela Orinoco muestra que es posible atacar la asimetría de información sobre la minería ilegal en el sur de Venezuela con datos abiertos y software libre. El prototipo integra hoy cinco fuentes satelitales e hidrológicas reales, denuncias comunitarias anónimas y un corpus científico filtrado por pertinencia territorial en una memoria semántica vectorial y georreferenciada, con persistencia políglota consistente y degradación controlada ante fallos de red, de base de datos o de los modelos de lenguaje.
 
-El trabajo inmediato es calibrar el umbral de similitud y los pesos del reranker con consultas etiquetadas; extender las pruebas a la saga y a los datos corruptos o vacíos y agregar la contenedorización con Docker Compose; y pasar del catálogo a los píxeles para calcular retrodispersión, NDVI y turbidez. A mediano plazo se prevé migrar la ingesta a Kafka y el histórico a Delta Lake con Spark, orquestar las reglas con Airflow, entrenar modelos de detección con datos etiquetados de la región, construir un gemelo digital de la cuenca del Caroní~\cite{le2024} y validar el sistema en campo junto con la Guardería Ambiental y las comunidades.
+El trabajo inmediato es calibrar el umbral de similitud y los pesos del reranker con consultas etiquetadas; extender las pruebas a la saga y a los datos corruptos o vacíos; contenedorizar la API como primer paso hacia la arquitectura objetivo en AWS (Tabla~\ref{tab:aws}); y pasar del catálogo a los píxeles para calcular retrodispersión, NDVI y turbidez. A mediano plazo se prevé migrar la ingesta a Kafka y el histórico a Delta Lake con Spark, orquestar las reglas con Airflow, entrenar modelos de detección con datos etiquetados de la región, construir un gemelo digital de la cuenca del Caroní~\cite{le2024} y validar el sistema en campo junto con la Guardería Ambiental y las comunidades.
 
 \section*{Agradecimientos}
 Los autores agradecen a la Prof.\ Livia Borjas, de la Maestría en Tecnologías de la Información de la UNEG, por la orientación en el marco de la iniciativa AmazonIA~4.0.
