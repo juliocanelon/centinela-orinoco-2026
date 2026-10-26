@@ -99,6 +99,11 @@ export class AIModelCascadeManager {
     }
   }
 
+  /** Cliente compartido de Gemini (misma clave y encabezados que la cascada); null sin GEMINI_API_KEY. */
+  public getGeminiClient(): GoogleGenAI | null {
+    return this.getClient();
+  }
+
   private getClient(): GoogleGenAI | null {
     if (!process.env.GEMINI_API_KEY) {
       return null;

@@ -194,6 +194,8 @@ export class SatelliteAutomatedScheduler {
   private timer: NodeJS.Timeout | null = null;
   private ragDocsCount = 0;
   private initialized: Promise<void>;
+  /** Se invoca tras una ejecución que insertó documentos RAG (p. ej. para vectorizarlos). */
+  public onRagDocumentsInserted: (() => void) | null = null;
 
   public cache: SchedulerCache = {
     hotspots: [],
@@ -441,6 +443,7 @@ export class SatelliteAutomatedScheduler {
     if (outcome.inserted > 0) {
       await this.refreshCache(store).catch(err => console.warn("[Scheduler] Error recargando caché:", err?.message || err));
     }
+    if (outcome.ragInserted > 0) this.onRagDocumentsInserted?.();
 
     return { success: !failed, message, received: outcome.received, inserted: outcome.inserted, skipped: outcome.skipped, ragInserted: outcome.ragInserted };
   }

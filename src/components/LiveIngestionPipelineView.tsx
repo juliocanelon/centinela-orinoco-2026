@@ -458,7 +458,7 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
               <div>
                 <h3 className="font-bold text-white text-base flex items-center gap-2"><Search className="w-4 h-4 text-sky-400" />Búsqueda en documentos almacenados</h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Busca por coincidencia de texto en environmental_rag_documents (focos FIRMS relevantes, boletines INAMEH, corpus e incidentes) y resume con IA solo lo encontrado. La tabla no tiene embeddings, así que no hay similitud vectorial.
+                  Busca por similitud semántica (embeddings Gemini en pgvector) y, si se indica un punto, dentro de un radio con PostGIS, sobre environmental_rag_documents: focos FIRMS relevantes, boletines INAMEH, corpus e incidentes. Resume con IA solo lo encontrado. Si los embeddings no están disponibles, usa coincidencia de texto.
                 </p>
               </div>
               <textarea
@@ -502,7 +502,9 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
             {ragResult && (
               <div className="space-y-4">
                 <div className="text-xs text-slate-400 font-mono">
-                  {ragResult.matchesFoundCount} documentos · términos: {(ragResult.terms || []).join(', ')} · {ragResult.searchMethod}
+                  {ragResult.matchesFoundCount} documentos · {ragResult.searchMethod}
+                  {ragResult.searchMode === 'text-fallback' && ` · términos: ${(ragResult.terms || []).join(', ')}`}
+                  {ragResult.fallbackReason && <span className="block text-amber-400">{ragResult.fallbackReason}</span>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {ragResult.topMatches.map((match) => (
@@ -510,7 +512,10 @@ export const LiveIngestionPipelineView: React.FC<LiveIngestionPipelineViewProps>
                       <div className="flex items-center justify-between gap-2">
                         <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300 border border-slate-700">{match.source}</span>
                         <span className="text-[10px] font-mono text-sky-400">
-                          coincidencia {Math.round(match.relevanceScore * 100)}%{match.distanceKmFromQueryTarget !== undefined ? ` · ${match.distanceKmFromQueryTarget} km` : ''}
+                          {match.similarity !== undefined
+                            ? `similitud ${Math.round(match.similarity * 100)}% · puntaje ${Math.round(match.relevanceScore * 100)}`
+                            : `coincidencia ${Math.round(match.relevanceScore * 100)}%`}
+                          {match.distanceKmFromQueryTarget !== undefined ? ` · ${match.distanceKmFromQueryTarget} km` : ''}
                         </span>
                       </div>
                       <h4 className="text-sm font-bold text-white">{match.title}</h4>

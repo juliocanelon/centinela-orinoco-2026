@@ -263,6 +263,15 @@ ${(schedulerStatus?.activeTasks || []).map(t => `| ${t.name} | ${t.agency} | ${t
               <span className="text-slate-500 mr-1">Documentos RAG:</span>
               <span className="font-bold text-violet-400">{schedulerStatus?.vectorRagDocsCount || 0} docs</span>
             </div>
+            {schedulerStatus?.ragEmbeddings && (
+              <div title={schedulerStatus.ragEmbeddings.lastError || `Modelo ${schedulerStatus.ragEmbeddings.model}`}>
+                <span className="text-slate-500 mr-1">Vectorizados:</span>
+                <span className="font-bold text-violet-400">{schedulerStatus.ragEmbeddings.embeddedDocs ?? '—'}</span>
+                <span className="text-slate-500 ml-1">
+                  · pendientes {schedulerStatus.ragEmbeddings.pendingDocs ?? '—'}{schedulerStatus.ragEmbeddings.running ? ' (procesando)' : ''}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -317,7 +317,7 @@ export const SATELLITE_API_CONNECTIONS: SatelliteApiConnection[] = [
     authType: 'INTERNAL_PROXY',
     availability: 'ACTIVE',
     availabilityNote: 'Los disparadores requieren el encabezado x-ingestion-token (INGESTION_TRIGGER_TOKEN).',
-    description: 'Rutas internas que protegen las credenciales, consumen las fuentes de este directorio e insertan en Supabase solo registros nuevos (claves únicas). La búsqueda semántica por embeddings (pgvector) aún no está implementada: environmental_rag_documents no tiene columna de embeddings.',
+    description: 'Rutas internas que protegen las credenciales, consumen las fuentes de este directorio e insertan en Supabase solo registros nuevos (claves únicas). Los documentos de environmental_rag_documents se vectorizan con Gemini (gemini-embedding-001, 768 dimensiones) y se consultan con la RPC match_environmental_documents (pgvector + PostGIS).',
     payloadFormat: 'JSON',
     sampleCurlCommand: 'curl -s -X POST -H "x-ingestion-token: $INGESTION_TRIGGER_TOKEN" "http://localhost:3000/api/scheduler/trigger/NASA_FIRMS"',
     queryParameters: [
