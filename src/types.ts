@@ -451,6 +451,7 @@ export interface SchedulerStatusResponse {
     model: string;
     embeddedDocs: number | null;
     pendingDocs: number | null;
+    pausedUntil: string | null;
     lastRunAt: string | null;
     lastRunEmbedded: number;
     lastError: string | null;

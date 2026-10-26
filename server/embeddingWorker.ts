@@ -29,6 +29,8 @@ export interface EmbeddingRunResult {
   failed: number;
   pending: number | null;
   stoppedReason?: string;
+  /** Gemini pidió esperar (cuota diaria): no conviene reintentar antes. */
+  retryAfterMs?: number | null;
 }
 
 export interface EmbeddingWorkerStats {
@@ -36,6 +38,8 @@ export interface EmbeddingWorkerStats {
   model: string;
   embeddedDocs: number | null;
   pendingDocs: number | null;
+  /** Pausado hasta esta hora por cuota diaria agotada. */
+  pausedUntil: string | null;
   lastRunAt: string | null;
   lastRunEmbedded: number;
   lastError: string | null;
@@ -69,6 +73,7 @@ export async function embedPendingDocuments(
   let embedded = 0;
   let failed = 0;
   let stoppedReason: string | undefined;
+  let retryAfterMs: number | null = null;
 
   for (let batch = 0; batch < maxBatches; batch++) {
     const { data, error } = await client
@@ -89,6 +94,7 @@ export async function embedPendingDocuments(
       vectors = await embedTexts(embeddingClient, docs.map(documentEmbeddingText), "RETRIEVAL_DOCUMENT");
     } catch (err: any) {
       stoppedReason = err instanceof EmbeddingUnavailableError ? err.message : `Error de embeddings: ${err?.message || err}`;
+      retryAfterMs = err instanceof EmbeddingUnavailableError ? err.retryAfterMs : null;
       break;
     }
 
@@ -113,7 +119,7 @@ export async function embedPendingDocuments(
     await sleep(pauseMs);
   }
 
-  return { embedded, failed, pending: await countDocs(client, true), stoppedReason };
+  return { embedded, failed, pending: await countDocs(client, true), stoppedReason, retryAfterMs };
 }
 
 /** Ejecuta embedPendingDocuments sin solaparse; un pedido durante una pasada agenda otra al final. */
@@ -125,6 +131,7 @@ export class EmbeddingWorker {
     model: EMBEDDING_MODEL,
     embeddedDocs: null,
     pendingDocs: null,
+    pausedUntil: null,
     lastRunAt: null,
     lastRunEmbedded: 0,
     lastError: null,
@@ -153,6 +160,7 @@ export class EmbeddingWorker {
       this.rerunRequested = true;
       return null;
     }
+    if (this.stats.pausedUntil && Date.now() < Date.parse(this.stats.pausedUntil)) return null;
     const client = this.getSupabase();
     if (!client) return null;
 
@@ -165,6 +173,7 @@ export class EmbeddingWorker {
         this.stats.lastRunAt = new Date().toISOString();
         this.stats.lastRunEmbedded = result.embedded;
         this.stats.lastError = result.stoppedReason || null;
+        this.stats.pausedUntil = result.retryAfterMs ? new Date(Date.now() + result.retryAfterMs).toISOString() : null;
         if (result.embedded > 0 || result.stoppedReason) {
           console.log(`[Embeddings] ${result.embedded} documentos vectorizados, ${result.pending ?? "?"} pendientes.${result.stoppedReason ? ` Detenido: ${result.stoppedReason}` : ""}`);
         }

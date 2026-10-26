@@ -16,7 +16,8 @@ export type EmbeddingTaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
 export type EmbeddingClient = Pick<GoogleGenAI, "models">;
 
 export class EmbeddingUnavailableError extends Error {
-  constructor(message: string) {
+  /** Si Gemini agotó la cuota del día, cuánto falta para que se renueve. */
+  constructor(message: string, public readonly retryAfterMs: number | null = null) {
     super(message);
     this.name = "EmbeddingUnavailableError";
   }
@@ -52,7 +53,19 @@ export function documentEmbeddingText(doc: {
     .slice(0, MAX_EMBEDDING_TEXT_CHARS);
 }
 
+/** Cuota diaria agotada (el plan gratuito permite 1.000 textos por día): no tiene sentido reintentar. */
+export function isDailyQuotaError(err: any): boolean {
+  return /PerDay|per day/i.test(String(err?.message || ""));
+}
+
+/** Segundos de espera que indica Gemini en retryDelay ("21510s"), sin tope. */
+export function quotaRetryAfterMs(err: any): number | null {
+  const match = String(err?.message || "").match(/"retryDelay":\s*"(\d+)s"/i);
+  return match ? Number(match[1]) * 1000 : null;
+}
+
 const isRetryable = (err: any): boolean => {
+  if (isDailyQuotaError(err)) return false;
   const status = Number(err?.status ?? err?.code ?? err?.response?.status);
   const msg = String(err?.message || "");
   return status === 429 || status >= 500 || /429|RESOURCE_EXHAUSTED|UNAVAILABLE|rate limit|timeout|ECONNRESET/i.test(msg);
@@ -101,6 +114,9 @@ export async function embedTexts(
       if (attempt === retries || !isRetryable(err)) break;
       await sleep(suggestedRetryDelayMs(err) ?? baseDelayMs * 2 ** attempt);
     }
+  }
+  if (isDailyQuotaError(lastError)) {
+    throw new EmbeddingUnavailableError("Cuota diaria de embeddings de Gemini agotada.", quotaRetryAfterMs(lastError));
   }
   throw new EmbeddingUnavailableError(`No se pudieron calcular embeddings: ${lastError?.message || lastError}`);
 }

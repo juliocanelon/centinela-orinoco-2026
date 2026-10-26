@@ -89,3 +89,14 @@ test("suggestedRetryDelayMs lee la espera que sugiere Gemini", () => {
   assert.equal(suggestedRetryDelayMs(new Error('{"retryDelay": "300s"}')), 65000);
   assert.equal(suggestedRetryDelayMs(new Error("otro error")), null);
 });
+
+test("cuota diaria agotada: no reintenta e informa cuánto esperar", async () => {
+  const daily = new Error('{"quotaId":"EmbedContentRequestsPerDayPerUserPerProjectPerModel-FreeTier","retryDelay": "21510s"}');
+  const { client, calls } = fakeClient([daily, [vector(1)]]);
+  await assert.rejects(embedTexts(client, ["a"], "RETRIEVAL_DOCUMENT", { baseDelayMs: 1 }), (err: any) => {
+    assert.ok(err instanceof EmbeddingUnavailableError);
+    assert.equal(err.retryAfterMs, 21_510_000);
+    return true;
+  });
+  assert.equal(calls.length, 1);
+});
