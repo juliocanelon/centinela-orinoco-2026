@@ -27,7 +27,8 @@ import {
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
-const PORT = 3000;
+const configuredPort = Number.parseInt(process.env.PORT ?? '', 10);
+const PORT = Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 3000;
 
 // Lazy initialization of Gemini client
 let geminiClient: GoogleGenAI | null = null;
