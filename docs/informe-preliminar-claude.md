@@ -833,6 +833,7 @@ flowchart LR
 - **Cascada LLM con respaldo determinístico.** Descrita en §III.5.
 - **Respuesta de contingencia del RAG.** Cuando el LLM falla, se devuelve la lista de documentos encontrados sin síntesis de IA.
 - **Idempotencia** (`Idempotency-Key`) en la elevación de incidentes. Permite reintentos seguros tras cortes.
+- **Vectorización tolerante a cuota.** Si se agota la cuota de Gemini, el worker de embeddings se pausa y retoma solo al renovarse, sin detener la ingesta.
 
 **Diseño de borde:**
 
