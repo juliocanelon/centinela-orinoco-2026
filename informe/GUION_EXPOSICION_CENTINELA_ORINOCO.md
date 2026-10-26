@@ -36,11 +36,11 @@ Es importante precisar desde el inicio el alcance del trabajo. Centinela Orinoco
 
 El área de interés se relaciona con la Amazonía venezolana y la cuenca del Orinoco, particularmente con Amazonas, Bolívar y Delta Amacuro. En esta región convergen territorios de gran relevancia ambiental, asentamientos humanos, áreas protegidas y actividades económicas que ejercen diferentes presiones sobre los ecosistemas.
 
-En el caso de Bolívar, el proyecto presta atención al Arco Minero del Orinoco y a los posibles efectos de las actividades mineras sobre la cobertura vegetal, los cursos de agua y los sedimentos. En Amazonas, el aislamiento geográfico y la conectividad limitada plantean dificultades para reunir observaciones oportunas. Delta Amacuro aporta otra dimensión territorial, asociada a la conexión hidrológica y a la vulnerabilidad de sus ecosistemas y comunidades.
+En el caso de Bolívar, el proyecto presta atención al Arco Minero del Orinoco, creado en 2016 mediante el Decreto 2.248 sobre 111.843,70 kilómetros cuadrados, cerca del 12,2 % del territorio nacional, y superpuesto con las cuencas del Caroní, el Caura y el Cuyuní. Interesan los posibles efectos de las actividades mineras sobre la cobertura vegetal, los cursos de agua y los sedimentos. En Amazonas, el aislamiento geográfico y la conectividad limitada plantean dificultades para reunir observaciones oportunas. Delta Amacuro aporta otra dimensión territorial, asociada a la conexión hidrológica y a la vulnerabilidad de sus ecosistemas y comunidades.
 
 El informe no plantea que todos estos efectos puedan medirse actualmente desde la plataforma. Más bien, los presenta como parte del contexto que justifica una arquitectura capaz de relacionar fuentes distintas, registrar su procedencia y apoyar la evaluación por especialistas. Esta precisión evita confundir la importancia del problema ambiental con las capacidades ya demostradas por el prototipo.
 
-*[Apoyo visual: ubicar los tres estados y el Arco Minero en el mapa, sin atribuir cifras no documentadas.]*
+*[Apoyo visual: ubicar los tres estados y el Arco Minero en el mapa, con la superficie del decreto.]*
 
 ### 03:30–05:30 | Planteamiento del problema
 
@@ -63,8 +63,6 @@ La tercera fuente son los boletines del INAMEH. El sistema procesa documentos pu
 
 También se contemplan denuncias comunitarias con ubicación y evidencias, formularios de campo y documentos científicos en PDF, texto o con DOI. La presencia de estos medios en la arquitectura no significa que todos estén conectados a actores externos en operación. Cada fuente requiere validación de actualidad, calidad, procedencia y condiciones de acceso.
 
-La heterogeneidad también afecta el modo de interpretar los registros. Una coordenada puede representar un punto de detección, el centro de una escena o la ubicación reportada por una persona; esas geometrías no tienen el mismo significado. Del mismo modo, una fecha de adquisición satelital no es necesariamente la fecha en que el dato quedó disponible para el análisis. Por eso, la arquitectura considera metadatos de fuente y tiempo como parte del contexto necesario para comparar observaciones.
-
 *[Apoyo visual: mostrar la tabla de fuentes y destacar qué se ingiere y qué permanece pendiente.]*
 
 ### 07:45–09:45 | Objetivo y objetivos específicos
@@ -80,11 +78,11 @@ Estos objetivos combinan el desarrollo de un prototipo con una evaluación de su
 
 ### 09:45–11:15 | Justificación y aporte
 
-La justificación se vincula con el enfoque de AmazonIA 4.0, que propone combinar tecnologías de datos e inteligencia artificial con necesidades de sostenibilidad y conocimiento territorial. En ese marco, la contribución del proyecto es integrar fuentes heterogéneas en una vista geoespacial y explorar cómo la información ambiental y comunitaria puede presentarse de forma contextualizada.
+La justificación se vincula con el enfoque de AmazonIA 4.0, que propone combinar tecnologías de datos e inteligencia artificial con necesidades de sostenibilidad y conocimiento territorial. También se alinea con la Estrategia del Programa sobre el Hombre y la Biosfera de la UNESCO, que orienta la gestión de reservas como la de Alto Orinoco-Casiquiare, en Amazonas.
 
 Un aporte técnico concreto es el flujo para promover una denuncia que ha sido confirmada en terreno a un incidente. Ese proceso contempla control de idempotencia, persistencia relacional y almacenamiento documental de evidencias. La idempotencia permite que un reintento de la misma operación no genere incidentes duplicados; la persistencia separa los datos estructurados de los documentos asociados.
 
-La contribución debe describirse con cautela. El proyecto no presenta una técnica nueva de teledetección, no demuestra precisión de detección de minería y no dispone de una evaluación de aceptación comunitaria. Su valor reside en la arquitectura inicial y en los mecanismos de integración que podrán someterse a pruebas futuras.
+En conjunto, el artículo declara cinco contribuciones: una arquitectura por capas con persistencia políglota y una saga que mantiene la consistencia entre bases de datos; una memoria semántica georreferenciada que combina similitud de significado y radio geográfico en una sola consulta; un filtro territorial que rechaza documentos ajenos a la Amazonía venezolana; una estrategia de resiliencia y anonimización alineada con los principios CARE de datos indígenas; y un prototipo con ingesta real de cinco fuentes. A la vez, el proyecto no presenta una técnica nueva de teledetección ni demuestra todavía precisión en la detección de minería; esas validaciones corresponden a etapas posteriores.
 
 ### 11:15–12:00 | Cierre y transición
 
@@ -113,23 +111,21 @@ Estas líneas son pertinentes porque el proyecto no se limita a mostrar un mapa.
 
 Sin embargo, una línea temática no sustituye una revisión bibliográfica. Para establecer el estado del arte es necesario identificar qué métodos emplearon otros estudios, qué datos utilizaron, qué resultados obtuvieron y cuáles fueron sus limitaciones. Esa comparación permite justificar la innovación y evita presentar como novedoso un componente que ya haya sido abordado de forma equivalente.
 
-### 15:15–17:30 | Calidad y suficiencia de los antecedentes
+### 15:15–17:30 | Antecedentes revisados
 
-La propuesta incluye cinco referencias declaradas mediante títulos y plataformas. En el documento de evaluación se señala que varias no incluyen autores, revista específica, volumen, páginas o DOI. Además, mencionar MDPI, ScienceDirect o ResearchGate no basta para demostrar que un trabajo particular se publicó en una revista arbitrada o se encuentra indexado en una base académica.
+La revisión partió de las cinco referencias de la propuesta, que identificamos con sus autores, revista y DOI: Pimenow y coautores, sobre inteligencia artificial y sostenibilidad de ecosistemas regionales, en *Sustainability*; de Bruyn y coautores, sobre tecnologías inteligentes y resiliencia climática; Vishwakarma y coautores, sobre inteligencia artificial para decisiones bajas en carbono; Arafat y coautores, sobre analítica de Big Data y sus cinco V; y Le y Fan, sobre gemelos digitales. Dos de ellas aparecen con títulos ligeramente distintos en la propuesta.
 
-Las directrices científicas del proyecto y la estructura del informe final establecen un mínimo de diez fuentes indexadas o de nivel equivalente. Por esa razón, las cinco entradas disponibles no satisfacen el requisito. Esta conclusión no equivale a afirmar que los títulos sean necesariamente inexistentes; indica que, con los metadatos aportados, no es posible comprobar su identidad bibliográfica, arbitraje ni indexación.
+A esa base agregamos literatura específica del problema. Sobre impactos de la minería en la Amazonía: Sonter y coautores muestran que la deforestación asociada se extiende hasta 70 kilómetros más allá de las concesiones; Gerson y coautores, que el dosel de los bosques cercanos acumula mercurio; y García-Sánchez y coautores midieron emisiones de mercurio en zonas mineras de Venezuela. Sobre teledetección: Camalan y coautores detectan minería con Sentinel-2; Pereira y coautores identifican dragas con el radar de Sentinel-1, que no depende de las nubes; y Caballero Espejo y coautores reconstruyen 34 años de pérdida de bosque en Perú. Para el contexto venezolano usamos a Colmenares, sobre el Arco Minero, y a Rodríguez y Aguilar, sobre los conflictos en Canaima. Las técnicas se apoyan en trabajos sobre RAG, búsqueda vectorial con índices HNSW, MQTT y LoRaWAN, y los principios CARE. En total, el artículo reúne 23 referencias en formato IEEE, casi todas con DOI verificado. Para las revistas regionales, como *Caminhos de Geografia* o *Procesos Históricos*, conviene confirmar su base de indexación.
 
-La tarea pendiente consiste en verificar cada referencia en fuentes editoriales o académicas, completar sus citas APA y analizar al menos diez artículos. Para cada artículo se deben registrar autoría, año, revista, DOI o URL editorial, método, datos, resultados y limitaciones. También conviene incluir estudios directamente relacionados con minería en la Amazonía, observación satelital, monitoreo hidrológico y arquitecturas inteligentes.
+La comparación muestra el vacío. Ningún antecedente correlaciona satélite, campo, comunidad y literatura científica; ninguno incorpora una memoria semántica georreferenciada ni opera con conectividad intermitente; y la gobernanza de datos indígenas aparece solo de forma tangencial. Además, la literatura indexada sobre la Amazonía venezolana es escasa, lo que refuerza la pertinencia del caso.
 
-El análisis no debería limitarse a resumir cada publicación por separado. Conviene compararlas mediante preguntas comunes: qué variable ambiental observaron, qué resolución espacial y temporal utilizaron, cómo validaron sus resultados, qué errores reconocieron y qué condiciones de conectividad o gobernanza asumieron. Esa matriz comparativa ayudaría a justificar la selección de tecnologías y a identificar con mayor precisión el vacío que el prototipo pretende abordar. También permitiría distinguir entre la pertinencia general de la inteligencia artificial y la evidencia concreta de que una técnica funciona para el territorio y el problema considerados.
-
-Es importante reconocer esta brecha durante la exposición. La rigurosidad académica se fortalece cuando se distingue lo que está sustentado de aquello que todavía debe comprobarse, en lugar de completar una bibliografía con información no verificada.
+*[Apoyo visual: mostrar la tabla comparativa de antecedentes del artículo.]*
 
 ### 17:30–19:15 | Brecha metodológica y contribución
 
 La brecha que el proyecto busca atender es la falta de una vista integrada para consultar anomalías ambientales junto con reportes comunitarios, registros hidrológicos y documentos científicos. La propuesta plantea relacionar información geoespacial y narrativa y ofrecer una síntesis contextual que facilite la revisión.
 
-La solución actual cubre solo una parte de esa brecha. Las fuentes llegan a través de conectores distintos y pueden consultarse en una interfaz común, pero todavía no existe un sistema completo de procesamiento distribuido ni un modelo de detección validado. La contribución es, por tanto, arquitectónica e integradora: muestra cómo se pueden organizar ciertos flujos y cómo registrar denuncias e incidentes sin perder el vínculo con sus evidencias.
+La solución actual cubre una parte de esa brecha. Las fuentes llegan a través de conectores distintos, se integran en una memoria semántica georreferenciada y pueden consultarse en una interfaz común; todavía no existe un sistema de procesamiento distribuido ni un modelo de detección validado. La contribución es, por tanto, arquitectónica e integradora: muestra cómo se pueden organizar ciertos flujos y cómo registrar denuncias e incidentes sin perder el vínculo con sus evidencias.
 
 Esta distinción define la originalidad que puede sostenerse hoy. No se afirma que la plataforma descubra automáticamente actividades ilícitas. Se propone una infraestructura de apoyo a investigación que podría evolucionar mediante validación científica, incorporación de datos de campo y pruebas con usuarios responsables.
 
@@ -147,7 +143,7 @@ Finalmente, la arquitectura incluye persistencia relacional y espacial, almacena
 
 ### 21:15–23:15 | Ingesta y procesamiento actual
 
-El planificador organiza consultas periódicas a FIRMS, Sentinel-1, Sentinel-2, Sentinel-3 y los boletines hidrológicos. Cuando una fuente responde, el sistema normaliza sus registros y aplica reglas para evitar duplicados. Además, se conservan datos de ejecución como estado, cantidad de registros recibidos o insertados y mensajes de error.
+El planificador organiza consultas periódicas a FIRMS, Sentinel-1, Sentinel-2, Sentinel-3 y los boletines hidrológicos. Cuando una fuente responde, el sistema normaliza sus registros y aplica reglas para evitar duplicados. Además, se conservan datos de ejecución como estado, cantidad de registros recibidos o insertados y mensajes de error. Al 25 de octubre de 2026 el sistema había almacenado 2.890 focos FIRMS, 52 escenas Sentinel-1, 139 productos Sentinel-2, 105 productos Sentinel-3 y 8 lecturas del INAMEH. La deduplicación funciona en la práctica: en una sola ejecución de FIRMS llegaron 1.493 focos, 1.412 ya estaban registrados y solo se insertaron los 81 nuevos.
 
 En FIRMS se consultan productos VIIRS y MODIS y se filtran los focos según el ámbito territorial definido. En Copernicus se recuperan metadatos STAC u OData de escenas y productos. En la integración hidrológica se procesan boletines PDF publicados por el INAMEH para obtener niveles, fechas y variaciones. Estos procesos aportan información verificable desde las fuentes consultadas, sujetos a su disponibilidad.
 
@@ -155,7 +151,7 @@ Pero es fundamental diferenciar ingesta de interpretación. Las escenas Sentinel
 
 ### 23:15–24:00 | Transición
 
-En esta parte se ha explicado que la arquitectura integra datos y procesos, pero que su alcance científico depende de la verificación bibliográfica y de la validación de cada fuente. Miguel Damián desarrollará ahora la persistencia de denuncias, la búsqueda documental, las limitaciones de inteligencia artificial y las recomendaciones para evolucionar el prototipo.
+En esta parte se ha explicado que la arquitectura integra datos y procesos con respaldo en la literatura, y que su alcance científico depende de la validación de cada fuente. Miguel Damián desarrollará ahora la persistencia de denuncias, la búsqueda documental, las limitaciones de inteligencia artificial y las recomendaciones para evolucionar el prototipo.
 
 ---
 
@@ -166,13 +162,13 @@ En esta parte se ha explicado que la arquitectura integra datos y procesos, pero
 
 ### 24:00–25:45 | Persistencia y gestión de evidencias
 
-Gracias, José. Para completar la arquitectura, esta sección se concentra en cómo se organizan los datos, cómo se utilizan para la consulta y qué condiciones serían necesarias para llevar la solución a un escenario de prueba en campo.
+Gracias, José. Esta sección explica cómo se organizan y consultan los datos, y qué falta para llevar la solución a una prueba en campo.
 
 La persistencia actual combina una base relacional y espacial con una base documental. Supabase utiliza PostgreSQL y PostGIS para almacenar información estructurada, coordenadas, estados de denuncias, incidentes y operaciones de integración. Supabase Storage conserva los archivos de evidencia. MongoDB almacena documentos con metadatos y referencias vinculadas a los incidentes.
 
 La promoción de una denuncia a incidente es el flujo transaccional más concreto. Antes de promoverla, la denuncia debe encontrarse confirmada en terreno. Se utiliza una clave de idempotencia para reconocer reintentos de una misma operación. PostgreSQL conserva el estado relacional y MongoDB el documento de evidencia; si una parte de la operación falla, se contempla una compensación para mantener la consistencia y la trazabilidad.
 
-Este diseño es híbrido, pero no debe confundirse con un Lakehouse. No existe aún una organización de datos crudos, validados y analíticos a gran escala, ni una estrategia general con almacenamiento de objetos y formatos tabulares de Lakehouse. La persistencia actual resuelve necesidades específicas del prototipo.
+Este diseño es híbrido, pero todavía no es un Lakehouse: la organización en zonas de datos crudos, validados y analíticos queda en el diseño objetivo.
 
 ### 25:45–27:45 | Recuperación documental e inteligencia artificial
 
@@ -180,27 +176,25 @@ El sistema también incorpora un flujo de recuperación aumentada por generació
 
 Después, Gemini puede redactar una síntesis a partir de los documentos recuperados. Si no es posible vectorizar la consulta, la búsqueda vuelve a la coincidencia de palabras con distancia geográfica, y si el modelo de síntesis no está disponible, se presentan los documentos sin resumen. Un ejemplo con datos reales: la consulta "crecida del Orinoco" recupera las lecturas del INAMEH aunque ninguna contiene la palabra "crecida"; esa es la diferencia con una búsqueda por palabras.
 
-El umbral de similitud se fijó en 0,65 con un criterio de precisión: en un sistema que orienta intervenciones en el territorio, mostrar un documento que no es pertinente es más costoso que omitir uno, y cuando ningún documento alcanza el umbral, la búsqueda por palabras cubre ese caso. Así ocurrió con una consulta sobre incendios cerca del río Atabapo. En las pruebas, los documentos pertinentes obtuvieron similitudes de 0,69 a 0,74, por encima de ese valor. Como siguiente paso proponemos calibrarlo con consultas de prueba que especialistas marquen como pertinentes o no, y elegir el umbral que mejor equilibre aciertos y resultados irrelevantes. Además, la cuota gratuita de Gemini permite vectorizar 1.000 textos por día: si se agota, la vectorización se pausa y retoma sola al día siguiente, sin detener la ingesta, porque se ejecuta aparte. Hoy los 1.216 documentos de la memoria están vectorizados.
+El umbral de similitud se fijó en 0,65 con un criterio de precisión: en un sistema que orienta intervenciones en el territorio, mostrar un documento que no es pertinente es más costoso que omitir uno, y cuando ningún documento alcanza el umbral, la búsqueda por palabras cubre ese caso. Así ocurrió con una consulta sobre incendios cerca del río Atabapo. En las pruebas, los documentos pertinentes obtuvieron similitudes de 0,69 a 0,74, por encima de ese valor. Como siguiente paso proponemos calibrarlo con consultas de prueba que especialistas marquen como pertinentes o no, y elegir el umbral que mejor equilibre aciertos y resultados irrelevantes. Hoy los 1.216 documentos de la memoria están vectorizados.
 
-También debe limitarse el papel de la inteligencia artificial. Gemini puede organizar y resumir evidencias, pero no verifica de manera independiente la verdad de los datos, no confirma minería ilegal y no debe activar operativos. Cualquier interpretación que pueda afectar personas o territorios requiere corroboración de fuentes y revisión humana.
+El papel de la inteligencia artificial también tiene límites: Gemini organiza y resume evidencias, pero no verifica los datos, no confirma minería ilegal y no debe activar operativos.
 
 ### 27:45–29:30 | Analítica y criterios de seguridad
 
-La analítica por zona combina registros disponibles con reglas deterministas y puede solicitar una síntesis a un modelo de lenguaje. Algunas clasificaciones de zonas se apoyan en listas de nombres y palabras clave; por ello no representan una evaluación jurídica exhaustiva ni un modelo predictivo validado.
+La analítica por zona combina registros disponibles con reglas deterministas y una síntesis de un modelo de lenguaje; no es un modelo predictivo validado. El artículo establece tres precauciones. Primero, un foco térmico puede corresponder a quema agrícola, incendio u otra causa y no confirma actividad minera. Segundo, la presencia de una escena satelital en un catálogo no demuestra que se haya detectado una perturbación. Tercero, no se deben inferir valores de contaminantes que no hayan sido medidos o publicados.
 
-El informe establece tres precauciones. Primero, un foco térmico puede corresponder a quema agrícola, incendio u otra causa y no confirma actividad minera. Segundo, la presencia de una escena satelital en un catálogo no demuestra que se haya detectado una perturbación. Tercero, no se deben inferir valores de contaminantes que no hayan sido medidos o publicados.
+Por eso, las reglas de alerta del diseño exigen que coincidan dos sensores independientes. La regla central pide un foco térmico de confianza alta y, a menos de dos kilómetros, una caída de la señal del radar Sentinel-1, en un área protegida o cerca de un territorio indígena; un foco aislado solo se registra en la bitácora. Estas reglas requieren analizar los píxeles de las imágenes y se ejecutarían en un orquestador como Apache Airflow.
 
-La decisión sobre una alerta debe permanecer en manos de personas responsables. La plataforma puede proporcionar indicios, ubicación, procedencia y contexto para orientar una revisión; no puede sustituir inspecciones, mediciones de campo ni protocolos institucionales. Esta condición debe reflejarse en el diseño de la interfaz, en los mensajes de salida y en las reglas de acceso.
+En todos los casos, la decisión sobre una alerta debe permanecer en manos de personas responsables: la plataforma orienta la revisión, pero no sustituye inspecciones, mediciones de campo ni protocolos institucionales.
 
 ### 29:30–31:45 | Evolución de la arquitectura
 
-El informe plantea varias líneas de evolución. La primera es fortalecer la procedencia y la calidad: cada registro debería conservar fuente, hora de adquisición, versión, licencia, transformaciones aplicadas y una valoración de calidad. Además, se deben separar claramente observaciones reales, capas de referencia y contenidos demostrativos.
+El artículo plantea varias líneas de evolución. La primera es procesar productos satelitales. Para detectar cambios es necesario descargar imágenes, definir algoritmos reproducibles, seleccionar ventanas temporales y comparar resultados con referencias de campo. Solo después de medir precisión y falsos positivos sería razonable presentar perturbaciones como detecciones.
 
-La segunda es procesar productos satelitales. Para detectar cambios es necesario descargar imágenes, definir algoritmos reproducibles, seleccionar ventanas temporales y comparar resultados con referencias de campo. Solo después de medir precisión y falsos positivos sería razonable presentar perturbaciones como detecciones.
+La segunda es construir una arquitectura analítica escalable con Lakehouse, procesamiento con Spark y orquestación con Apache Airflow; Kafka podría incorporarse si el volumen de datos en tiempo real lo justifica.
 
-La tercera es construir una arquitectura analítica escalable con Lakehouse y una herramienta de orquestación, como Apache Airflow o una alternativa equivalente. Kafka o NiFi podrían incorporarse si el volumen y los requisitos de tiempo real lo justifican. El procesamiento distribuido con Spark también debe vincularse con necesidades concretas, no agregarse solo por cumplir una lista tecnológica.
-
-La cuarta línea es completar el enfoque offline-first. Para una región con conectividad irregular se requiere almacenamiento local durable, sincronización diferida, reintentos, manejo de conflictos y protección de los datos en el dispositivo. MQTT o LoRaWAN pueden evaluarse en función de los sensores disponibles, su cobertura y el consumo energético.
+La tercera línea es completar el enfoque offline-first. Del lado del servidor ya existe resiliencia: si una fuente falla, la siguiente ejecución recupera lo que faltó sin duplicar, y la clave de idempotencia permite reintentar la elevación de incidentes tras un corte. Falta llevarla al campo: en los puestos de Guardería se requiere almacenamiento local durable, sincronización diferida, reintentos, manejo de conflictos y protección de los datos en el dispositivo. MQTT o LoRaWAN pueden evaluarse en función de los sensores disponibles, su cobertura y el consumo energético.
 
 *[Apoyo visual: señalar las brechas como evolución y no como servicios presentes.]*
 
@@ -208,17 +202,19 @@ La cuarta línea es completar el enfoque offline-first. Para una región con con
 
 La protección de datos resulta especialmente importante para reportes comunitarios. El sistema contempla controles en la base de datos y una regla básica para proteger la identidad cuando una denuncia es anónima. No obstante, aún se requiere un esquema integral de acceso por roles, consentimiento, retención, anonimización espacial y protección del conocimiento biocultural.
 
-En el despliegue, la solución se plantea actualmente como una aplicación web apoyada en servicios externos. No se presenta una arquitectura de alta disponibilidad basada en contenedores. Una fase futura deberá definir cómo empaquetar los componentes, administrar credenciales, monitorear los servicios, respaldar la información y recuperar la operación ante fallos.
+En el despliegue, la aplicación corre hoy en servicios gestionados: Google Cloud Run, Supabase y MongoDB Atlas, sin contenedores propios. Para una operación institucional proponemos una arquitectura objetivo en AWS: la API en contenedores sobre ECS Fargate, los conectores como funciones Lambda programadas con EventBridge, Step Functions para orquestar reintentos, Aurora PostgreSQL con PostGIS y pgvector para mantener juntas la búsqueda espacial y la vectorial, S3 para evidencias y el futuro Lakehouse, Cognito para los roles de usuario, y Secrets Manager, KMS y CloudWatch para credenciales, cifrado y monitoreo. El primer paso es contenedorizar la API.
 
-Los usuarios previstos incluyen analistas ambientales, investigadores, equipos de monitoreo y personas que reciben o verifican reportes. La interfaz puede facilitar la consulta conjunta de datos, pero el informe no presenta todavía pruebas de usabilidad con estos grupos ni un piloto de campo. Por ello, los beneficios descritos son resultados esperados, no resultados medidos.
+*[Apoyo visual: mostrar la tabla de correspondencia con AWS del artículo.]*
+
+Los usuarios previstos son la Guardería Ambiental, investigadores, tomadores de decisión y comunidades. Como todavía no hay pruebas de usabilidad ni un piloto de campo, los beneficios descritos son resultados esperados, no medidos.
 
 ### 33:30–35:15 | Conclusiones y recomendaciones
 
 Como conclusiones principales, Centinela Orinoco integra conectores para consultar NASA FIRMS, catálogos Copernicus y boletines del INAMEH, pero el funcionamiento continuo depende de credenciales y servicios externos. Sentinel aporta actualmente metadatos de productos, no análisis de imágenes. La fuente hidrológica aporta niveles de boletines, no mediciones de calidad de agua ni telemetría directa.
 
-La persistencia de denuncias e incidentes es el flujo más desarrollado y contempla idempotencia, evidencias y compensación entre bases de datos. La recuperación documental es vectorial y geográfica, con respaldo textual, aunque sus umbrales aún deben calibrarse; la síntesis de Gemini puede asistir el análisis, pero no sustituye validación ni revisión humana.
+La persistencia de denuncias e incidentes es el flujo más desarrollado y contempla idempotencia, evidencias y compensación entre bases de datos. La recuperación documental es vectorial y geográfica, con respaldo textual y un umbral fijado con criterio de precisión cuya calibración se propone; la síntesis de Gemini puede asistir el análisis, pero no sustituye validación ni revisión humana.
 
-Las recomendaciones prioritarias son configurar y probar las fuentes en un entorno controlado; completar el procesamiento de imágenes; calibrar y evaluar la búsqueda vectorial con consultas etiquetadas; verificar al menos diez artículos indexados con referencias APA; y ampliar las pruebas automatizadas, hoy limitadas a la memoria semántica, junto con RBAC, privacidad, almacenamiento offline y despliegue reproducible.
+Las recomendaciones prioritarias son completar el procesamiento de imágenes satelitales para activar las reglas de alerta; aplicar la calibración propuesta de la búsqueda vectorial con consultas etiquetadas; extender las pruebas automatizadas, hoy centradas en la memoria semántica, a la ingesta y a la saga; implementar roles de acceso, privacidad y almacenamiento offline en el borde; y contenedorizar la solución como primer paso hacia la arquitectura en AWS.
 
 En consecuencia, la factibilidad a mediano plazo es razonable como herramienta de apoyo a la investigación, siempre que se atiendan estas brechas antes de cualquier piloto con instituciones o comunidades.
 
@@ -226,7 +222,7 @@ En consecuencia, la factibilidad a mediano plazo es razonable como herramienta d
 
 Para cerrar, Centinela Orinoco propone una forma de integrar información territorial y ambiental que suele encontrarse dispersa. El prototipo ya permite observar cómo podrían relacionarse algunas fuentes y procesos, y ya cuenta con búsqueda semántica sobre su memoria documental; la detección de minería, la operación offline y la evaluación de impacto permanecen como trabajo futuro.
 
-El valor académico del proyecto está tanto en la arquitectura propuesta como en la delimitación honesta de sus capacidades. La siguiente etapa debe basarse en literatura verificable, datos de calidad, protocolos de privacidad y validación con usuarios. Muchas gracias. Quedamos atentos a sus preguntas.
+El valor académico del proyecto está tanto en la arquitectura propuesta como en la delimitación honesta de sus capacidades. La siguiente etapa debe basarse en datos de campo, protocolos de privacidad y validación con usuarios e instituciones. Muchas gracias. Quedamos atentos a sus preguntas.
 
 ---
 
@@ -236,4 +232,4 @@ El valor académico del proyecto está tanto en la arquitectura propuesta como e
 - Mantener a la vista el diagrama de arquitectura durante la intervención de José y volver a él al explicar las brechas.
 - Ensayar con cronómetro. Si una intervención supera los 12 minutos, reducir ejemplos y no acelerar la lectura.
 - Dejar las preguntas para después de los 36 minutos o acordar previamente si se descontarán del tiempo de exposición.
-- Verificar los nombres de los productos y las referencias antes de la presentación. No afirmar que las cinco referencias académicas están indexadas mientras esa verificación siga pendiente.
+- Tener a mano el artículo IEEE con sus 23 referencias por si preguntan por una fuente, y verificar los nombres de los productos antes de la presentación.
