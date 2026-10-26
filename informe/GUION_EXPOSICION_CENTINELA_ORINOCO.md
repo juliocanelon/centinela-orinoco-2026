@@ -176,11 +176,11 @@ Este diseño es híbrido, pero no debe confundirse con un Lakehouse. No existe a
 
 ### 25:45–27:45 | Recuperación documental e inteligencia artificial
 
-El sistema también incorpora un flujo de recuperación aumentada por generación, conocido como RAG. En su estado actual, la recuperación es léxica y geográfica: identifica términos de una consulta, busca documentos que contienen esas palabras y considera la distancia a un punto cuando se proporciona una ubicación.
+El sistema también incorpora un flujo de recuperación aumentada por generación, conocido como RAG. Cada documento se convierte en un vector de 768 dimensiones con el modelo de embeddings de Gemini y se guarda en PostgreSQL con la extensión pgvector. Al consultar, la pregunta también se vectoriza y la base busca los documentos más parecidos por significado; si se indica una ubicación, la misma consulta limita la búsqueda a un radio con PostGIS. Luego los resultados se reordenan según similitud, cercanía, antigüedad, si la fuente es arbitrada y severidad.
 
-Después, Gemini puede redactar una síntesis a partir de los documentos recuperados. Si el modelo no está disponible, la plataforma puede presentar los documentos sin generar esa síntesis. Esta función ayuda a consultar información, pero no convierte la búsqueda en semántica vectorial. No se generan ni almacenan embeddings para medir similitud conceptual entre documentos.
+Después, Gemini puede redactar una síntesis a partir de los documentos recuperados. Si no es posible vectorizar la consulta, la búsqueda vuelve a la coincidencia de palabras con distancia geográfica, y si el modelo de síntesis no está disponible, se presentan los documentos sin resumen. Un ejemplo con datos reales: la consulta "crecida del Orinoco" recupera las lecturas del INAMEH aunque ninguna contiene la palabra "crecida"; esa es la diferencia con una búsqueda por palabras.
 
-Esta diferencia es importante porque “RAG” describe una familia de enfoques y no demuestra por sí misma que exista una base vectorial. Para completar esa capacidad se debe escoger un modelo de embeddings, definir su dimensión, almacenarlo con su texto y procedencia, implementar una búsqueda híbrida y evaluar los resultados con consultas y documentos etiquetados.
+Hay que señalar sus límites. El umbral de similitud, fijado en 0,65, y los pesos del reordenamiento son valores iniciales que aún no se calibran con consultas y documentos etiquetados; de hecho, una consulta sobre incendios cerca del río Atabapo no superó el umbral y se resolvió por palabras. Además, la cuota gratuita de Gemini permite vectorizar 1.000 textos por día: la primera carga de 1.216 documentos se reparte en dos días, sin detener la ingesta, porque la vectorización se ejecuta aparte y retoma lo pendiente.
 
 También debe limitarse el papel de la inteligencia artificial. Gemini puede organizar y resumir evidencias, pero no verifica de manera independiente la verdad de los datos, no confirma minería ilegal y no debe activar operativos. Cualquier interpretación que pueda afectar personas o territorios requiere corroboración de fuentes y revisión humana.
 
@@ -216,15 +216,15 @@ Los usuarios previstos incluyen analistas ambientales, investigadores, equipos d
 
 Como conclusiones principales, Centinela Orinoco integra conectores para consultar NASA FIRMS, catálogos Copernicus y boletines del INAMEH, pero el funcionamiento continuo depende de credenciales y servicios externos. Sentinel aporta actualmente metadatos de productos, no análisis de imágenes. La fuente hidrológica aporta niveles de boletines, no mediciones de calidad de agua ni telemetría directa.
 
-La persistencia de denuncias e incidentes es el flujo más desarrollado y contempla idempotencia, evidencias y compensación entre bases de datos. La recuperación documental es textual y geográfica; la síntesis de Gemini puede asistir el análisis, pero no sustituye validación ni revisión humana.
+La persistencia de denuncias e incidentes es el flujo más desarrollado y contempla idempotencia, evidencias y compensación entre bases de datos. La recuperación documental es vectorial y geográfica, con respaldo textual, aunque sus umbrales aún deben calibrarse; la síntesis de Gemini puede asistir el análisis, pero no sustituye validación ni revisión humana.
 
-Las recomendaciones prioritarias son configurar y probar las fuentes en un entorno controlado; completar el procesamiento de imágenes; implementar y evaluar embeddings y búsqueda vectorial; verificar al menos diez artículos indexados con referencias APA; y desarrollar pruebas, RBAC, privacidad, almacenamiento offline y despliegue reproducible.
+Las recomendaciones prioritarias son configurar y probar las fuentes en un entorno controlado; completar el procesamiento de imágenes; calibrar y evaluar la búsqueda vectorial con consultas etiquetadas; verificar al menos diez artículos indexados con referencias APA; y ampliar las pruebas automatizadas, hoy limitadas a la memoria semántica, junto con RBAC, privacidad, almacenamiento offline y despliegue reproducible.
 
 En consecuencia, la factibilidad a mediano plazo es razonable como herramienta de apoyo a la investigación, siempre que se atiendan estas brechas antes de cualquier piloto con instituciones o comunidades.
 
 ### 35:15–36:00 | Cierre
 
-Para cerrar, Centinela Orinoco propone una forma de integrar información territorial y ambiental que suele encontrarse dispersa. El prototipo ya permite observar cómo podrían relacionarse algunas fuentes y procesos, pero la detección de minería, la búsqueda semántica, la operación offline y la evaluación de impacto permanecen como trabajo futuro.
+Para cerrar, Centinela Orinoco propone una forma de integrar información territorial y ambiental que suele encontrarse dispersa. El prototipo ya permite observar cómo podrían relacionarse algunas fuentes y procesos, y ya cuenta con búsqueda semántica sobre su memoria documental; la detección de minería, la operación offline y la evaluación de impacto permanecen como trabajo futuro.
 
 El valor académico del proyecto está tanto en la arquitectura propuesta como en la delimitación honesta de sus capacidades. La siguiente etapa debe basarse en literatura verificable, datos de calidad, protocolos de privacidad y validación con usuarios. Muchas gracias. Quedamos atentos a sus preguntas.
 
