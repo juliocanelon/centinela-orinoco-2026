@@ -1,0 +1,143 @@
+<mxfile host="app.diagrams.net" modified="2026-10-25T18:00:00.000Z" agent="GitHub Copilot" version="24.7.17" type="device">
+  <diagram id="centinela-arquitectura-v3" name="Arquitectura v3">
+    <mxGraphModel dx="1500" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="CENTINELA ORINOCO | ARQUITECTURA v3" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="25" y="20" width="1400" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Fuentes reales y cuatro capas funcionales | estado de implementación y diseño futuro" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#486581;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="27" y="62" width="1400" height="28" as="geometry" />
+        </mxCell>
+
+        <mxCell id="panel-sources" value="FUENTES Y ACTORES" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#93C5FD;strokeWidth=2;fontColor=#1E3A5F;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="115" width="270" height="665" as="geometry" />
+        </mxCell>
+        <mxCell id="panel-ingestion" value="1. INGESTA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDFA;strokeColor=#5EEAD4;strokeWidth=2;fontColor=#134E4A;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="315" y="115" width="270" height="665" as="geometry" />
+        </mxCell>
+        <mxCell id="panel-storage" value="2. ALMACENAMIENTO Y PROCESAMIENTO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#FDBA74;strokeWidth=2;fontColor=#7C2D12;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="610" y="115" width="270" height="665" as="geometry" />
+        </mxCell>
+        <mxCell id="panel-intelligence" value="3. INTELIGENCIA Y ANALÍTICA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#C4B5FD;strokeWidth=2;fontColor=#4C1D95;fontSize=13;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="905" y="115" width="270" height="665" as="geometry" />
+        </mxCell>
+        <mxCell id="panel-consumption" value="4. CONSUMO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#86EFAC;strokeWidth=2;fontColor=#166534;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="115" width="270" height="665" as="geometry" />
+        </mxCell>
+
+        <mxCell id="src-satellite" value="&lt;b&gt;Observación ambiental&lt;/b&gt;&lt;br&gt;NASA FIRMS: anomalías térmicas&lt;br&gt;Copernicus: catálogos Sentinel-1, 2 y 3&lt;br&gt;INAMEH: boletines hidrométricos&lt;br&gt;&lt;font color=&quot;#64748B&quot;&gt;Se ingieren datos y catálogos; no píxeles Sentinel.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="src-field" value="&lt;b&gt;Campo y comunidad&lt;/b&gt;&lt;br&gt;KoboToolbox / ODK, minutas de patrullaje y denuncias anónimas con ubicación y evidencias." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="src-corpus" value="&lt;b&gt;Conocimiento científico&lt;/b&gt;&lt;br&gt;Artículos, informes y normativa en PDF, texto o DOI." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="510" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="src-edge" value="&lt;b&gt;Sensores de campo&lt;/b&gt;&lt;br&gt;LoRaWAN y captura local&lt;br&gt;Diseño futuro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="680" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ing-scheduler" value="&lt;b&gt;Scheduler de ingesta directa&lt;/b&gt;&lt;br&gt;FIRMS, Sentinel-1/2/3 e INAMEH; cadencias por fuente, filtro territorial y deduplicación." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="335" y="170" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ing-api" value="&lt;b&gt;API REST y webhooks&lt;/b&gt;&lt;br&gt;Recepción y validación de reportes Kobo / ODK y denuncias comunitarias." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="335" y="340" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ing-corpus" value="&lt;b&gt;Ingesta del corpus&lt;/b&gt;&lt;br&gt;Extracción PDF, metadatos Crossref/DOI, geofencing territorial y deduplicación." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="335" y="510" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ing-future" value="&lt;b&gt;Evolución de la ingesta&lt;/b&gt;&lt;br&gt;Nodo edge, SQLite / MQTT y Apache Kafka&lt;br&gt;Diseño futuro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="335" y="680" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db-operational" value="&lt;b&gt;PostgreSQL + PostGIS&lt;/b&gt;&lt;br&gt;Supabase: ingestas, telemetría, reportes, incidentes y geometrías." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C2410C;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="630" y="170" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="db-saga" value="&lt;b&gt;Persistencia de evidencias&lt;/b&gt;&lt;br&gt;MongoDB Atlas + Supabase Storage&lt;br&gt;Saga compensable e idempotencia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C2410C;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="630" y="340" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="db-rag" value="&lt;b&gt;Documentos ambientales y vectores&lt;/b&gt;&lt;br&gt;Supabase PostgreSQL + pgvector&lt;br&gt;Embeddings y geometrías para recuperación espacial" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#C2410C;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="630" y="510" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="db-lakehouse" value="&lt;b&gt;Histórico analítico&lt;/b&gt;&lt;br&gt;Delta Lake / MinIO + Spark&lt;br&gt;Diseño futuro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="630" y="680" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ai-analytics" value="&lt;b&gt;Analítica territorial&lt;/b&gt;&lt;br&gt;Densidad de focos y análisis por zona con los datos disponibles." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="925" y="170" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ai-rag" value="&lt;b&gt;RAG espacial&lt;/b&gt;&lt;br&gt;Embeddings Gemini, similitud pgvector, filtro geográfico PostGIS y reranker; búsqueda textual como respaldo." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="925" y="340" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ai-answer" value="&lt;b&gt;Preguntas y generación de respuestas&lt;/b&gt;&lt;br&gt;Contexto de datos actuales + cascada Gemini; respuesta en lenguaje natural y respaldo determinístico." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="925" y="510" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ai-airflow" value="&lt;b&gt;Reglas automatizadas&lt;/b&gt;&lt;br&gt;DAG de detección y Airflow&lt;br&gt;Diseño futuro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="925" y="680" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ui-map" value="&lt;b&gt;SPA React + Leaflet&lt;/b&gt;&lt;br&gt;Mapa táctico, capas territoriales, telemetría y alertas." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="170" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-reports" value="&lt;b&gt;Incidentes y boletines&lt;/b&gt;&lt;br&gt;Gestión de denuncias, evidencias y reportes para revisión humana." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="340" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-chat" value="&lt;b&gt;Chat operativo&lt;/b&gt;&lt;br&gt;El usuario pregunta sobre el territorio; la interfaz presenta la respuesta y su contexto disponible." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="510" width="230" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-satellite-ingestion" value="consultas programadas" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0F766E;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="src-satellite" target="ing-scheduler">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-field-ingestion" value="webhooks / API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0F766E;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="src-field" target="ing-api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-corpus-ingestion" value="PDF / DOI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#0F766E;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="src-corpus" target="ing-corpus">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-scheduler-storage" value="datos normalizados" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C2410C;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ing-scheduler" target="db-operational">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-api-storage" value="reportes y evidencias" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C2410C;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ing-api" target="db-saga">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-corpus-storage" value="documentos y metadatos" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C2410C;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ing-corpus" target="db-rag">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-operational-analytics" value="series y geometrías" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#C2410C;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="db-operational" target="ai-analytics">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-rag-storage" value="índice vectorial y espacial" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=block;startFill=1;endArrow=block;endFill=1;strokeColor=#7C3AED;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="db-rag" target="ai-rag">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-analytics-ui" value="mapa y alertas" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ai-analytics" target="ui-map">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-rag-answer" value="contexto recuperado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7C3AED;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0;" edge="1" parent="1" source="ai-rag" target="ai-answer">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1165" y="395" /><mxPoint x="1165" y="490" /><mxPoint x="1040" y="490" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-chat-ai" value="pregunta / respuesta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=block;startFill=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=9;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="ui-chat" target="ai-answer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="governance" value="GOBERNANZA TRANSVERSAL  |  RLS y acceso backend (implementado)  ·  denuncia anónima (implementada)  ·  CARE, RBAC por rol y geo-enmascaramiento (diseño)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#64748B;strokeWidth=1.5;fontColor=#243B53;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="20" y="815" width="1450" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-implemented" value="Implementado" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="425" y="880" width="150" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-design" value="Diseño futuro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="595" y="880" width="150" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="footnote" value="La IA apoya el análisis; las alertas requieren validación humana. Sentinel aporta catálogos de productos, no análisis de píxeles satelitales." style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#486581;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="35" y="925" width="1440" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

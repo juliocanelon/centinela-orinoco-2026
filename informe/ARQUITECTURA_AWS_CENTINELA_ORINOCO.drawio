@@ -1,299 +1,287 @@
-<mxfile host="app.diagrams.net" modified="2026-10-25T00:00:00.000Z" agent="GitHub Copilot" version="24.7.17" type="device">
-  <diagram id="centinela-aws-architecture" name="Arquitectura AWS objetivo">
-    <mxGraphModel dx="1800" dy="1160" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1160" math="0" shadow="0">
+<mxfile host="app.diagrams.net">
+  <diagram name="Arquitectura AWS objetivo" id="XZtwHIGx9pqpKP2Aip9i">
+    <mxGraphModel dx="7083" dy="2572" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="CENTINELA ORINOCO | ARQUITECTURA OBJETIVO EN AWS" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=24;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="30" y="18" width="1650" height="38" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-1" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=24;fontStyle=1;" value="CENTINELA ORINOCO | ARQUITECTURA OBJETIVO EN AWS" vertex="1">
+          <mxGeometry height="38" width="1650" x="30" y="18" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle" value="Propuesta de despliegue basada en los flujos funcionales de Centinela Orinoco | El perímetro AWS representa una evolución, no la infraestructura actualmente desplegada" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#486581;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="32" y="58" width="1715" height="26" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-2" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#486581;fontSize=13;" value="Propuesta de despliegue basada en los flujos funcionales de Centinela Orinoco | El perímetro AWS representa una evolución, no la infraestructura actualmente desplegada" vertex="1">
+          <mxGeometry height="26" width="1715" x="32" y="58" as="geometry" />
         </mxCell>
-
-        <mxCell id="legend-title" value="LECTURA DEL DIAGRAMA" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="32" y="94" width="150" height="24" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-3" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;fontStyle=1;" value="LECTURA DEL DIAGRAMA" vertex="1">
+          <mxGeometry height="24" width="150" x="32" y="94" as="geometry" />
         </mxCell>
-        <mxCell id="legend-current" value="Capacidad presente en el prototipo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="190" y="92" width="235" height="28" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=10;" value="Capacidad presente en el prototipo" vertex="1">
+          <mxGeometry height="28" width="235" x="190" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="legend-target" value="Servicio AWS propuesto / objetivo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="440" y="92" width="245" height="28" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=10;" value="Servicio AWS propuesto / objetivo" vertex="1">
+          <mxGeometry height="28" width="245" x="440" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="legend-flow" value="Flujo de datos o solicitud" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#2563EB;strokeWidth=2;fontColor=#102A43;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="700" y="92" width="210" height="28" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#2563EB;strokeWidth=2;fontColor=#102A43;fontSize=10;" value="Flujo de datos o solicitud" vertex="1">
+          <mxGeometry height="28" width="210" x="700" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="legend-control" value="Seguridad / observabilidad transversal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="925" y="92" width="280" height="28" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=10;" value="Seguridad / observabilidad transversal" vertex="1">
+          <mxGeometry height="28" width="280" x="925" y="92" as="geometry" />
         </mxCell>
-
-        <mxCell id="panel-channels" value="1. CANALES, ACTORES Y FUENTES" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#93C5FD;strokeWidth=2;fontColor=#1E3A5F;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" vertex="1" parent="1">
-          <mxGeometry x="25" y="135" width="1750" height="145" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#93C5FD;strokeWidth=2;fontColor=#1E3A5F;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" value="1. CANALES, ACTORES Y FUENTES" vertex="1">
+          <mxGeometry height="145" width="1750" x="25" y="135" as="geometry" />
         </mxCell>
-        <mxCell id="panel-api" value="2. PRESENTACION, SEGURIDAD DE BORDE Y API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDFA;strokeColor=#5EEAD4;strokeWidth=2;fontColor=#134E4A;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" vertex="1" parent="1">
-          <mxGeometry x="25" y="295" width="1750" height="145" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDFA;strokeColor=#5EEAD4;strokeWidth=2;fontColor=#134E4A;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" value="2. PRESENTACION, SEGURIDAD DE BORDE Y API" vertex="1">
+          <mxGeometry height="145" width="1750" x="25" y="295" as="geometry" />
         </mxCell>
-        <mxCell id="vpc-frame" value="AWS CLOUD | VPC PRIVADA OBJETIVO PARA SERVICIOS DE APLICACION Y DATOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#475569;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
-          <mxGeometry x="25" y="455" width="1750" height="448" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#64748B;strokeWidth=2;dashed=1;fontColor=#475569;fontSize=12;fontStyle=1;verticalAlign=top;spacingTop=8;" value="AWS CLOUD | VPC PRIVADA OBJETIVO PARA SERVICIOS DE APLICACION Y DATOS" vertex="1">
+          <mxGeometry height="448" width="1750" x="25" y="455" as="geometry" />
         </mxCell>
-        <mxCell id="panel-logic" value="3. LOGICA DE NEGOCIO, INGESTA Y ORQUESTACION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#94A3B8;strokeWidth=1;fontColor=#243B53;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=9;" vertex="1" parent="1">
-          <mxGeometry x="40" y="480" width="1720" height="175" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#94A3B8;strokeWidth=1;fontColor=#243B53;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=9;" value="3. LOGICA DE NEGOCIO, INGESTA Y ORQUESTACION" vertex="1">
+          <mxGeometry height="175" width="1720" x="40" y="480" as="geometry" />
         </mxCell>
-        <mxCell id="panel-data" value="4. PERSISTENCIA, LAKEHOUSE Y SERVICIOS DE IA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#FCD34D;strokeWidth=1;fontColor=#78350F;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=9;" vertex="1" parent="1">
-          <mxGeometry x="40" y="670" width="1720" height="215" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#FCD34D;strokeWidth=1;fontColor=#78350F;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=9;" value="4. PERSISTENCIA, LAKEHOUSE Y SERVICIOS DE IA" vertex="1">
+          <mxGeometry height="215" width="1720" x="40" y="670" as="geometry" />
         </mxCell>
-        <mxCell id="panel-ops" value="5. BORDE, SEGURIDAD, GOBIERNO Y OPERACION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#C4B5FD;strokeWidth=2;fontColor=#4C1D95;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" vertex="1" parent="1">
-          <mxGeometry x="25" y="920" width="1750" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#C4B5FD;strokeWidth=2;fontColor=#4C1D95;fontSize=14;fontStyle=1;verticalAlign=top;spacingTop=10;" value="5. BORDE, SEGURIDAD, GOBIERNO Y OPERACION" vertex="1">
+          <mxGeometry height="135" width="1750" x="25" y="920" as="geometry" />
         </mxCell>
-
-        <!-- Flujos: se dibujan antes de las tarjetas para mantener las etiquetas legibles. -->
-        <mxCell id="edge-user-cdn" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-users" target="card-cloudfront">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-14" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-36" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-42" value="HTTPS">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-community-api" value="reporte / consulta" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-community" target="card-apigw">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-15" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-37" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-48" value="reporte / consulta">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-satellite-lambda" value="CSV FIRMS / catalogos STAC-OData" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-satellite" target="card-lambda">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-16" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-38" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-61" value="CSV FIRMS / catalogos STAC-OData">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-hydro-lambda" value="boletines PDF" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-inameh" target="card-lambda">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-17" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-39" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-61" value="boletines PDF">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-corpus-lambda" value="PDF / texto / DOI" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-corpus" target="card-lambda">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-18" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-40" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-61" value="PDF / texto / DOI">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-iot-lambda" value="MQTT (objetivo)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="channel-edge" target="card-lambda">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-19" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-41" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-61" value="MQTT (objetivo)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-cloudfront-apigw" value="solicitudes REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-cloudfront" target="card-apigw">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-20" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-42" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-48" value="solicitudes REST">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-cognito-apigw" value="identidad / autorizacion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-identity" target="card-apigw">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-21" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-45" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-48" value="identidad / autorizacion">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-apigw-ecs" value="HTTPS / JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-apigw" target="card-ecs">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-22" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-48" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-55" value="HTTPS / JSON">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-event-step" value="reglas de ejecucion programada" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-eventbridge" target="card-stepfn">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-23" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-51" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-58" value="reglas de ejecucion programada">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-step-lambda" value="ejecucion / reintentos" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-stepfn" target="card-lambda">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-24" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-58" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-61" value="ejecucion / reintentos">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-lambda-s3" value="crudos / normalizados" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-lambda" target="card-s3">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-25" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-61" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-74" value="crudos / normalizados">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-lambda-aurora" value="registros geoespaciales" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-lambda" target="card-aurora">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-26" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-61" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-71" value="registros geoespaciales">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-ecs-aurora" value="reportes / incidentes / consulta espacial" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-ecs" target="card-aurora">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-27" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-55" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-71" value="reportes / incidentes / consulta espacial">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-ecs-s3" value="evidencias / objetos" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-ecs" target="card-s3">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-28" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-55" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-74" value="evidencias / objetos">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-ecs-docdb" value="metadatos de evidencia (saga)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-ecs" target="card-docdb">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-29" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-55" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#15803D;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-77" value="metadatos de evidencia (saga)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-ecs-rag" value="consulta contextual" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-ecs" target="card-rag">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-30" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-55" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-64" value="consulta contextual">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-rag-search" value="busqueda vectorial (objetivo)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-rag" target="card-opensearch">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-31" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-80" value="busqueda vectorial (objetivo)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-rag-aurora" value="recuperacion textual actual / pgvector objetivo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-rag" target="card-aurora">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-32" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-71" value="recuperacion textual actual / pgvector objetivo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-rag-bedrock" value="sintesis asistida (objetivo)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-rag" target="card-bedrock">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-33" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-64" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-67" value="sintesis asistida (objetivo)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-bedrock-review" value="resultado para revision humana" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-bedrock" target="channel-users">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-34" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-67" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#2563EB;strokeWidth=2;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-36" value="resultado para revision humana">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-s3-glue" value="catalogo / transformacion analitica (objetivo)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="card-s3" target="card-glue">
+        <mxCell id="M7etk_R9I97HqhxA5ST2-35" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-74" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#FFFFFF;" target="M7etk_R9I97HqhxA5ST2-83" value="catalogo / transformacion analitica (objetivo)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- Actores y fuentes -->
-        <mxCell id="channel-users" value="&lt;b&gt;Analistas y equipos de campo&lt;/b&gt;&lt;br&gt;Consulta cartografica, revision de alertas y validacion humana." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="50" y="174" width="245" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-36" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;Analistas y equipos de campo&lt;/b&gt;&lt;br&gt;Consulta cartografica, revision de alertas y validacion humana." vertex="1">
+          <mxGeometry height="78" width="245" x="50" y="174" as="geometry" />
         </mxCell>
-        <mxCell id="channel-community" value="&lt;b&gt;Comunidades y patrullajes&lt;/b&gt;&lt;br&gt;Denuncias, coordenadas, narrativas y evidencias; formularios Kobo/ODK cuando se habiliten." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="315" y="174" width="275" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-37" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;Comunidades y patrullajes&lt;/b&gt;&lt;br&gt;Denuncias, coordenadas, narrativas y evidencias; formularios Kobo/ODK cuando se habiliten." vertex="1">
+          <mxGeometry height="78" width="275" x="315" y="174" as="geometry" />
         </mxCell>
-        <mxCell id="channel-satellite" value="&lt;b&gt;NASA FIRMS y Copernicus&lt;/b&gt;&lt;br&gt;Focos termicos VIIRS/MODIS; catalogos STAC/OData de Sentinel-1/2/3." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="610" y="174" width="355" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-93" edge="1" parent="1" source="M7etk_R9I97HqhxA5ST2-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="M7etk_R9I97HqhxA5ST2-39" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="channel-inameh" value="&lt;b&gt;INAMEH&lt;/b&gt;&lt;br&gt;Boletines PDF de niveles del rio Orinoco; no son sensores en tiempo real." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="985" y="174" width="220" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-38" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;NASA FIRMS y Copernicus&lt;/b&gt;&lt;br&gt;Focos termicos VIIRS/MODIS; catalogos STAC/OData de Sentinel-1/2/3." vertex="1">
+          <mxGeometry height="78" width="355" x="610" y="174" as="geometry" />
         </mxCell>
-        <mxCell id="channel-corpus" value="&lt;b&gt;Corpus cientifico&lt;/b&gt;&lt;br&gt;PDF, texto, DOI/Crossref y metadatos de investigacion." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1225" y="174" width="250" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-39" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;INAMEH&lt;/b&gt;&lt;br&gt;Boletines PDF de niveles del rio Orinoco; no son sensores en tiempo real." vertex="1">
+          <mxGeometry height="78" width="220" x="985" y="174" as="geometry" />
         </mxCell>
-        <mxCell id="channel-edge" value="&lt;b&gt;Sensores de campo (evolucion)&lt;/b&gt;&lt;br&gt;MQTT, almacenamiento local y sincronizacion diferida; aun no implementados." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=12;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1495" y="174" width="250" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-40" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;Corpus cientifico&lt;/b&gt;&lt;br&gt;PDF, texto, DOI/Crossref y metadatos de investigacion." vertex="1">
+          <mxGeometry height="78" width="250" x="1225" y="174" as="geometry" />
         </mxCell>
-
-        <!-- Capa de presentacion y APIs -->
-        <mxCell id="card-cloudfront" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="55" y="328" width="270" height="92" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-41" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=12;align=left;spacing=8;" value="&lt;b&gt;Sensores de campo (evolucion)&lt;/b&gt;&lt;br&gt;MQTT, almacenamiento local y sincronizacion diferida; aun no implementados." vertex="1">
+          <mxGeometry height="78" width="250" x="1495" y="174" as="geometry" />
         </mxCell>
-        <mxCell id="icon-cloudfront" value="" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="68" y="348" width="48" height="48" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-42" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="92" width="270" x="55" y="328" as="geometry" />
         </mxCell>
-        <mxCell id="text-cloudfront" value="&lt;b&gt;Amazon CloudFront&lt;/b&gt;&lt;br&gt;CDN para la aplicacion web&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: React + Vite&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="122" y="336" width="192" height="76" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-43" parent="1" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="48" width="48" x="68" y="348" as="geometry" />
         </mxCell>
-        <mxCell id="card-identity" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="350" y="328" width="270" height="92" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-44" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon CloudFront&lt;/b&gt;&lt;br&gt;CDN para la aplicacion web&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: React + Vite&lt;/font&gt;" vertex="1">
+          <mxGeometry height="76" width="192" x="122" y="336" as="geometry" />
         </mxCell>
-        <mxCell id="icon-cognito" value="" style="outlineConnect=0;strokeColor=#DD344C;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="363" y="348" width="48" height="48" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-45" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="92" width="270" x="350" y="328" as="geometry" />
         </mxCell>
-        <mxCell id="text-identity" value="&lt;b&gt;Amazon Cognito + AWS WAF&lt;/b&gt;&lt;br&gt;Identidad, control de acceso y proteccion de borde&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: RBAC y filtrado web&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="417" y="336" width="194" height="76" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-46" parent="1" style="outlineConnect=0;strokeColor=#DD344C;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="48" width="48" x="363" y="348" as="geometry" />
         </mxCell>
-        <mxCell id="card-apigw" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="645" y="328" width="270" height="92" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-47" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon Cognito + AWS WAF&lt;/b&gt;&lt;br&gt;Identidad, control de acceso y proteccion de borde&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: RBAC y filtrado web&lt;/font&gt;" vertex="1">
+          <mxGeometry height="76" width="194" x="417" y="336" as="geometry" />
         </mxCell>
-        <mxCell id="icon-apigw" value="" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="658" y="348" width="48" height="48" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-48" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="92" width="270" x="645" y="328" as="geometry" />
         </mxCell>
-        <mxCell id="text-apigw" value="&lt;b&gt;Amazon API Gateway&lt;/b&gt;&lt;br&gt;Entrada REST para reportes y consultas&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: API Express&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="712" y="336" width="192" height="76" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-49" parent="1" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="48" width="48" x="658" y="348" as="geometry" />
         </mxCell>
-        <mxCell id="card-eventbridge" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="960" y="328" width="300" height="92" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-50" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon API Gateway&lt;/b&gt;&lt;br&gt;Entrada REST para reportes y consultas&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: API Express&lt;/font&gt;" vertex="1">
+          <mxGeometry height="76" width="192" x="712" y="336" as="geometry" />
         </mxCell>
-        <mxCell id="icon-eventbridge" value="" style="outlineConnect=0;strokeColor=#E7157B;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="973" y="348" width="48" height="48" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-51" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="92" width="300" x="960" y="328" as="geometry" />
         </mxCell>
-        <mxCell id="text-eventbridge" value="&lt;b&gt;Amazon EventBridge Scheduler&lt;/b&gt;&lt;br&gt;Ejecucion periodica de conectores&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: planificador Node.js&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1027" y="336" width="220" height="76" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-52" parent="1" style="outlineConnect=0;strokeColor=#E7157B;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="48" width="48" x="973" y="348" as="geometry" />
         </mxCell>
-        <mxCell id="api-note" value="&lt;b&gt;Protocolos de integracion&lt;/b&gt;&lt;br&gt;HTTPS / JSON para API y reportes&lt;br&gt;Servicios externos sujetos a conectividad y credenciales" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1290" y="328" width="455" height="92" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-53" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon EventBridge Scheduler&lt;/b&gt;&lt;br&gt;Ejecucion periodica de conectores&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: planificador Node.js&lt;/font&gt;" vertex="1">
+          <mxGeometry height="76" width="220" x="1027" y="336" as="geometry" />
         </mxCell>
-
-        <!-- Logica y orquestacion: componentes AWS propuestos con correspondencia actual -->
-        <mxCell id="card-ecs" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="55" y="515" width="300" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-54" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;Protocolos de integracion&lt;/b&gt;&lt;br&gt;HTTPS / JSON para API y reportes&lt;br&gt;Servicios externos sujetos a conectividad y credenciales" vertex="1">
+          <mxGeometry height="92" width="455" x="1290" y="328" as="geometry" />
         </mxCell>
-        <mxCell id="icon-ecs" value="" style="outlineConnect=0;strokeColor=#3F8624;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="70" y="545" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-55" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="112" width="300" x="55" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="text-ecs" value="&lt;b&gt;Amazon ECS + Fargate&lt;/b&gt;&lt;br&gt;API y logica de dominio: reportes, incidentes y analitica&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Node.js + Express&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="128" y="525" width="217" height="94" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-56" parent="1" style="outlineConnect=0;strokeColor=#3F8624;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="70" y="545" as="geometry" />
         </mxCell>
-        <mxCell id="card-stepfn" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="375" y="515" width="255" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-57" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon ECS + Fargate&lt;/b&gt;&lt;br&gt;API y logica de dominio: reportes, incidentes y analitica&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Node.js + Express&lt;/font&gt;" vertex="1">
+          <mxGeometry height="94" width="217" x="128" y="525" as="geometry" />
         </mxCell>
-        <mxCell id="icon-stepfn" value="" style="outlineConnect=0;strokeColor=#E7157B;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="388" y="545" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-58" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="112" width="255" x="375" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="text-stepfn" value="&lt;b&gt;AWS Step Functions&lt;/b&gt;&lt;br&gt;Orquestacion, reintentos y control de ejecucion&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: sustituir tareas simples&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="446" y="525" width="176" height="94" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-59" parent="1" style="outlineConnect=0;strokeColor=#E7157B;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="388" y="545" as="geometry" />
         </mxCell>
-        <mxCell id="card-lambda" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="650" y="515" width="270" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-60" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;AWS Step Functions&lt;/b&gt;&lt;br&gt;Orquestacion, reintentos y control de ejecucion&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: sustituir tareas simples&lt;/font&gt;" vertex="1">
+          <mxGeometry height="94" width="176" x="446" y="525" as="geometry" />
         </mxCell>
-        <mxCell id="icon-lambda" value="" style="outlineConnect=0;strokeColor=#D86613;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="665" y="545" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-61" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="112" width="270" x="650" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="text-lambda" value="&lt;b&gt;AWS Lambda&lt;/b&gt;&lt;br&gt;Conectores FIRMS, STAC/OData, INAMEH y corpus&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: modulos TypeScript en Node.js&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="723" y="525" width="187" height="94" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-62" parent="1" style="outlineConnect=0;strokeColor=#D86613;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="665" y="545" as="geometry" />
         </mxCell>
-        <mxCell id="card-rag" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="940" y="515" width="300" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-63" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;AWS Lambda&lt;/b&gt;&lt;br&gt;Conectores FIRMS, STAC/OData, INAMEH y corpus&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: modulos TypeScript en Node.js&lt;/font&gt;" vertex="1">
+          <mxGeometry height="94" width="187" x="723" y="525" as="geometry" />
         </mxCell>
-        <mxCell id="rag-symbol" value="RAG" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#E0F2FE;strokeColor=#0284C7;strokeWidth=2;fontColor=#075985;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="957" y="548" width="48" height="48" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-64" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="112" width="300" x="940" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="text-rag" value="&lt;b&gt;Recuperacion y sintesis&lt;/b&gt;&lt;br&gt;Busqueda textual + distancia espacial actual&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;OpenSearch vectorial: objetivo&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1012" y="525" width="220" height="94" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-65" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#E0F2FE;strokeColor=#0284C7;strokeWidth=2;fontColor=#075985;fontSize=13;fontStyle=1;" value="RAG" vertex="1">
+          <mxGeometry height="48" width="48" x="957" y="548" as="geometry" />
         </mxCell>
-        <mxCell id="card-bedrock" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="1260" y="515" width="270" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-66" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Recuperacion y sintesis&lt;/b&gt;&lt;br&gt;Busqueda textual + distancia espacial actual&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;OpenSearch vectorial: objetivo&lt;/font&gt;" vertex="1">
+          <mxGeometry height="94" width="220" x="1012" y="525" as="geometry" />
         </mxCell>
-        <mxCell id="icon-bedrock" value="" style="outlineConnect=0;strokeColor=#C925D1;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="1275" y="545" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-67" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="112" width="270" x="1260" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="text-bedrock" value="&lt;b&gt;Amazon Bedrock&lt;/b&gt;&lt;br&gt;Sintesis asistida y, si se valida, embeddings&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Google Gemini API&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1333" y="525" width="187" height="94" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-68" parent="1" style="outlineConnect=0;strokeColor=#C925D1;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="1275" y="545" as="geometry" />
         </mxCell>
-        <mxCell id="human-review" value="&lt;b&gt;Revision humana obligatoria&lt;/b&gt;&lt;br&gt;Corroboracion antes de emitir alertas o activar acciones. La IA no decide operativos." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1550" y="515" width="195" height="112" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-69" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon Bedrock&lt;/b&gt;&lt;br&gt;Sintesis asistida y, si se valida, embeddings&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Google Gemini API&lt;/font&gt;" vertex="1">
+          <mxGeometry height="94" width="187" x="1333" y="525" as="geometry" />
         </mxCell>
-
-        <!-- Capa de datos -->
-        <mxCell id="card-aurora" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="55" y="710" width="300" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-70" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#15803D;strokeWidth=2;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;Revision humana obligatoria&lt;/b&gt;&lt;br&gt;Corroboracion antes de emitir alertas o activar acciones. La IA no decide operativos." vertex="1">
+          <mxGeometry height="112" width="195" x="1550" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="icon-aurora" value="" style="outlineConnect=0;strokeColor=#3B48CC;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="70" y="751" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-71" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="135" width="300" x="55" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="text-aurora" value="&lt;b&gt;Amazon Aurora PostgreSQL&lt;/b&gt;&lt;br&gt;Datos relacionales y espaciales: PostGIS; pgvector como evolucion&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Supabase PostgreSQL/PostGIS&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="128" y="720" width="217" height="115" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-72" parent="1" style="outlineConnect=0;strokeColor=#3B48CC;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="70" y="751" as="geometry" />
         </mxCell>
-        <mxCell id="card-s3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="375" y="710" width="310" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-73" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon Aurora PostgreSQL&lt;/b&gt;&lt;br&gt;Datos relacionales y espaciales: PostGIS; pgvector como evolucion&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Supabase PostgreSQL/PostGIS&lt;/font&gt;" vertex="1">
+          <mxGeometry height="115" width="217" x="128" y="720" as="geometry" />
         </mxCell>
-        <mxCell id="icon-s3" value="" style="outlineConnect=0;strokeColor=#7AA116;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="390" y="751" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-74" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="135" width="310" x="375" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="text-s3" value="&lt;b&gt;Amazon S3&lt;/b&gt;&lt;br&gt;Evidencias privadas y Lakehouse Bronze/Silver/Gold&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Supabase Storage para evidencias&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="448" y="720" width="228" height="115" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-75" parent="1" style="outlineConnect=0;strokeColor=#7AA116;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="390" y="751" as="geometry" />
         </mxCell>
-        <mxCell id="card-docdb" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="705" y="710" width="300" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-76" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon S3&lt;/b&gt;&lt;br&gt;Evidencias privadas y Lakehouse Bronze/Silver/Gold&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: Supabase Storage para evidencias&lt;/font&gt;" vertex="1">
+          <mxGeometry height="115" width="228" x="448" y="720" as="geometry" />
         </mxCell>
-        <mxCell id="icon-docdb" value="" style="outlineConnect=0;strokeColor=#3B48CC;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.documentdb_with_mongodb_compatibility;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="720" y="751" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-77" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="135" width="300" x="705" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="text-docdb" value="&lt;b&gt;Amazon DocumentDB&lt;/b&gt;&lt;br&gt;Documentos de evidencias y auditoria de incidentes&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: MongoDB&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="778" y="720" width="217" height="115" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-78" parent="1" style="outlineConnect=0;strokeColor=#3B48CC;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.documentdb_with_mongodb_compatibility;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="720" y="751" as="geometry" />
         </mxCell>
-        <mxCell id="card-opensearch" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="1025" y="710" width="300" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-79" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon DocumentDB&lt;/b&gt;&lt;br&gt;Documentos de evidencias y auditoria de incidentes&lt;br&gt;&lt;font color=&quot;#15803D&quot;&gt;Actual: MongoDB&lt;/font&gt;" vertex="1">
+          <mxGeometry height="115" width="217" x="778" y="720" as="geometry" />
         </mxCell>
-        <mxCell id="icon-opensearch" value="" style="outlineConnect=0;strokeColor=#005BFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticsearch_service;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="751" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-80" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="135" width="300" x="1025" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="text-opensearch" value="&lt;b&gt;Amazon OpenSearch Service&lt;/b&gt;&lt;br&gt;Indice vectorial para recuperacion semantica&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: RAG con embeddings evaluados&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1098" y="720" width="217" height="115" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-81" parent="1" style="outlineConnect=0;strokeColor=#005BFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticsearch_service;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="1040" y="751" as="geometry" />
         </mxCell>
-        <mxCell id="card-glue" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="1345" y="710" width="400" height="135" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-82" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;Amazon OpenSearch Service&lt;/b&gt;&lt;br&gt;Indice vectorial para recuperacion semantica&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: RAG con embeddings evaluados&lt;/font&gt;" vertex="1">
+          <mxGeometry height="115" width="217" x="1098" y="720" as="geometry" />
         </mxCell>
-        <mxCell id="icon-glue" value="" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="1360" y="751" width="52" height="52" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-83" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="135" width="400" x="1345" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="text-glue" value="&lt;b&gt;AWS Glue Data Catalog + Athena&lt;/b&gt;&lt;br&gt;Catalogo y consulta de zonas Lakehouse para analitica reproducible&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: no implementado actualmente&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1418" y="720" width="317" height="115" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-84" parent="1" style="outlineConnect=0;strokeColor=#8C4FFF;dashed=0;verticalLabelPosition=bottom;verticalAlign=middle;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="52" width="52" x="1360" y="751" as="geometry" />
         </mxCell>
-
-        <!-- Seguridad y operacion -->
-        <mxCell id="ops-iot" value="&lt;b&gt;AWS IoT Core + Greengrass&lt;/b&gt;&lt;br&gt;Mensajeria liviana y procesamiento local para zonas sin conexion&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: edge/offline-first&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="50" y="959" width="280" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-85" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#102A43;fontSize=11;" value="&lt;b&gt;AWS Glue Data Catalog + Athena&lt;/b&gt;&lt;br&gt;Catalogo y consulta de zonas Lakehouse para analitica reproducible&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: no implementado actualmente&lt;/font&gt;" vertex="1">
+          <mxGeometry height="115" width="317" x="1418" y="720" as="geometry" />
         </mxCell>
-        <mxCell id="ops-iam" value="&lt;b&gt;AWS IAM&lt;/b&gt;&lt;br&gt;Roles de servicio y minimo privilegio&lt;br&gt;Complementa Cognito para identidad de usuarios" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="350" y="959" width="235" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-86" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E28A22;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;AWS IoT Core + Greengrass&lt;/b&gt;&lt;br&gt;Mensajeria liviana y procesamiento local para zonas sin conexion&lt;br&gt;&lt;font color=&quot;#B45309&quot;&gt;Objetivo: edge/offline-first&lt;/font&gt;" vertex="1">
+          <mxGeometry height="78" width="280" x="50" y="959" as="geometry" />
         </mxCell>
-        <mxCell id="ops-secrets" value="&lt;b&gt;AWS Secrets Manager&lt;/b&gt;&lt;br&gt;Custodia de credenciales de fuentes, base de datos y modelos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="605" y="959" width="260" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-87" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;AWS IAM&lt;/b&gt;&lt;br&gt;Roles de servicio y minimo privilegio&lt;br&gt;Complementa Cognito para identidad de usuarios" vertex="1">
+          <mxGeometry height="78" width="235" x="350" y="959" as="geometry" />
         </mxCell>
-        <mxCell id="ops-kms" value="&lt;b&gt;AWS KMS&lt;/b&gt;&lt;br&gt;Cifrado de objetos, volumenes y respaldos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="885" y="959" width="205" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-88" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;AWS Secrets Manager&lt;/b&gt;&lt;br&gt;Custodia de credenciales de fuentes, base de datos y modelos" vertex="1">
+          <mxGeometry height="78" width="260" x="605" y="959" as="geometry" />
         </mxCell>
-        <mxCell id="ops-cloudwatch" value="&lt;b&gt;Amazon CloudWatch&lt;/b&gt;&lt;br&gt;Metricas, registros, alarmas y trazas operativas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1110" y="959" width="270" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-89" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;AWS KMS&lt;/b&gt;&lt;br&gt;Cifrado de objetos, volumenes y respaldos" vertex="1">
+          <mxGeometry height="78" width="205" x="885" y="959" as="geometry" />
         </mxCell>
-        <mxCell id="ops-cloudtrail" value="&lt;b&gt;AWS CloudTrail&lt;/b&gt;&lt;br&gt;Auditoria de operaciones y acceso a servicios" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" vertex="1" parent="1">
-          <mxGeometry x="1400" y="959" width="340" height="78" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-90" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;Amazon CloudWatch&lt;/b&gt;&lt;br&gt;Metricas, registros, alarmas y trazas operativas" vertex="1">
+          <mxGeometry height="78" width="270" x="1110" y="959" as="geometry" />
         </mxCell>
-
-        <mxCell id="note" value="NOTA DE ALCANCE: los bloques AWS son una arquitectura objetivo. El prototipo actual utiliza React/Vite, Express, Supabase, MongoDB y Gemini; cuenta con conectores FIRMS, catálogos Copernicus e INAMEH. Lakehouse, procesamiento distribuido, RAG vectorial, edge durable y despliegue AWS permanecen como evoluciones propuestas. La supervision y decision final corresponden a personas responsables." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#7F1D1D;fontSize=11;fontStyle=2;" vertex="1" parent="1">
-          <mxGeometry x="35" y="1072" width="1715" height="58" as="geometry" />
+        <mxCell id="M7etk_R9I97HqhxA5ST2-91" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;dashed=1;fontColor=#102A43;fontSize=11;align=left;spacing=8;" value="&lt;b&gt;AWS CloudTrail&lt;/b&gt;&lt;br&gt;Auditoria de operaciones y acceso a servicios" vertex="1">
+          <mxGeometry height="78" width="340" x="1400" y="959" as="geometry" />
+        </mxCell>
+        <mxCell id="M7etk_R9I97HqhxA5ST2-92" parent="1" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;fontColor=#7F1D1D;fontSize=11;fontStyle=2;" value="NOTA DE ALCANCE: los bloques AWS son una arquitectura objetivo. El prototipo actual utiliza React/Vite, Express, Supabase, MongoDB y Gemini; cuenta con conectores FIRMS, catálogos Copernicus e INAMEH. Lakehouse, procesamiento distribuido, RAG vectorial, edge durable y despliegue AWS permanecen como evoluciones propuestas. La supervision y decision final corresponden a personas responsables." vertex="1">
+          <mxGeometry height="58" width="1715" x="35" y="1072" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
