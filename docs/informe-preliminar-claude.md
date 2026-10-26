@@ -1,6 +1,6 @@
 # Informe Técnico Final (versión preliminar) — Centinela Orinoco
 
-> **Nota de versión.** Borrador elaborado el 15/10/2026 a partir de [Specs_Informe_Tecnico_Final.md](./Specs_Informe_Tecnico_Final.md) y del estado del repositorio en el commit `c8ef4f6` (rama `main`). Actualizado el 25/10/2026 con la ingesta satelital e hidrológica real del commit `9c0917e` y siguientes (hasta `ac8920c`): el scheduler ya no genera datos sintéticos. Las marcas **[Implementado]**, **[Simulado]** y **[Diseño]** siguen la convención del §5 de las specs. Los textos entre corchetes con la etiqueta `PENDIENTE` deben completarse antes de maquetar el PDF. Las referencias bibliográficas se verificaron contra Crossref o DataCite el 15/10/2026 (ver §R).
+> **Nota de versión.** Borrador elaborado el 15/10/2026 a partir de [Specs_Informe_Tecnico_Final.md](./Specs_Informe_Tecnico_Final.md) y del estado del repositorio en el commit `c8ef4f6` (rama `main`). Actualizado el 25/10/2026 con la ingesta satelital e hidrológica real del commit `9c0917e` y siguientes (hasta `ac8920c`): el scheduler ya no genera datos sintéticos. Actualizado el 26/10/2026 con la memoria semántica vectorial (PR #3): embeddings de Gemini en pgvector, búsqueda vectorial espacial, reranker y pruebas automatizadas. Las marcas **[Implementado]**, **[Simulado]** y **[Diseño]** siguen la convención del §5 de las specs. Los textos entre corchetes con la etiqueta `PENDIENTE` deben completarse antes de maquetar el PDF. Las referencias bibliográficas se verificaron contra Crossref o DataCite el 15/10/2026 (ver §R).
 
 ---
 
@@ -41,7 +41,7 @@ La minería aurífera no regulada en el Arco Minero del Orinoco y en el estado A
 
 Este trabajo diseña y prototipa Centinela Orinoco, una arquitectura de datos inteligente organizada en cuatro capas. La capa de ingesta recibe anomalías térmicas, radar, imágenes multiespectrales, telemetría hidrométrica y formularios de patrullaje. La capa de almacenamiento combina una base relacional con extensiones espaciales y vectoriales, una base documental para evidencias y un almacén de objetos, coordinados mediante una saga compensable con idempotencia. La capa de inteligencia incorpora una memoria semántica georreferenciada y una cascada de modelos de lenguaje con respaldo determinístico. La capa de consumo ofrece un tablero web con mapa táctico, gestión de incidentes, boletines y un canal de denuncia anónima. El diseño incluye un nodo de borde con almacenamiento local y comunicación por protocolos livianos para operar con cortes de red y de energía.
 
-El prototipo implementa la persistencia políglota, la ingesta programada y el canal comunitario. Los datos satelitales se simulan con parámetros realistas; la búsqueda vectorial, las pruebas automatizadas y la contenedorización quedan como trabajo inmediato. La propuesta permite que la Guardería Ambiental, los científicos y las comunidades transformen datos dispersos en alertas priorizadas y verificables.
+El prototipo implementa la persistencia políglota, la ingesta real de cinco fuentes satelitales e hidrológicas, la memoria semántica vectorial con búsqueda espacial y el canal comunitario. El análisis de píxeles satelitales y la contenedorización quedan como trabajo inmediato. La propuesta permite que la Guardería Ambiental, los científicos y las comunidades transformen datos dispersos en alertas priorizadas y verificables.
 
 **Palabras clave:** arquitectura de datos inteligente; generación aumentada por recuperación; minería ilegal; Arco Minero del Orinoco; AmazonIA 4.0.
 
@@ -175,15 +175,16 @@ La **UNESCO**, a través del Programa sobre el Hombre y la Biosfera y su trabajo
 | Webhooks Kobo/ODK | **[Implementado]** | `/api/webhooks/kobo`, `/api/webhooks/odk` |
 | Scheduler con ingesta real (FIRMS, Sentinel-1/2/3, INAMEH) sin duplicados | **[Implementado]** | `server/satelliteScheduler.ts`, `server/ingestion/*`, tabla `ingestion_runs` |
 | Análisis de imagen satelital (retrodispersión, NDVI, turbidez) | **[Diseño]**: se ingiere el catálogo, no los píxeles | — |
-| Cascada de 10 modelos LLM con respaldo determinístico | **[Implementado]** | `server/aiModelManager.ts` |
-| Búsqueda RAG | **[Implementado]** por coincidencia de texto y distancia geodésica sobre documentos reales; la similitud vectorial es **[Diseño]** | `server/ragSearch.ts`, `/api/rag/vector-search` |
-| Generación y persistencia de embeddings | **[Simulado]**: se registra el orquestador, pero no se guarda el vector | `server.ts`, inserción en `environmental_rag_documents` |
-| Filtro / reranker | **[Diseño]** (propuesta en Anexo A.1) | — |
+| Cascada de 4 modelos LLM con respaldo determinístico | **[Implementado]** | `server/aiModelManager.ts` |
+| Búsqueda RAG vectorial espacial (similitud coseno + `ST_DWithin`) con respaldo por texto | **[Implementado]** | `server/ragSearch.ts`, RPC `match_environmental_documents`, `/api/rag/vector-search` |
+| Generación y persistencia de embeddings (`gemini-embedding-001`, 768 dimensiones) | **[Implementado]** | `server/embeddings.ts`, `server/embeddingWorker.ts`, `supabase/migrations/202610260001_rag_vector_search.sql` |
+| Filtro / reranker de puntaje compuesto | **[Implementado]** | `server/rag/reranker.ts` (Anexo A.1) |
 | Kafka, Spark, Delta Lake/MinIO, Airflow | **[Diseño]** | §III.3, III.4, III.6 |
 | Nodo edge, MQTT, LoRaWAN | **[Diseño]**; el buffer offline del servidor es **[Implementado]** | §III.8 |
 | RBAC con RLS por rol | **[Diseño]**; RLS habilitado y acceso restringido a `service_role` es **[Implementado]** | §III.7 |
 | Blockchain | **[Diseño]** / trabajo futuro | §III.7 |
-| Pruebas unitarias, Dockerfile y Docker Compose | **No existen aún** en el repositorio | §III.9, III.10 |
+| Pruebas unitarias (26 casos, `npm test`) | **[Implementado]** para la memoria semántica | `tests/` |
+| Dockerfile y Docker Compose | **No existen aún** en el repositorio | §III.10 |
 
 ---
 
@@ -328,9 +329,9 @@ flowchart TD
 
 | Innovación | Contraste | Estado |
 |---|---|---|
-| RAG espacial híbrido: similitud coseno + `ST_DWithin` en una sola consulta | Refs. 6, 7, 11 usan clasificación sin memoria semántica | [Diseño] (Anexo A.1) |
+| RAG espacial híbrido: similitud coseno + `ST_DWithin` en una sola consulta | Refs. 6, 7, 11 usan clasificación sin memoria semántica | [Implementado] (Anexos A.1–A.2) |
 | Geofencing semántico del corpus: un LLM rechaza documentos ajenos a la Amazonía venezolana (HTTP 400) | Las revisiones (Refs. 1, 4) no filtran por pertinencia territorial | [Implementado] |
-| Cascada de 10 modelos LLM con respaldo determinístico | Los sistemas de alerta (Ref. 8) dependen de un solo motor | [Implementado] |
+| Cascada de 4 modelos LLM con respaldo determinístico | Los sistemas de alerta (Ref. 8) dependen de un solo motor | [Implementado] |
 | Persistencia políglota con saga compensable e idempotencia | Ningún antecedente trata la consistencia entre motores | [Implementado] |
 | Denuncia comunitaria anónima con elevación a incidente | Ref. 10 reconoce el impacto en tierras indígenas, pero sin canal de participación | [Implementado] |
 
@@ -386,8 +387,8 @@ flowchart LR
     S5[Spark · diseño]
   end
   subgraph A[4. Inteligencia y analítica]
-    A1[Embeddings<br/>Voyage / Gemini]
-    A2[RAG espacial + reranker]
+    A1[Embeddings Gemini<br/>gemini-embedding-001 · impl.]
+    A2[RAG espacial + reranker · impl.]
     A3[Cascada LLM · impl.]
     A4[Motor de reglas / Airflow]
   end
@@ -428,7 +429,6 @@ C4Context
   System_Ext(kobo, "KoboToolbox / ODK", "Formularios de patrullaje")
   System_Ext(cr, "Crossref", "Metadatos DOI")
   System_Ext(llm, "Google Gemini", "LLM y embeddings")
-  System_Ext(voy, "Voyage AI", "Embeddings")
   Rel(op, cen, "Usa", "HTTPS")
   Rel(an, cen, "Ingresa PDF / DOI", "HTTPS")
   Rel(com, cen, "Denuncia", "HTTPS")
@@ -437,7 +437,6 @@ C4Context
   Rel(kobo, cen, "Envía", "Webhook")
   Rel(cen, cr, "Verifica DOI", "REST")
   Rel(cen, llm, "Genera / clasifica", "REST")
-  Rel(cen, voy, "Vectoriza", "REST")
 ```
 *Figura F5. C4 nivel 1. Elaboración propia.*
 
@@ -475,12 +474,13 @@ C4Container
 | Componente | Archivo | Responsabilidad |
 |---|---|---|
 | `SatelliteAutomatedScheduler` | `server/satelliteScheduler.ts` | Cinco tareas con cadencia de producción, conectores reales, deduplicación e historial en `ingestion_runs` |
-| `AIModelCascadeManager` | `server/aiModelManager.ts` | Cascada de 10 modelos, cuotas, enfriamiento ante 429 |
+| `AIModelCascadeManager` | `server/aiModelManager.ts` | Cascada de 4 modelos, cuotas, enfriamiento ante 429 |
+| `EmbeddingWorker` | `server/embeddingWorker.ts`, `server/embeddings.ts` | Vectorización por lotes de los documentos RAG con Gemini |
 | `zoneAnalyticsEngine` | `server/zoneAnalyticsEngine.ts` | Análisis predictivo por zona |
 | `communityReportService` | `server/services/communityReportService.ts` | Denuncias, evidencia en Storage, anonimización |
 | `hybridIncidentService` | `server/services/hybridIncidentService.ts` | Saga PostgreSQL → MongoDB con compensación |
 | Pipeline de corpus | `server.ts` (`/api/corpus/*`) | PDF, Crossref, geofencing LLM, deduplicación |
-| RAG | `server/ragSearch.ts`, `server.ts` (`/api/rag/vector-search`) | Recuperación por texto y distancia (sin embeddings) y síntesis LLM |
+| RAG | `server/ragSearch.ts`, `server/rag/reranker.ts`, `server.ts` (`/api/rag/vector-search`) | Búsqueda vectorial espacial, reranker, respaldo por texto y síntesis LLM |
 
 *Figura F7. C4 nivel 3 (versión tabular; `PENDIENTE: dibujar en Structurizr/PlantUML y guardar en docs/diagramas/`).*
 
@@ -540,6 +540,7 @@ sequenceDiagram
     API-->>A: 400 Documento rechazado (geofencing)
   else Pertinente
     API->>P: INSERT environmental_rag_documents por sitio
+    API->>API: Worker calcula embeddings (Gemini)
     API-->>A: 200 Artículo + logs de vectorización
   end
 ```
@@ -605,7 +606,7 @@ Restricciones destacables del esquema:
 - `incidents_cancellation_consistency_chk` exige `cancelled_at` solo en estado `CANCELLED`.
 - RLS está habilitado en las tres tablas y se revocan los permisos de `anon` y `authenticated`; solo `service_role` (backend) opera.
 
-> **Brecha de esquema.** La tabla `environmental_rag_documents` se usa en `server.ts`, `server/satelliteScheduler.ts` y `server/zoneAnalyticsEngine.ts`. La migración `202610250001_real_satellite_ingestion.sql` le agrega `content_hash` y un índice único para no duplicar documentos, pero el `create table` sigue fuera de `supabase/migrations/`. Debe agregarse con la columna `embedding vector(768)` (Anexo A.2).
+> **Brecha de esquema.** La tabla `environmental_rag_documents` se usa en `server.ts`, `server/satelliteScheduler.ts` y `server/zoneAnalyticsEngine.ts`. La migración `202610250001_real_satellite_ingestion.sql` le agrega `content_hash` y un índice único para no duplicar documentos, pero el `create table` sigue fuera de `supabase/migrations/`. La migración `202610260001_rag_vector_search.sql` agrega `embedding vector(768)`, `embedding_model`, `embedded_at`, la geometría generada `geom`, los índices HNSW y GiST, y la RPC `match_environmental_documents` (Anexo A.2).
 >
 > **Tablas de ingesta real [Implementado].** Las migraciones `20261025000*` crean `sentinel1_scenes`, `sentinel3_products`, `environmental_monitoring_stations`, `hydrological_telemetry_readings` e `ingestion_runs`. También rehacen `s2_product_tile` con un registro por producto y eliminan los registros sintéticos anteriores.
 
@@ -656,9 +657,9 @@ sequenceDiagram
 
 **BD vectorial elegida: pgvector en Supabase**, `vector(768)` con índice HNSW. Frente a alternativas dedicadas (Qdrant, Chroma, Pinecone), pgvector permite combinar en **una sola consulta SQL** la similitud coseno y el filtro espacial `ST_DWithin` de PostGIS, sin sincronizar dos almacenes ni exponer coordenadas de comunidades a un servicio externo.
 
-**Embeddings.** Se diseñan con Voyage AI y respaldo en Gemini embeddings. **Estado actual [Simulado]:** el pipeline registra qué orquestador usaría y persiste el `content_chunk` y sus metadatos, pero **no** calcula ni guarda el vector (`server.ts`, bloque de vectorización de `/api/corpus/ingest`).
+**Embeddings [Implementado].** Cada documento se vectoriza con Gemini `gemini-embedding-001`, reducido a 768 dimensiones y normalizado (`RETRIEVAL_DOCUMENT` para documentos, `RETRIEVAL_QUERY` para consultas). Los documentos se insertan sin vector y `EmbeddingWorker` los vectoriza por lotes al arrancar el servidor, tras cada ingesta del scheduler y al ingresar corpus; así, un fallo de Gemini no bloquea la ingesta. El proceso respeta la cuota gratuita de Gemini (100 textos por minuto y 1.000 por día) y se pausa si se agota. Los 1.216 documentos de la memoria semántica están vectorizados en producción.
 
-**Generación [Implementado].** `AIModelCascadeManager` recorre 10 modelos Gemini con cuotas diarias; ante errores 429 o de cuota marca el modelo como agotado y pasa al siguiente. Si la cuota global está saturada, corta la cascada y devuelve una respuesta determinística de contingencia (`engineType: "tactical_contingency"`).
+**Generación [Implementado].** `AIModelCascadeManager` recorre 4 modelos Gemini con cuotas diarias; ante errores 429 o de cuota marca el modelo como agotado y pasa al siguiente. Si la cuota global está saturada, corta la cascada y devuelve una respuesta determinística de contingencia (`engineType: "tactical_contingency"`).
 
 **Grafo de conocimiento [Diseño].**
 
@@ -675,7 +676,7 @@ graph LR
   Articulo -- "estudia" --> Sitio
 ```
 
-**Pipeline de filtro y reranker [Diseño; código propuesto en Anexo A.1].**
+**Pipeline de filtro y reranker [Implementado; código en Anexo A.1].**
 
 ```mermaid
 flowchart LR
@@ -701,7 +702,7 @@ Justificación de los pesos:
 - La condición de **arbitrado** (0,10) favorece la evidencia científica revisada por pares.
 - La **severidad** (0,10) desempata a favor de lo crítico.
 
-Los pesos son iniciales y deben calibrarse con un conjunto etiquetado (`PENDIENTE`).
+Los pesos son iniciales y deben calibrarse con un conjunto etiquetado. Sin punto de consulta, el peso de la proximidad pasa a la similitud. Si no es posible vectorizar la consulta, la búsqueda usa coincidencia de texto y distancia geodésica.
 
 ## III.6 Flujo dinámico automatizado
 
@@ -862,7 +863,7 @@ flowchart LR
 
 ## III.9 Calidad de software
 
-> **Estado:** el repositorio **no contiene pruebas automatizadas** a la fecha. La tabla define los casos mínimos; la columna "obtenido" se completa al implementarlos (`tests/`, con Vitest o `node:test`).
+> **Estado:** `tests/` contiene 26 pruebas automatizadas con `node:test` (`npm test`) para la memoria semántica: embeddings, reranker, respaldo por texto, cuota agotada y errores de Supabase. Todas pasan. Los casos de la tabla siguiente, sobre ingesta y saga, siguen pendientes de automatizar.
 
 **Tabla T7. Casos de prueba ante datos corruptos o vacíos**
 
@@ -934,7 +935,6 @@ flowchart TB
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_EVIDENCE_BUCKET`;
 - `MONGODB_URI`, `MONGODB_USERNAME`, `MONGODB_PASSWORD`, `MONGODB_DATABASE`, `MONGODB_INCIDENT_EVIDENCE_COLLECTION`, `MONGODB_SERVER_SELECTION_TIMEOUT_MS`;
 - `HYBRID_WRITE_MAX_RETRIES`, `HYBRID_WRITE_TIMEOUT_MS`;
-- `VOYAGE_API_KEY` (no figura en `.env.example`; debe agregarse).
 
 ## III.11 Resultado esperado para el usuario final
 
@@ -974,14 +974,14 @@ flowchart TB
 
 1. **OE1.** Se caracterizaron ocho fuentes de datos (T1), cinco de ellas con ingesta real automatizada, y se mostró que su heterogeneidad (variedad), su cadencia (velocidad) y su incertidumbre (veracidad) exceden la capacidad de un sistema transaccional tradicional.
 2. **OE2.** Se diseñó una arquitectura por capas con persistencia políglota. Su núcleo, la saga PostgreSQL–MongoDB con idempotencia y compensación, está implementado, con restricciones de integridad verificables en las migraciones. La resiliencia offline está implementada en el servidor y diseñada para el borde.
-3. **OE3.** Se definió una memoria semántica georreferenciada sobre pgvector y PostGIS, con un reranker compuesto. El pipeline de ingesta del corpus y el geofencing semántico funcionan. La recuperación ya opera sobre documentos reales por coincidencia de texto y distancia geodésica. La recuperación vectorial y la generación de embeddings siguen pendientes y son la prioridad de implementación.
+3. **OE3.** Se implementó una memoria semántica georreferenciada sobre pgvector y PostGIS: los documentos se vectorizan con Gemini y la búsqueda combina similitud coseno y radio geográfico en una sola consulta, con un reranker compuesto y respaldo por texto. El pipeline de ingesta del corpus y el geofencing semántico funcionan. Falta calibrar el umbral y los pesos con consultas etiquetadas.
 4. **OE4.** El scheduler automatiza la ingesta real de FIRMS, Sentinel-1/2/3 e INAMEH con cadencias de producción, sin duplicados y con historial de ejecuciones. También se formalizaron cinco reglas de decisión y su DAG equivalente en Airflow. Las reglas están diseñadas, no implementadas.
-5. **OE5.** La capa de consumo está prototipada en React con más de diez vistas operativas. Las pruebas ante datos corruptos o vacíos están especificadas (T7), pero aún no automatizadas.
+5. **OE5.** La capa de consumo está prototipada en React con más de diez vistas operativas. La memoria semántica tiene 26 pruebas automatizadas; las pruebas de ingesta y saga ante datos corruptos o vacíos están especificadas (T7), pero aún no automatizadas.
 
 ## IV.3 Recomendaciones y trabajo futuro
 
-1. Implementar la RPC `match_environmental_documents` y el reranker (Anexos A.1–A.2), y generar embeddings reales.
-2. Agregar `tests/` con los casos de T7, el `Dockerfile` y el `docker-compose.yml` (Anexo A.3).
+1. Calibrar el umbral de similitud (0,65) y los pesos del reranker con consultas etiquetadas.
+2. Agregar a `tests/` los casos de T7, y crear el `Dockerfile` y el `docker-compose.yml` (Anexo A.3).
 3. Pasar del catálogo a los píxeles: descargar bandas Sentinel-1/2 y calcular retrodispersión, NDVI y turbidez sobre las escenas ya registradas.
 4. Migrar la ingesta a Kafka y el histórico a Delta Lake/MinIO con Spark.
 5. Entrenar modelos de detección (CNN sobre Sentinel-1/2) con datos etiquetados de la región.
@@ -1005,7 +1005,7 @@ centinela-orinoco-2026/
 ├── .env.example                 Variables sin secretos
 ├── Dockerfile, docker-compose.yml   PENDIENTE
 ├── pipelines/                   PENDIENTE (PySpark, DAG Airflow, publicador MQTT)
-└── tests/                       PENDIENTE
+└── tests/                       Pruebas node:test (npm test)
 ```
 
 ---
@@ -1064,31 +1064,43 @@ Vishwakarma, A. K., Patro, P. K., & Acquaye, A. (2025). Applications of AI to lo
 
 # A. Anexos
 
-## A.1 Filtro y reranker (código propuesto; no existe aún en el repositorio)
+## A.1 Filtro y reranker (implementado)
 
-Ruta sugerida: `server/rag/reranker.ts`
+Archivo: `server/rag/reranker.ts`
 
 ```typescript
-export interface RagCandidate {
+/**
+ * Reranker de la memoria semántica (ecuación 1 del artículo):
+ * score = 0,45·sim + 0,20·(1 − d/R) + 0,15·e^(−días/90) + 0,10·arbitrado + 0,10·severidad
+ * Sin punto de consulta (o sin radio) no hay proximidad: su peso pasa a la similitud.
+ * Los pesos son iniciales y no están calibrados con un conjunto etiquetado.
+ */
+
+export interface RerankCandidate {
   id: string;
-  title: string;
-  contentChunk: string;
-  similarity: number;        // 1 - distancia coseno, [0, 1]
-  distanceKm: number;        // calculada por PostGIS
-  createdAt: string;         // ISO
-  peerReviewed: boolean;
-  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  doc_type: string;
+  similarity: number;
+  distance_km: number | null;
+  created_at: string;
+  metadata: Record<string, any> | null;
 }
 
 export interface RerankOptions {
-  radiusKm: number;
-  matchThreshold?: number;   // por defecto 0.65
-  topN?: number;             // por defecto 5
+  radiusKm?: number;
+  topN?: number;
   now?: Date;
-  weights?: Partial<typeof DEFAULT_WEIGHTS>;
+  weights?: Partial<RerankWeights>;
 }
 
-const DEFAULT_WEIGHTS = {
+export interface RerankWeights {
+  similarity: number;
+  proximity: number;
+  recency: number;
+  peerReviewed: number;
+  severity: number;
+}
+
+export const DEFAULT_WEIGHTS: RerankWeights = {
   similarity: 0.45,
   proximity: 0.2,
   recency: 0.15,
@@ -1096,94 +1108,175 @@ const DEFAULT_WEIGHTS = {
   severity: 0.1,
 };
 
-const SEVERITY_SCORE = { LOW: 0.25, MEDIUM: 0.5, HIGH: 0.75, CRITICAL: 1 } as const;
-const RECENCY_TAU_DAYS = 90;
+export const RECENCY_TAU_DAYS = 90;
 
-export function rerank(candidates: RagCandidate[], opts: RerankOptions) {
-  const w = { ...DEFAULT_WEIGHTS, ...opts.weights };
-  const threshold = opts.matchThreshold ?? 0.65;
-  const now = (opts.now ?? new Date()).getTime();
+const SEVERITY_SCORE: Record<string, number> = { LOW: 0.25, MEDIUM: 0.5, HIGH: 0.75, CRITICAL: 1 };
+const FIRMS_CONFIDENCE_SCORE: Record<string, number> = { low: 0.25, nominal: 0.5, high: 0.75 };
+const HYDRO_ALERT_SCORE: Record<string, number> = { ALERT_CRECIDA: 1, ELEVATED: 0.5, OPTIMAL: 0, SIN_REFERENCIA: 0 };
+
+/** Severidad en [0, 1] según lo que trae cada tipo de documento; 0 si no hay dato. */
+export function severityOf(metadata: Record<string, any> | null | undefined): number {
+  if (!metadata) return 0;
+  if (typeof metadata.severity === "string" && metadata.severity in SEVERITY_SCORE) return SEVERITY_SCORE[metadata.severity];
+  if (typeof metadata.alert_status === "string" && metadata.alert_status in HYDRO_ALERT_SCORE) return HYDRO_ALERT_SCORE[metadata.alert_status];
+  if (typeof metadata.confidence === "string" && metadata.confidence in FIRMS_CONFIDENCE_SCORE) return FIRMS_CONFIDENCE_SCORE[metadata.confidence];
+  return 0;
+}
+
+export interface RerankedCandidate<T extends RerankCandidate> {
+  candidate: T;
+  score: number;
+  components: { similarity: number; proximity: number; recency: number; peerReviewed: number; severity: number };
+}
+
+export function rerank<T extends RerankCandidate>(candidates: T[], options: RerankOptions = {}): RerankedCandidate<T>[] {
+  const base = { ...DEFAULT_WEIGHTS, ...options.weights };
+  const radius = options.radiusKm;
+  const useProximity = Number.isFinite(radius) && (radius as number) > 0;
+  const weights = useProximity ? base : { ...base, similarity: base.similarity + base.proximity, proximity: 0 };
+  const now = (options.now ?? new Date()).getTime();
 
   return candidates
-    .filter((c) => Number.isFinite(c.similarity) && c.similarity >= threshold)
-    .filter((c) => Number.isFinite(c.distanceKm) && c.distanceKm <= opts.radiusKm)
-    .map((c) => {
-      const ageDays = Math.max(0, (now - Date.parse(c.createdAt)) / 86_400_000);
-      const proximity = opts.radiusKm > 0 ? 1 - c.distanceKm / opts.radiusKm : 1;
-      const recency = Number.isFinite(ageDays) ? Math.exp(-ageDays / RECENCY_TAU_DAYS) : 0;
-      const severity = c.severity ? SEVERITY_SCORE[c.severity] : 0;
+    .filter(c => Number.isFinite(c.similarity))
+    .filter(c => !useProximity || c.distance_km === null || !Number.isFinite(c.distance_km) || c.distance_km <= (radius as number))
+    .map(candidate => {
+      const ageDays = Math.max(0, (now - Date.parse(candidate.created_at)) / 86_400_000);
+      const components = {
+        similarity: Math.min(1, Math.max(0, candidate.similarity)),
+        proximity: useProximity && candidate.distance_km !== null && Number.isFinite(candidate.distance_km)
+          ? Math.max(0, 1 - candidate.distance_km / (radius as number))
+          : 0,
+        recency: Number.isFinite(ageDays) ? Math.exp(-ageDays / RECENCY_TAU_DAYS) : 0,
+        peerReviewed: candidate.metadata?.peer_reviewed === true ? 1 : 0,
+        severity: severityOf(candidate.metadata),
+      };
       const score =
-        w.similarity * c.similarity +
-        w.proximity * proximity +
-        w.recency * recency +
-        w.peerReviewed * (c.peerReviewed ? 1 : 0) +
-        w.severity * severity;
-      return { ...c, score: Number(score.toFixed(4)) };
+        weights.similarity * components.similarity +
+        weights.proximity * components.proximity +
+        weights.recency * components.recency +
+        weights.peerReviewed * components.peerReviewed +
+        weights.severity * components.severity;
+      return { candidate, score: Math.round(score * 10000) / 10000, components };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, opts.topN ?? 5);
+    .slice(0, Math.max(1, options.topN ?? 8));
 }
 ```
 
-## A.2 DDL y RPC de búsqueda vectorial espacial (propuesta)
+## A.2 DDL y RPC de búsqueda vectorial espacial (implementado)
 
-Ruta sugerida: `supabase/migrations/202610150001_rag_vector_search.sql`
+Archivo: `supabase/migrations/202610260001_rag_vector_search.sql`, aplicada en Supabase de producción.
 
 ```sql
-create extension if not exists vector;
+-- =============================================================================
+-- Centinela Orinoco: memoria semántica vectorial y espacial.
+-- Agrega el embedding (Gemini gemini-embedding-001, 768 dimensiones) y una
+-- geometría a environmental_rag_documents, y la RPC que combina similitud
+-- coseno y distancia geodésica en una sola consulta. Los documentos se
+-- insertan sin embedding; el servidor los vectoriza después por lotes.
+-- =============================================================================
 
-create table if not exists public.environmental_rag_documents (
-  id uuid primary key default gen_random_uuid(),
-  doc_type text not null,
-  source_reference_id text,
-  title text not null,
-  location_name text,
-  sub_basin text,
-  latitude double precision check (latitude between -90 and 90),
-  longitude double precision check (longitude between -180 and 180),
-  geom geometry(Point, 4326) generated always as (
-    st_setsrid(st_makepoint(longitude, latitude), 4326)
-  ) stored,
-  content_chunk text not null,
-  embedding vector(768),
-  metadata jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
+begin;
 
-create index if not exists rag_docs_embedding_hnsw
-  on public.environmental_rag_documents using hnsw (embedding vector_cosine_ops);
-create index if not exists rag_docs_geom_gix
+set local search_path to 'public', 'extensions';
+
+create extension if not exists vector with schema extensions;
+
+-- -----------------------------------------------------------------------------
+-- 1. Columnas
+-- -----------------------------------------------------------------------------
+alter table public.environmental_rag_documents
+  add column if not exists embedding vector(768),
+  add column if not exists embedding_model text,
+  add column if not exists embedded_at timestamptz;
+
+alter table public.environmental_rag_documents
+  add column if not exists geom geometry(Point, 4326) generated always as (
+    case when latitude is not null and longitude is not null
+      then st_setsrid(st_makepoint(longitude, latitude), 4326) end
+  ) stored;
+
+-- -----------------------------------------------------------------------------
+-- 2. Índices
+-- -----------------------------------------------------------------------------
+create index if not exists idx_rag_documents_embedding_hnsw
+  on public.environmental_rag_documents
+  using hnsw (embedding vector_cosine_ops) with (m = 16, ef_construction = 64);
+
+create index if not exists idx_rag_documents_geom
   on public.environmental_rag_documents using gist (geom);
 
+-- Documentos pendientes de vectorizar (el worker los busca en cada pasada).
+create index if not exists idx_rag_documents_pending_embedding
+  on public.environmental_rag_documents (created_at)
+  where embedding is null;
+
+-- -----------------------------------------------------------------------------
+-- 3. Búsqueda: similitud coseno + filtro espacial opcional
+-- -----------------------------------------------------------------------------
 create or replace function public.match_environmental_documents(
   query_embedding vector(768),
-  p_lat double precision,
-  p_lng double precision,
-  p_radius_km double precision,
+  p_lat double precision default null,
+  p_lng double precision default null,
+  p_radius_km double precision default null,
   p_threshold double precision default 0.65,
-  p_k int default 20
+  p_k integer default 20
 )
 returns table (
-  id uuid, title text, content_chunk text, similarity double precision,
-  distance_km double precision, created_at timestamptz, metadata jsonb
+  id uuid,
+  doc_type text,
+  source_reference_id text,
+  title text,
+  location_name text,
+  sub_basin text,
+  latitude double precision,
+  longitude double precision,
+  content_chunk text,
+  metadata jsonb,
+  created_at timestamptz,
+  similarity double precision,
+  distance_km double precision
 )
-language sql stable
-set search_path = public
+language sql
+stable
+set search_path to 'public', 'extensions'
 as $$
-  select d.id, d.title, d.content_chunk,
-         1 - (d.embedding <=> query_embedding) as similarity,
-         st_distance(d.geom::geography,
-                     st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography) / 1000.0 as distance_km,
-         d.created_at, d.metadata
+  with target as (
+    select case when p_lat is not null and p_lng is not null
+      then st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography end as point
+  )
+  select
+    d.id,
+    d.doc_type,
+    d.source_reference_id,
+    d.title,
+    d.location_name,
+    d.sub_basin,
+    d.latitude,
+    d.longitude,
+    d.content_chunk,
+    d.metadata,
+    d.created_at,
+    1 - (d.embedding <=> query_embedding) as similarity,
+    case when t.point is not null and d.geom is not null
+      then st_distance(d.geom::geography, t.point) / 1000.0 end as distance_km
   from public.environmental_rag_documents d
+  cross join target t
   where d.embedding is not null
-    and st_dwithin(d.geom::geography,
-                   st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography,
-                   p_radius_km * 1000)
     and 1 - (d.embedding <=> query_embedding) >= p_threshold
+    and (
+      t.point is null
+      or p_radius_km is null
+      or (d.geom is not null and st_dwithin(d.geom::geography, t.point, p_radius_km * 1000))
+    )
   order by d.embedding <=> query_embedding
-  limit p_k;
+  limit least(greatest(coalesce(p_k, 20), 1), 100);
 $$;
+
+revoke all on function public.match_environmental_documents(vector, double precision, double precision, double precision, double precision, integer) from public, anon, authenticated;
+grant execute on function public.match_environmental_documents(vector, double precision, double precision, double precision, double precision, integer) to service_role;
+
+commit;
 ```
 
 ## A.3 Docker Compose (propuesta)
