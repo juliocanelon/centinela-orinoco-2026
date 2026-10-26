@@ -82,6 +82,10 @@ El botón de sol/luna de la barra superior cambia el modo (**Día**, **Noche** o
 
 Los componentes usan las clases de Tailwind de siempre (`slate-*`, `sky-*`, `bg-surface`…). El modo y el acento cambian las variables CSS de esas rampas según los atributos `data-mode` y `data-accent` de `<html>`. En modo día las rampas se invierten (50 ↔ 950), así que una clase pensada para el modo oscuro mantiene el contraste sin reescribir el componente. Para ajustar colores o agregar un acento, edita `scripts/generate-theme-css.mjs` y ejecuta `npm run theme`.
 
+## Especificación del manual de usuario
+
+El [plan del manual de usuario tipo wiki](docs/specs/manual-usuario-wiki.md) describe la guía práctica para aprender a usar la interfaz y entender la información que muestra. El manual está disponible desde el menú izquierdo y cuenta con índice, búsqueda y artículos para las secciones principales. Las pautas para mantenerlo actualizado están en el mismo documento.
+
 ## Puesta en marcha local
 
 Requisitos: Node.js 20+ y acceso a un proyecto de Supabase y a un clúster de MongoDB Atlas.
@@ -90,6 +94,7 @@ Requisitos: Node.js 20+ y acceso a un proyecto de Supabase y a un clúster de Mo
 npm install
 cp .env.example .env      # completar las variables (ver abajo)
 npm run dev               # http://localhost:3000
+# Si el puerto 3000 ya está ocupado, usa: PORT=3001 pnpm dev
 ```
 
 ### Variables de entorno

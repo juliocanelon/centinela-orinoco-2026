@@ -185,6 +185,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         <div className="p-3 md:p-2.5 lg:p-3 border-t border-line space-y-2">
+          <a
+            id="link-user-manual"
+            href={`${window.location.origin}${import.meta.env.BASE_URL || '/'}#/manual/inicio`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onCloseMobile}
+            title="Manual de usuario"
+            className="w-full h-9 flex items-center md:justify-center lg:justify-start gap-3 px-2.5 rounded-lg text-[13px] text-slate-400 hover:text-slate-100 hover:bg-raised transition-colors"
+          >
+            <BookOpen className="w-[18px] h-[18px] shrink-0 text-slate-500" />
+            <span className="md:hidden lg:inline">Manual de usuario</span>
+          </a>
           <button
             type="button"
             id="btn-about-project"
