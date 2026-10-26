@@ -224,10 +224,10 @@ donde $s$ es la similitud coseno, $d$ la distancia en km, $t$ la antigüedad en 
 La generación usa una cascada de cuatro modelos Gemini con cuotas diarias: ante un error de cuota o HTTP~429 el modelo se marca como agotado y se pasa al siguiente; si todos fallan, se devuelve una respuesta determinística de contingencia.
 
 \subsection{Flujo dinámico automatizado}
-La Tabla~\ref{tab:reglas} define las reglas de decisión que un DAG de Apache Airflow ejecuta después de ingerir y correlar espacialmente las fuentes. La regla central exige la coincidencia de dos sensores independientes, porque un foco térmico aislado no prueba minería: puede ser una quema agrícola. Cada tarea de ingesta tiene tres reintentos con espera exponencial, y el fallo de una fuente no bloquea las demás ramas.
+La Tabla~\ref{tab:reglas} define las reglas de decisión que, en el diseño objetivo, ejecutaría un DAG de Apache Airflow después de ingerir y correlar espacialmente las fuentes. La regla central exige la coincidencia de dos sensores independientes, porque un foco térmico aislado no prueba minería: puede ser una quema agrícola. En ese diseño, cada tarea de ingesta tendría tres reintentos con espera exponencial, y el fallo de una fuente no bloquearía las demás ramas. En el prototipo, un \emph{scheduler} propio ejecuta la ingesta de forma independiente por fuente y, si una falla, registra el error y la reintenta en su siguiente ejecución programada; las reglas aún no se aplican, porque R1 a R3 requieren el análisis de píxeles satelitales.
 
 \begin{table}[!t]
-\caption{Reglas de decisión (umbrales iniciales)}
+\caption{Reglas de decisión del diseño objetivo (umbrales iniciales)}
 \label{tab:reglas}
 \centering
 \footnotesize
@@ -252,7 +252,7 @@ En los puestos de Guardería, un nodo de borde (Raspberry Pi o Jetson, con panel
 La denuncia es anónima por defecto, y una restricción de la base de datos impide guardar nombre o contacto cuando lo es. Los datos de contacto nunca salen de PostgreSQL, los registros no contienen datos personales y la seguridad a nivel de fila (RLS) restringe el acceso al \emph{backend}. El diseño agrega control de acceso por roles (administrador, operador, analista, comunidad), generalización de coordenadas de comunidades a 0,01° (unos 1,1~km), eliminación de metadatos EXIF y consentimiento comunitario previo según los principios CARE~\cite{carroll2020}. El hash SHA-256 de cada evidencia puede registrarse en una cadena de bloques permisionada para demostrar ante las autoridades que no fue alterada.
 
 \subsection{Despliegue objetivo en la nube}
-El prototipo corre hoy en servicios gestionados (Cloud Run, Supabase y MongoDB Atlas) sin contenedores propios. Para producción institucional se propone una arquitectura en AWS que conserva los mismos flujos funcionales (Tabla~\ref{tab:aws}). La API se empaqueta en contenedores sobre Amazon ECS con Fargate y escala de forma horizontal; los conectores de ingesta pasan a funciones AWS Lambda disparadas por Amazon EventBridge Scheduler, y AWS Step Functions orquesta los reintentos y las dependencias que hoy resuelve el \emph{scheduler} en proceso. Las credenciales de las fuentes se guardan en AWS Secrets Manager, los objetos y volúmenes se cifran con AWS KMS, y Amazon CloudWatch y AWS CloudTrail registran métricas, alarmas y auditoría. En los puestos de Guardería, AWS IoT Greengrass ejecuta el nodo de borde con almacenamiento local y publica por MQTT hacia AWS IoT Core cuando hay enlace.
+El prototipo corre hoy en servicios gestionados (Cloud Run, Supabase y MongoDB Atlas) sin contenedores propios. Para producción institucional se propone una arquitectura en AWS que conserva los mismos flujos funcionales (Tabla~\ref{tab:aws}). La API se empaqueta en contenedores sobre Amazon ECS con Fargate y escala de forma horizontal; los conectores de ingesta pasan a funciones AWS Lambda disparadas por Amazon EventBridge Scheduler, y AWS Step Functions orquesta las dependencias y los reintentos que hoy se resuelven reprogramando la tarea en el \emph{scheduler}. Las credenciales de las fuentes se guardan en AWS Secrets Manager, los objetos y volúmenes se cifran con AWS KMS, y Amazon CloudWatch y AWS CloudTrail registran métricas, alarmas y auditoría. En los puestos de Guardería, AWS IoT Greengrass ejecuta el nodo de borde con almacenamiento local y publica por MQTT hacia AWS IoT Core cuando hay enlace.
 
 La memoria semántica se mantiene en PostgreSQL: Amazon Aurora PostgreSQL admite PostGIS y pgvector, de modo que la búsqueda vectorial y el filtro espacial siguen resolviéndose en una sola consulta. Una base vectorial aparte, como Amazon OpenSearch, solo se justificaría si el volumen de documentos superara lo que el índice HNSW de PostgreSQL maneja con la latencia requerida.
 
@@ -270,7 +270,7 @@ SPA React + Vite & Amazon CloudFront + S3 & Distribución de la interfaz web con
 Sin autenticación de usuarios & Amazon Cognito + AWS WAF & Identidad, RBAC por rol y filtrado de tráfico en el borde \\
 API Express (Node.js) & Amazon API Gateway + ECS Fargate & API REST en contenedores con escalado horizontal \\
 Scheduler en proceso & EventBridge Scheduler + AWS Lambda & Ejecución periódica de los conectores FIRMS, STAC/OData, INAMEH y corpus \\
-Reintentos en el scheduler & AWS Step Functions & Orquestación con dependencias, reintentos y control de ejecución \\
+Reprogramación tras fallos en el scheduler & AWS Step Functions & Orquestación con dependencias, reintentos y control de ejecución \\
 Supabase PostgreSQL + PostGIS + pgvector & Amazon Aurora PostgreSQL & Datos relacionales, espaciales y vectoriales en un mismo motor \\
 Supabase Storage & Amazon S3 & Evidencias privadas y zonas Bronze, Silver y Gold del Lakehouse \\
 (no implementado) & AWS Glue Data Catalog + Amazon Athena & Catálogo y consulta analítica del Lakehouse \\
